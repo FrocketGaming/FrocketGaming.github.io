@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Formatter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 3px #74A12E;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            max-width: 1100px;
+        }
+        .input-container, .output-container {
+            width: 500px;
+            margin: 0 10px;
+        }
+        .box {
+            height: 300px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 0 4px #333333;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .box:focus-within {
+            border-color: #c6ee86;
+            box-shadow: 0 0 15px #74A12E;
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            color: #ffffff;
+            border: none;
+            resize: none;
+            font-size: 14px;
+            outline: none;
+        }
+        textarea:focus {
+            outline: none;
+        }
+        .options {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .option {
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1px solid #74A12E;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="checkbox"]:checked {
+            background-color: #c6ee86;
+            border: 1px solid #74A12E;
+        }
+        input[type="checkbox"]:focus {
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+        }
+        .format-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #74A12E;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 3px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .format-btn:hover {
+            background-color: #c6ee86;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #74A12E ;
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+        .copy-btn:hover, .copy-btn:focus {
+            color: #74A12E;
+            outline: none;
+        }
+        .output-container {
+            position: relative;
+        }
+        .copy-popup {
+            position: absolute;
+            top: 40px;
+            right: 10px;
+            background-color: #74A12E;
+            color: #1a1a1a;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .copy-popup.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>SQL Formatter</h1>
+    <div class="container">
+        <div class="input-container">
+            <div class="box">
+                <textarea id="input" placeholder="Enter your data here..."></textarea>
+            </div>
+            <div class="options">
+                <div class="option">
+                    <input type="checkbox" id="quote">
+                    <label for="quote">Quote</label>
+                </div>
+                <div class="option">
+                    <input type="checkbox" id="parenthesis">
+                    <label for="parenthesis">Parenthesis</label>
+                </div>
+            </div>
+            <button class="format-btn" onclick="formatInput()">Format</button>
+        </div>
+        <div class="output-container">
+            <div class="box">
+                <textarea id="output" readonly></textarea>
+                <button class="copy-btn" onclick="copyToClipboard()">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+                <div class="copy-popup">Text copied</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatInput() {
+            const input = document.getElementById('input').value;
+            const quote = document.getElementById('quote').checked;
+            const parenthesis = document.getElementById('parenthesis').checked;
+            
+            let items = input.split(/[,\n]+/).map(item => item.trim()).filter(item => item !== '');
+            
+            if (quote) {
+                items = items.map(item => `'${item}'`);
+            }
+            
+            let result = items.join(', ');
+            
+            if (parenthesis) {
+                result = `(${result})`;
+            }
+            
+            document.getElementById('output').value = result;
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            const popup = document.querySelector('.copy-popup');
+
+            // Create a temporary textarea element to copy from
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = output.value;
+            document.body.appendChild(tempTextArea);
+            
+            // Copy the text without visual selection
+            tempTextArea.select();
+            document.execCommand('copy');
+            
+            // Remove the temporary textarea
+            document.body.removeChild(tempTextArea);
+
+            // Show the popup
+            popup.classList.add('show');
+            setTimeout(() => {
+                popup.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
