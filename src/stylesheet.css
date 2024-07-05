@@ -88,7 +88,7 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:focus {
     box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
 }
-.format-btn, .clear-bnt {
+.format-btn  {
     margin-top: 10px;
     padding: 8px 16px;
     background-color: #74A12E;
@@ -104,6 +104,17 @@ input[type="checkbox"]:focus {
     color: #1a1a1a;
     outline: none;
     box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+}
+.clear-bnt {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #383838;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 .clear-bnt:hover {
     background-color: #fb6c6c;
