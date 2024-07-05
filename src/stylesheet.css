@@ -355,7 +355,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
     position: fixed;
     top: 0;
     left: 0;
-    width: 30vh;
+    width: 15rem;
     height: 100%;
     background-color: rgba(18, 18, 18, 0.98);
     display: flex;
@@ -379,6 +379,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
     text-align: center;
     transform: translateY(-50px);
     opacity: 0;
+    padding-left: inherit;
     transition: all 0.5s cubic-bezier(0.7, 0, 0.3, 1);
 }
 
@@ -452,7 +453,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
 }
 
 .submenu a {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     margin: 15px 0;
     opacity: 0;
     transform: translateX(-20px);
