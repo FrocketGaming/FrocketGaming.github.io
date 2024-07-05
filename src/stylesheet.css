@@ -1,5 +1,5 @@
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Oswald', sans-serif;
     background-color: #1a1a1a;
     color: #ffffff;
     display: flex;
@@ -7,14 +7,15 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    padding: 20px;
+    padding: 0 20px 20px 20px;
     box-sizing: border-box;
 }
-.roboto-regular {
-    font-family: "Roboto", sans-serif;
-    font-weight: 400;
+.oswald-fnt {
+    font-family: "Oswald", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 200;
     font-style: normal;
-  }  
+  }
 h1 {
     font-size: 2.5em;
     margin-bottom: 1px;
@@ -24,13 +25,13 @@ h1 {
 }
 p {
     font-size: .9em;
-    margin-bottom: 5px;
+    margin-bottom: 15px;
     text-align: center;
     color: #fff;
 }
 sub {
     font-size: 1em;
-    margin-bottom: 5px;
+    /* margin-bottom: 5px; */
     text-align: center;
     color: #c6ee86;
 }
@@ -65,8 +66,10 @@ textarea {
     color: #ffffff;
     border: none;
     resize: none;
-    font-size: 14px;
+    font-size: 16px;
     outline: none;
+    font-family: 'Oswald', sans-serif; 
+    font-weight: 300;
 }
 textarea:focus {
     outline: none;
