@@ -48,7 +48,8 @@ const quoteCheckbox = document.getElementById('quote');
             if (formatSQL) {
                 result = formatSQLQuery(input);
             } else {
-                let items = input.split(/[,\n]+/).map(item => item.trim()).filter(item => item !== '');
+                // Always split by both commas and whitespace
+                let items = input.split(/[,\s]+/).filter(item => item.trim() !== '');
                 
                 if (quote) {
                     items = items.map(item => `'${item}'`);
@@ -58,16 +59,6 @@ const quoteCheckbox = document.getElementById('quote');
                 
                 if (parenthesis) {
                     result = `(${result})`;
-                }
-                
-                // If no formatting options are selected, just return the comma-separated list
-                if (!quote && !parenthesis && !formatSQL) {
-                    // Check if the input is already a comma-separated list
-                    if (input.includes(',')) {
-                        result = input.split(',').map(item => item.trim()).join(', ');
-                    } else {
-                        result = items.join(', ');
-                    }
                 }
             }
             
