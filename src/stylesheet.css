@@ -1,5 +1,5 @@
 body {
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Raleway', sans-serif;
     background-color: #1a1a1a;
     color: #ffffff;
     display: flex;
@@ -10,8 +10,8 @@ body {
     padding: 0 20px 20px 20px;
     box-sizing: border-box;
 }
-.oswald-fnt {
-    font-family: "Oswald", sans-serif;
+.raleway-fnt {
+    font-family: "Raleway", sans-serif;
     font-optical-sizing: auto;
     font-weight: 200;
     font-style: normal;
@@ -68,8 +68,8 @@ textarea {
     resize: none;
     font-size: 16px;
     outline: none;
-    font-family: 'Oswald', sans-serif; 
-    font-weight: 300;
+    font-family: 'Raleway', sans-serif; 
+    font-weight: 400;
 }
 textarea:focus {
     outline: none;
@@ -157,7 +157,7 @@ input[type="checkbox"]:focus {
     top: 40px;
     right: 10px;
     background-color: #74A12E;
-    color: #1a1a1a;
+    color: #fff;
     padding: 5px 10px;
     border-radius: 3px;
     font-size: 12px;
