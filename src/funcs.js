@@ -44,7 +44,7 @@ const quoteCheckbox = document.getElementById('quote');
             const formatSQL = formatSQLRadio.checked;
             
             let result;
-
+        
             if (formatSQL) {
                 result = formatSQLQuery(input);
             } else {
@@ -58,6 +58,16 @@ const quoteCheckbox = document.getElementById('quote');
                 
                 if (parenthesis) {
                     result = `(${result})`;
+                }
+                
+                // If no formatting options are selected, just return the comma-separated list
+                if (!quote && !parenthesis && !formatSQL) {
+                    // Check if the input is already a comma-separated list
+                    if (input.includes(',')) {
+                        result = input.split(',').map(item => item.trim()).join(', ');
+                    } else {
+                        result = items.join(', ');
+                    }
                 }
             }
             
