@@ -30,7 +30,7 @@
                     <label for="parenthesis">Add Parenthesis</label>
                 </div>
             </div>
-            <div class="radio-option">
+            <div class="format-sql">
                 <input type="checkbox" id="formatSQL" name="formatOption" value="sql">
                 <label for="formatSQL">Format SQL</label>
             </div>
@@ -40,7 +40,7 @@
         <div class="output-container">
             <div class="box">
                 <textarea id="output" readonly></textarea>
-                <button class="copy-btn" onclick="copyToClipboard()">
+                <button id="copyButton" class="copy-btn">
                     <i class="fa-solid fa-copy"></i>
                 </button>
                 <div class="copy-popup">Text copied</div>
