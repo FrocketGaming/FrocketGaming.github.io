@@ -364,7 +364,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
     visibility: hidden;
     transition: all 0.5s cubic-bezier(0.7, 0, 0.3, 1);
     z-index: 999;
-    padding-left: 40px;
+    padding-left: 30px;
     padding-top: 40px;
 }
 
@@ -394,7 +394,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
     font-size: 2rem;
     color: #fff;
     text-decoration: none;
-    margin: 30px 0;
+    margin: 20px 0;
     transition: all 0.3s ease;
     cursor: pointer;
     position: relative;
@@ -475,3 +475,78 @@ input[type="checkbox"]:focus:ring-offset-0 {
 .submenu-trigger.active .submenu a:nth-child(3) {
     transition-delay: 0.3s;
 } 
+
+/* Menu Media CSS */
+@media screen and (max-width: 768px) {
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+
+    .logo {
+        font-size: 1.2rem;
+        margin-left: 10px;
+    }
+
+    .menu-overlay {
+        width: 100%;
+        padding-left: 20px;
+        padding-top: 60px;
+    }
+
+    .menu-content a, .submenu-trigger {
+        font-size: 2rem;
+        margin: 20px 0;
+    }
+
+    .submenu a {
+        font-size: 1.5rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .navbar {
+        padding: 0.5rem;
+    }
+
+    .logo {
+        font-size: 1rem;
+        margin-left: 5px;
+    }
+
+    .menu-overlay {
+        padding-left: 15px;
+        padding-top: 50px;
+    }
+
+    .menu-content a, .submenu-trigger {
+        font-size: 1.8rem;
+        margin: 15px 0;
+    }
+
+    .submenu a {
+        font-size: 1.3rem;
+    }
+}
+.hamburger {
+    width: 30px;
+    height: 20px;
+}
+
+@media screen and (max-width: 768px) {
+    .hamburger {
+        width: 25px;
+        height: 18px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .hamburger {
+        width: 20px;
+        height: 15px;
+    }
+}
+@media screen and (max-width: 768px) {
+    .menu-overlay {
+        width: 100%;
+    }
+}
