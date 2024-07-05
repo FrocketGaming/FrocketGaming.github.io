@@ -96,7 +96,7 @@
         input[type="checkbox"]:focus {
             box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
         }
-        .format-btn {
+        .format-btn, .clear-bnt {
             margin-top: 10px;
             padding: 8px 16px;
             background-color: #74A12E;
@@ -112,6 +112,10 @@
             color: #1a1a1a;
             outline: none;
             box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+        }
+        .clear-bnt {
+            background-color: #fb6c6c;
+            margin-left: 10px;
         }
         .copy-btn {
             position: absolute;
@@ -199,7 +203,7 @@
                 <label for="formatSQL">Format SQL</label>
             </div>
             <button class="format-btn" onclick="formatInput()">Format</button>
-            <button class="clear-bnt" onclick="clearInput()">Clear</button>
+            <button class="clear-bnt" onclick="clearOutput()">Clear</button>
         </div>
         <div class="output-container">
             <div class="box">
@@ -299,6 +303,10 @@
             .join('\n');
 
         return formattedQuery;
+    }
+
+        function clearOutput() {
+        document.getElementById('output').value = '';
     }
 
         function copyToClipboard() {
