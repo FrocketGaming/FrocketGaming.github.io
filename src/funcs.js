@@ -3,14 +3,14 @@ const parenthesisCheckbox = document.getElementById('parenthesis');
 const formatSQLCheckbox = document.getElementById('formatSQL');
 const options = document.querySelector('.options');
 const output = document.getElementById('output');
-const copyButton = document.getElementById('copyButton'); // Assume you have a button with this ID
+const copyButton = document.getElementById('copyButton'); 
 const popup = document.querySelector('.copy-popup');
 
 // Function to update the copy button state
 function updateCopyButtonState() {
     if (output.value.trim() === '') {
         copyButton.disabled = true;
-        copyButton.classList.add('disabled'); // Add a CSS class for styling if needed
+        copyButton.classList.add('disabled');
     } else {
         copyButton.disabled = false;
         copyButton.classList.remove('disabled');
@@ -136,3 +136,32 @@ function copyToClipboard() {
 
 // Add click event listener to the copy button
 copyButton.addEventListener('click', copyToClipboard);
+
+// // Menu
+// document.addEventListener('DOMContentLoaded', () => {
+//     const menuToggle = document.querySelector('.menu-toggle');
+//     const navLinks = document.querySelector('.nav-links');
+
+//     menuToggle.addEventListener('click', () => {
+//         navLinks.classList.toggle('active');
+//         menuToggle.classList.toggle('active');
+//     });
+
+//     // Close menu when a link is clicked
+//     document.querySelectorAll('.nav-links a').forEach(link => {
+//         link.addEventListener('click', () => {
+//             navLinks.classList.remove('active');
+//             menuToggle.classList.remove('active');
+//         });
+//     });
+
+//     // Change navbar background on scroll
+//     window.addEventListener('scroll', () => {
+//         const navbar = document.querySelector('.navbar');
+//         if (window.scrollY > 50) {
+//             navbar.style.backgroundColor = 'rgba(42, 42, 42, 1)';
+//         } else {
+//             navbar.style.backgroundColor = 'rgba(42, 42, 42, 0.8)';
+//         }
+//     });
+// });

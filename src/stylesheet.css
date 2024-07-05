@@ -9,32 +9,36 @@ body {
     margin: 0;
     padding: 0 20px 20px 20px;
     box-sizing: border-box;
+    /* padding-top: 70px; */
 }
+
 .raleway-fnt {
     font-family: "Raleway", sans-serif;
     font-optical-sizing: auto;
     font-weight: 300;
     font-style: normal;
-  }
+}
+
 h1 {
     font-size: 2.5em;
     margin-bottom: 1px;
-    text-align: center;
     color: #fff;
     text-shadow: 0 0 3px #74A12E;
 }
+
 p {
     font-size: .9em;
     margin-bottom: 15px;
-    text-align: center;
     color: #fff;
 }
+
 sub {
     font-size: 1em;
     /* margin-bottom: 5px; */
     text-align: center;
     color: #c6ee86;
 }
+
 .container {
     display: flex;
     justify-content: center;
@@ -42,10 +46,13 @@ sub {
     max-width: 100%;
     height: 70vh;
 }
-.input-container, .output-container {
+
+.input-container,
+.output-container {
     width: 40%;
     margin: 0 10px;
 }
+
 .box {
     height: 50vh;
     background-color: #2a2a2a;
@@ -55,10 +62,12 @@ sub {
     box-shadow: 0 0 4px #333333;
     transition: border-color 0.3s, box-shadow 0.3s;
 }
+
 .box:focus-within {
     border-color: #c6ee86;
     box-shadow: 0 0 15px #74A12E;
 }
+
 textarea {
     width: 100%;
     height: 100%;
@@ -68,22 +77,26 @@ textarea {
     resize: none;
     font-size: 16px;
     outline: none;
-    font-family: 'Raleway', sans-serif; 
+    font-family: 'Raleway', sans-serif;
     font-weight: 400;
 }
+
 textarea:focus {
     outline: none;
 }
+
 .options {
     margin-top: 10px;
     display: flex;
     align-items: center;
 }
+
 .option {
     margin-right: 20px;
     display: flex;
     align-items: center;
 }
+
 input[type="checkbox"] {
     margin-right: 5px;
     appearance: none;
@@ -96,16 +109,19 @@ input[type="checkbox"] {
     cursor: pointer;
     transition: background-color 0.3s;
 }
+
 input[type="checkbox"]:checked {
     background-color: #c6ee86;
     border: 1px solid #74A12E;
     outline: none;
 }
+
 input[type="checkbox"]:focus:ring-offset-0 {
     box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
     outline: none;
 }
-.format-btn  {
+
+.format-btn {
     margin-top: 10px;
     padding: 8px 16px;
     background-color: #74A12E;
@@ -116,12 +132,14 @@ input[type="checkbox"]:focus:ring-offset-0 {
     cursor: pointer;
     transition: background-color 0.3s, box-shadow 0.3s;
 }
+
 .format-btn:hover {
     background-color: #c6ee86;
     color: #1a1a1a;
     outline: none;
     box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
 }
+
 .clear-bnt {
     margin-top: 10px;
     padding: 8px 16px;
@@ -133,27 +151,32 @@ input[type="checkbox"]:focus:ring-offset-0 {
     cursor: pointer;
     transition: background-color 0.3s, box-shadow 0.3s;
 }
+
 .clear-bnt:hover {
     background-color: #fb6c6c;
 }
+
 .copy-btn {
     position: absolute;
     top: 10px;
     right: 10px;
     background: none;
     border: none;
-    color: #74A12E ;
+    color: #74A12E;
     cursor: pointer;
     font-size: 18px;
     transition: color 0.3s;
 }
+
 .copy-btn:hover {
     color: #c6ee86;
     outline: none;
 }
+
 .output-container {
     position: relative;
 }
+
 .copy-popup {
     position: absolute;
     top: 40px;
@@ -166,38 +189,48 @@ input[type="checkbox"]:focus:ring-offset-0 {
     opacity: 0;
     transition: opacity 0.3s;
 }
+
 .copy-popup.show {
     opacity: 1;
 }
+
 .format-sql {
     margin-top: 10px;
     display: flex;
     align-items: center;
 }
+
 .disabled {
     opacity: 0.5;
     pointer-events: none;
 }
+
 @media (max-width: 768px) {
     .container {
         flex-direction: column;
         align-items: center;
         height: auto;
     }
-    .input-container, .output-container {
+
+    .input-container,
+    .output-container {
         width: 80%;
         margin: 0 0 20px 0;
     }
+
     .box {
         height: 30vh;
     }
 }
+
 @media (max-width: 1100px) {
     .container {
         flex-direction: column;
         align-items: center;
     }
-    .input-container, .output-container {
+
+    .input-container,
+    .output-container {
         width: 100%;
         max-width: 500px;
         margin: 0 0 20px 0;
@@ -208,23 +241,156 @@ input[type="checkbox"]:focus:ring-offset-0 {
     body {
         padding: 10px;
     }
+
     h1 {
         font-size: 2em;
     }
+
     sub {
         font-size: 0.9em;
     }
+
     .box {
         height: 200px;
     }
+
     .options {
         flex-wrap: wrap;
     }
+
     .option {
         margin-bottom: 10px;
     }
-    .format-btn, .clear-bnt {
+
+    .format-btn,
+    .clear-bnt {
         width: 100%;
         margin-bottom: 10px;
     }
 }
+
+/* menu
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: rgba(42, 42, 42, 0.8);
+    backdrop-filter: blur(10px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #c6ee86;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.nav-links {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.nav-links li {
+    list-style: none;
+    margin-left: 30px;
+}
+
+.nav-links a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -5px;
+    left: 0;
+    background-color: #c6ee86;
+    transition: width 0.3s ease;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+.menu-toggle {
+    display: none;
+    cursor: pointer;
+}
+
+.bar {
+    width: 25px;
+    height: 3px;
+    background-color: #c6ee86;
+    transition: all 0.3s ease;
+}
+
+.bar::before,
+.bar::after {
+    content: '';
+    position: absolute;
+    width: 25px;
+    height: 3px;
+    background-color: #c6ee86;
+    transition: all 0.3s ease;
+}
+
+.bar::before {
+    transform: translateY(-8px);
+}
+
+.bar::after {
+    transform: translateY(8px);
+}
+
+@media screen and (max-width: 768px) {
+    .nav-links {
+        position: fixed;
+        right: -100%;
+        top: 70px;
+        flex-direction: column;
+        background-color: rgba(42, 42, 42, 0.9);
+        width: 100%;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .nav-links.active {
+        right: 0;
+    }
+
+    .nav-links li {
+        margin: 15px 0;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .menu-toggle.active .bar {
+        background-color: transparent;
+    }
+
+    .menu-toggle.active .bar::before {
+        transform: rotate(45deg);
+    }
+
+    .menu-toggle.active .bar::after {
+        transform: rotate(-45deg);
+    }
+} */
