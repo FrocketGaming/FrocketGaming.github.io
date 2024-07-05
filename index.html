@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Txt Formatter (for SQL)</title>
+    <title>QoL Tools</title>
     <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="./src/stylesheet.css">
@@ -15,17 +15,33 @@
 </head>
 
 <body class="raleway-fnt">
-    <!-- <nav class="navbar">
-        <div class="logo">TOOLS</div>
-        <ul class="nav-links">
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#txt_formatter">Txt Format</a></li>
-        </ul>
-        <div class="menu-toggle">
-            <div class="bar"></div>
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="menu-toggle">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="logo">QoL Tools</div>
         </div>
-    </nav> -->
+    </nav>
+    <div class="menu-overlay">
+        <div class="menu-content">
+            <a href="#home">home</a>
+            <div class="submenu-trigger">
+                tools
+                <span class="arrow">&#9656;</span>
+                <div class="submenu">
+                    <a href="#tool1">txt formatter</a>
+                    <a href="#tool2">json formatter</a>
+                </div>
+            </div>
+            <a href="#about">about</a>
+            <!-- <a href="#contact">contact</a> -->
+        </div>
+    </div>
     <h1>txt formatter</h1>
     <p>You can add quotes, parenthesis or format without to create comma separated values.</br>
         If you input a SQL query then you can prettify it with the Format SQL option.</p>

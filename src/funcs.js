@@ -137,31 +137,41 @@ function copyToClipboard() {
 // Add click event listener to the copy button
 copyButton.addEventListener('click', copyToClipboard);
 
-// // Menu
-// document.addEventListener('DOMContentLoaded', () => {
-//     const menuToggle = document.querySelector('.menu-toggle');
-//     const navLinks = document.querySelector('.nav-links');
+// Menu
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.querySelector('.menu-toggle');
+    const menuOverlay = document.querySelector('.menu-overlay');
+    const submenuTrigger = document.querySelector('.submenu-trigger');
 
-//     menuToggle.addEventListener('click', () => {
-//         navLinks.classList.toggle('active');
-//         menuToggle.classList.toggle('active');
-//     });
+    menuToggle.addEventListener('click', () => {
+        menuToggle.classList.toggle('active');
+        menuOverlay.classList.toggle('active');
+        document.body.classList.toggle('menu-open');
+    });
 
-//     // Close menu when a link is clicked
-//     document.querySelectorAll('.nav-links a').forEach(link => {
-//         link.addEventListener('click', () => {
-//             navLinks.classList.remove('active');
-//             menuToggle.classList.remove('active');
-//         });
-//     });
+    // Toggle submenu
+    submenuTrigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        submenuTrigger.classList.toggle('active');
+    });
 
-//     // Change navbar background on scroll
-//     window.addEventListener('scroll', () => {
-//         const navbar = document.querySelector('.navbar');
-//         if (window.scrollY > 50) {
-//             navbar.style.backgroundColor = 'rgba(42, 42, 42, 1)';
-//         } else {
-//             navbar.style.backgroundColor = 'rgba(42, 42, 42, 0.8)';
-//         }
-//     });
-// });
+    // Close menu when a link is clicked
+    document.querySelectorAll('.menu-content a:not(.submenu a)').forEach(link => {
+        link.addEventListener('click', () => {
+            menuToggle.classList.remove('active');
+            menuOverlay.classList.remove('active');
+            document.body.classList.remove('menu-open');
+            submenuTrigger.classList.remove('active');
+        });
+    });
+
+    // Change navbar background on scroll
+    window.addEventListener('scroll', () => {
+        const navbar = document.querySelector('.navbar');
+        if (window.scrollY > 50) {
+            navbar.style.backgroundColor = 'rgba(18, 18, 18, 0.9)';
+        } else {
+            navbar.style.backgroundColor = 'transparent';
+        }
+    });
+});
