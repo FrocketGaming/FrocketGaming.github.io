@@ -99,9 +99,11 @@ input[type="checkbox"] {
 input[type="checkbox"]:checked {
     background-color: #c6ee86;
     border: 1px solid #74A12E;
+    outline: none;
 }
 input[type="checkbox"]:focus {
     box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+    outline: none;
 }
 .format-btn  {
     margin-top: 10px;
