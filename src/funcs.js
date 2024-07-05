@@ -137,7 +137,7 @@ function copyToClipboard() {
 // Add click event listener to the copy button
 copyButton.addEventListener('click', copyToClipboard);
 
-// // Menu =========
+// Menu =========
 // document.addEventListener('DOMContentLoaded', () => {
 //     const menuToggle = document.querySelector('.menu-toggle');
 //     const menuOverlay = document.querySelector('.menu-overlay');
