@@ -109,7 +109,7 @@ function formatSQLQuery(query) {
 }
 
 function clearOutput() {
-    input.value = '';
+    input_text.value = '';
     output.value = '';
     updateCopyButtonState(); // Update copy button state after clearing
 }
