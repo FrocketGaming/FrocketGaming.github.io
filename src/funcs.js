@@ -5,6 +5,7 @@ const options = document.querySelector('.options');
 const output = document.getElementById('output');
 const copyButton = document.getElementById('copyButton'); 
 const popup = document.querySelector('.copy-popup');
+const input = document.getElementById('input').value;
 
 // Function to update the copy button state
 function updateCopyButtonState() {
@@ -58,7 +59,7 @@ function enableCheckboxes() {
 }
 
 function formatInput() {
-    const input = document.getElementById('input').value;
+    // const input = document.getElementById('input').value;
     const quote = quoteCheckbox.checked;
     const parenthesis = parenthesisCheckbox.checked;
     const formatSQL = formatSQLCheckbox.checked;
@@ -108,7 +109,7 @@ function formatSQLQuery(query) {
 }
 
 function clearOutput() {
-    const input = document.getElementById('input').value;
+    // const input = document.getElementById('input').value;
     input.value = '';
     output.value = '';
     updateCopyButtonState(); // Update copy button state after clearing
