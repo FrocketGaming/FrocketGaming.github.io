@@ -2,6 +2,7 @@ const quoteCheckbox = document.getElementById('quote');
 const parenthesisCheckbox = document.getElementById('parenthesis');
 const formatSQLCheckbox = document.getElementById('formatSQL');
 const options = document.querySelector('.options');
+const input_text = document.getElementById('input');
 const output = document.getElementById('output');
 const copyButton = document.getElementById('copyButton'); 
 const popup = document.querySelector('.copy-popup');
@@ -108,8 +109,7 @@ function formatSQLQuery(query) {
 }
 
 function clearOutput() {
-    const input = document.getElementById('input').value;
-    input = '';
+    input.value = '';
     output.value = '';
     updateCopyButtonState(); // Update copy button state after clearing
 }
