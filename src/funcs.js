@@ -108,6 +108,7 @@ function formatSQLQuery(query) {
 }
 
 function clearOutput() {
+    tempTextArea.value = '';
     output.value = '';
     updateCopyButtonState(); // Update copy button state after clearing
 }
