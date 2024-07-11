@@ -108,7 +108,8 @@ function formatSQLQuery(query) {
 }
 
 function clearOutput() {
-    tempTextArea.value = '';
+    const input = document.getElementById('input').value;
+    input.value = '';
     output.value = '';
     updateCopyButtonState(); // Update copy button state after clearing
 }
