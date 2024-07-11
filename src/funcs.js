@@ -5,7 +5,7 @@ const options = document.querySelector('.options');
 const output = document.getElementById('output');
 const copyButton = document.getElementById('copyButton'); 
 const popup = document.querySelector('.copy-popup');
-const input = document.getElementById('input').value;
+const input = document.getElementById('input');
 
 // Function to update the copy button state
 function updateCopyButtonState() {
