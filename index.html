@@ -4,38 +4,248 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ML Algorithm Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
     <nav>
-        <ul>
-            <li><a href="index.html" class="active">Algorithms</a></li>
-            <li><a href="metrics.html">Evaluation Metrics</a></li>
-        </ul>
+        <div class="container">
+            <h1>ML Algorithm Explorer</h1>
+            <ul>
+                <li><a href="index.html" class="active">Algorithms</a></li>
+                <li><a href="metrics.html">Evaluation Metrics</a></li>
+            </ul>
+        </div>
     </nav>
 
-    <main>
+    <main class="container">
         <div class="card-container">
             <div class="card">
-                <h2>Decision Trees</h2>
-                <p class="type">Classification & Regression</p>
+                <div class="card-header">
+                    <h2>Decision Trees</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                    <span class="tag regression">Regression</span>
+                </div>
                 <p>A tree-like model of decisions based on features.</p>
-                <h3>Pros:</h3>
-                <ul>
-                    <li>Easy to understand and interpret</li>
-                    <li>Requires little data preparation</li>
-                </ul>
-                <h3>Cons:</h3>
-                <ul>
-                    <li>Can create overly complex trees</li>
-                    <li>Can be unstable</li>
-                </ul>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Easy to understand and interpret</li>
+                        <li>Requires little data preparation</li>
+                        <li>Can handle both numerical and categorical data</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Can create overly complex trees</li>
+                        <li>Can be unstable</li>
+                        <li>Prone to overfitting</li>
+                    </ul>
+                </div>
                 <div class="types">
-                    <button onclick="showPopup('cart')">CART</button>
-                    <button onclick="showPopup('random-forest')">Random Forest</button>
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="cart">CART</button>
+                    <button class="type-btn" data-type="random-forest">Random Forest</button>
+                    <button class="type-btn" data-type="id3">ID3</button>
                 </div>
             </div>
-            <!-- Add more algorithm cards here -->
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Support Vector Machines (SVM)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>A model that finds the optimal hyperplane to separate classes.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Effective in high-dimensional spaces</li>
+                        <li>Versatile through different kernel functions</li>
+                        <li>Memory efficient</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Computationally intensive for large datasets</li>
+                        <li>Sensitive to feature scaling</li>
+                        <li>Difficult to interpret</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="linear-svm">Linear SVM</button>
+                    <button class="type-btn" data-type="kernel-svm">Kernel SVM</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Neural Networks</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>A model inspired by biological neural networks in the brain.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Can model complex non-linear relationships</li>
+                        <li>Highly flexible and adaptable</li>
+                        <li>Can handle large amounts of data</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Requires large amounts of data</li>
+                        <li>Computationally intensive</li>
+                        <li>Prone to overfitting</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="mlp">Multilayer Perceptron</button>
+                    <button class="type-btn" data-type="cnn">Convolutional Neural Network</button>
+                    <button class="type-btn" data-type="rnn">Recurrent Neural Network</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>K-Nearest Neighbors (KNN)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>A model that classifies based on the majority class of nearest neighbors.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Simple and easy to implement</li>
+                        <li>No assumptions about data distribution</li>
+                        <li>Can be used for classification and regression</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Computationally expensive for large datasets</li>
+                        <li>Sensitive to irrelevant features</li>
+                        <li>Requires feature scaling</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="knn-classification">KNN Classification</button>
+                    <button class="type-btn" data-type="knn-regression">KNN Regression</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Naive Bayes</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                </div>
+                <p>A probabilistic classifier based on Bayes' theorem.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Simple and fast</li>
+                        <li>Works well with high-dimensional data</li>
+                        <li>Requires little training data</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Assumes feature independence</li>
+                        <li>Sensitive to feature selection</li>
+                        <li>May be outperformed by more sophisticated models</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="gaussian-nb">Gaussian NB</button>
+                    <button class="type-btn" data-type="multinomial-nb">Multinomial NB</button>
+                    <button class="type-btn" data-type="bernoulli-nb">Bernoulli NB</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Gradient Boosting</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>An ensemble method that builds models sequentially to correct previous errors.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>High performance</li>
+                        <li>Handles mixed data types well</li>
+                        <li>Robust to outliers</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Can be prone to overfitting</li>
+                        <li>Computationally intensive</li>
+                        <li>Requires careful tuning</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="xgboost">XGBoost</button>
+                    <button class="type-btn" data-type="lightgbm">LightGBM</button>
+                    <button class="type-btn" data-type="catboost">CatBoost</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Clustering Algorithms</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag unsupervised">Unsupervised</span>
+                </div>
+                <p>Algorithms that group similar data points together.</p>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Discover hidden patterns</li>
+                        <li>No labeled data required</li>
+                        <li>Useful for data exploration</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Results can be subjective</li>
+                        <li>May be sensitive to initial conditions</li>
+                        <li>Difficult to determine optimal number of clusters</li>
+                    </ul>
+                </div>
+                <div class="types">
+                    <h3>Types:</h3>
+                    <button class="type-btn" data-type="k-means">K-Means</button>
+                    <button class="type-btn" data-type="dbscan">DBSCAN</button>
+                    <button class="type-btn" data-type="hierarchical">Hierarchical</button>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -43,12 +253,13 @@
         <div class="popup-content">
             <h2 id="popup-title"></h2>
             <p id="popup-description"></p>
-            <button onclick="toggleAdvanced()">Show Advanced Description</button>
-            <p id="popup-advanced" style="display: none;"></p>
-            <button onclick="closePopup()">Close</button>
+            <button id="toggle-advanced" class="btn">Show Advanced Description</button>
+            <p id="popup-advanced" class="hidden"></p>
+            <button id="close-popup" class="btn">Close</button>
         </div>
     </div>
 
-    <script src="/src/script.js"></script>
+    <script src="/src/scripts.js"></script>
 </body>
 </html>
+        

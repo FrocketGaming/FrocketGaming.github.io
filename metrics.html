@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Evaluation Metrics Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css">
+    <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <h1>ML Evaluation Metrics Explorer</h1>
+            <ul>
+                <li><a href="index.html">Algorithms</a></li>
+                <li><a href="metrics.html" class="active">Evaluation Metrics</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="card-container">
+            <!-- Existing cards (Accuracy, Precision, Recall) -->
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>F1 Score</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                </div>
+                <p>The harmonic mean of precision and recall, providing a balanced measure of the model's performance.</p>
+                <div class="formula">
+                    <h3>Formula:</h3>
+                    <div class="katex">F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall}</div>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Balances precision and recall</li>
+                        <li>Useful for imbalanced datasets</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Doesn't account for true negatives</li>
+                        <li>May not be suitable when false positives and false negatives have very different costs</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>ROC AUC</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                </div>
+                <p>Area Under the Receiver Operating Characteristic curve, measuring the model's ability to distinguish between classes.</p>
+                <div class="formula">
+                    <h3>Interpretation:</h3>
+                    <p>AUC of 0.5 indicates random guessing, while 1.0 indicates perfect classification.</p>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Insensitive to class imbalance</li>
+                        <li>Provides a single score for model comparison</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>May be too optimistic for highly imbalanced datasets</li>
+                        <li>Doesn't provide information about model calibration</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Mean Squared Error (MSE)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>The average of the squared differences between predicted and actual values.</p>
+                <div class="formula">
+                    <h3>Formula:</h3>
+                    <div class="katex">MSE = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2</div>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Penalizes larger errors more heavily</li>
+                        <li>Always positive, making it easy to interpret</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Sensitive to outliers</li>
+                        <li>Not in the same unit as the target variable</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>R-squared (R²)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>The proportion of the variance in the dependent variable that is predictable from the independent variable(s).</p>
+                <div class="formula">
+                    <h3>Formula:</h3>
+                    <div class="katex">R^2 = 1 - \frac{\sum_{i=1}^n (y_i - \hat{y}_i)^2}{\sum_{i=1}^n (y_i - \bar{y})^2}</div>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Easy to interpret (ranges from 0 to 1)</li>
+                        <li>Indicates how well the model fits the data</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Can increase with the addition of irrelevant variables</li>
+                        <li>Doesn't indicate whether the model's predictions are biased</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Mean Absolute Error (MAE)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag regression">Regression</span>
+                </div>
+                <p>The average of the absolute differences between predicted and actual values.</p>
+                <div class="formula">
+                    <h3>Formula:</h3>
+                    <div class="katex">MAE = \frac{1}{n} \sum_{i=1}^n |y_i - \hat{y}_i|</div>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Less sensitive to outliers than MSE</li>
+                        <li>In the same unit as the target variable</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Doesn't penalize large errors as heavily as MSE</li>
+                        <li>May not be suitable when large errors are particularly undesirable</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Log Loss (Cross-Entropy Loss)</h2>
+                </div>
+                <div class="tags">
+                    <span class="tag classification">Classification</span>
+                </div>
+                <p>Measures the performance of a classification model where the prediction is a probability value between 0 and 1.</p>
+                <div class="formula">
+                    <h3>Formula:</h3>
+                    <div class="katex">LogLoss = -\frac{1}{n} \sum_{i=1}^n [y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i)]</div>
+                </div>
+                <div class="pros">
+                    <h3>Pros:</h3>
+                    <ul>
+                        <li>Penalizes confident misclassifications more heavily</li>
+                        <li>Suitable for multi-class classification</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons:</h3>
+                    <ul>
+                        <li>Can be sensitive to outliers</li>
+                        <li>Less intuitive to interpret than accuracy</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js"></script>
+    <script src="/src/metrics_script.js"></script>
+</body>
+</html>
