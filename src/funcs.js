@@ -109,7 +109,6 @@ function formatSQLQuery(query) {
 
 function clearOutput() {
     output.value = '';
-    document.getElementById("input").value = '';
     updateCopyButtonState(); // Update copy button state after clearing
 }
 
