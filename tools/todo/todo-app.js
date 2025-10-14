@@ -34,7 +34,66 @@ class TodoApp {
     init() {
         this.loadTodos();
         this.setupEventListeners();
+        this.setupTooltip();
         this.render();
+    }
+
+    setupTooltip() {
+        // Create tooltip element
+        this.tooltip = document.createElement('div');
+        this.tooltip.className = 'description-tooltip';
+        document.body.appendChild(this.tooltip);
+
+        // Add event delegation for description icons
+        document.addEventListener('mouseover', (e) => {
+            const icon = e.target.closest('.description-icon');
+            if (icon) {
+                const description = icon.getAttribute('data-tooltip');
+                if (description) {
+                    this.showTooltip(icon, description);
+                }
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const icon = e.target.closest('.description-icon');
+            if (icon) {
+                this.hideTooltip();
+            }
+        });
+    }
+
+    showTooltip(element, text) {
+        this.tooltip.textContent = text;
+        this.tooltip.classList.add('visible');
+
+        // Position tooltip above the icon
+        const rect = element.getBoundingClientRect();
+        const tooltipRect = this.tooltip.getBoundingClientRect();
+
+        // Center horizontally on the icon
+        let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+        // Position above the icon
+        let top = rect.top - tooltipRect.height - 10;
+
+        // Keep tooltip within viewport bounds
+        const padding = 10;
+        if (left < padding) left = padding;
+        if (left + tooltipRect.width > window.innerWidth - padding) {
+            left = window.innerWidth - tooltipRect.width - padding;
+        }
+        if (top < padding) {
+            // If no room above, show below instead
+            top = rect.bottom + 10;
+        }
+
+        this.tooltip.style.left = `${left}px`;
+        this.tooltip.style.top = `${top}px`;
+    }
+
+    hideTooltip() {
+        this.tooltip.classList.remove('visible');
     }
 
     loadTodos() {
@@ -434,7 +493,7 @@ class TodoApp {
                        onchange="todoApp.toggleTodo(${todo.id})">
                 <span class="todo-text">${this.escapeHtml(todo.text)}</span>
                 ${hasDescription ? `
-                    <span class="description-icon" data-tooltip="${this.escapeHtml(todo.description)}">
+                    <span class="description-icon" data-tooltip="${this.escapeHtml(todo.description.slice(0, 1000))}${todo.description.length > 1000 ? '...' : ''}">
                         <i class="fa-solid fa-circle-info"></i>
                     </span>
                 ` : ''}
