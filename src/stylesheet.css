@@ -474,6 +474,10 @@ input[type="checkbox"]:focus:ring-offset-0 {
 
 .submenu-trigger.active .submenu a:nth-child(3) {
     transition-delay: 0.3s;
+}
+
+.submenu-trigger.active .submenu a:nth-child(4) {
+    transition-delay: 0.4s;
 } 
 
 /* Menu Media CSS */
