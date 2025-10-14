@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List - QoL Tools</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="todo-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="menu-toggle">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="logo">QoL Tools</div>
+        </div>
+    </nav>
+    <div class="menu-overlay">
+        <div class="menu-content">
+            <a href="../../index.html">home</a>
+            <div class="submenu-trigger">
+                tools
+                <span class="arrow">&#9656;</span>
+                <div class="submenu">
+                    <a href="../../index.html">txt formatter</a>
+                    <a href="index.html">to-do list</a>
+                    <a href="../csv-viewer/index.html">csv viewer</a>
+                    <a href="../regex-tester/index.html">regex tester</a>
+                </div>
+            </div>
+            <a href="#about">about</a>
+        </div>
+    </div>
+
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-text">
+                <h1>to-do list</h1>
+                <p>Manage your tasks with this simple to-do list. Your data is saved in browser cookies.</p>
+            </div>
+            <div class="header-actions">
+                <button id="exportBtn" class="format-btn">
+                    <i class="fa-solid fa-download"></i> Export
+                </button>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                <button id="importBtn" class="format-btn">
+                    <i class="fa-solid fa-upload"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="todo-container">
+        <div class="input-section">
+            <input type="text" id="todoInput" placeholder="Add a new task..." />
+            <button id="calendarBtn" class="calendar-btn" title="Set deadline">
+                <i class="fa-solid fa-calendar"></i>
+            </button>
+            <input type="date" id="deadlineInput" class="deadline-input-hidden" />
+            <select id="prioritySelect" class="priority-select">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button id="addBtn" class="format-btn">Add</button>
+        </div>
+
+        <div class="description-toggle-section">
+            <button id="descriptionToggleBtn" class="description-toggle-btn">
+                <i class="fa-solid fa-plus"></i> Add Description (Optional)
+            </button>
+        </div>
+
+        <div class="description-section" id="descriptionSection" style="display: none;">
+            <textarea id="descriptionInput" placeholder="Add task description or notes..."></textarea>
+        </div>
+
+        <div class="stats-section" id="statsSection">
+            <div class="stats-header" onclick="todoApp.toggleStatsSection()">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-chart-simple"></i> Stats Dashboard
+                </h3>
+                <span class="toggle-icon" id="statsToggleIcon">▶</span>
+            </div>
+            <div class="progress-bar-container-always-visible">
+                <div class="progress-bar-label">Overall Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="stats-wrapper" id="statsWrapper" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Tasks</div>
+                        <div class="stat-value" id="statTotal">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Active</div>
+                        <div class="stat-value" id="statActive">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Completed</div>
+                        <div class="stat-value" id="statCompleted">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Completion Rate</div>
+                        <div class="stat-value" id="statCompletionRate">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Overdue</div>
+                        <div class="stat-value stat-overdue" id="statOverdue">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">High Priority</div>
+                        <div class="stat-value" id="statHigh">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="todo-list-wrapper" id="activeSection">
+            <h3 class="section-title">Active Tasks</h3>
+            <ul id="todoList"></ul>
+        </div>
+
+        <div class="completed-section" id="completedSection">
+            <div class="completed-header" onclick="todoApp.toggleCompletedSection()">
+                <h3 class="section-title">
+                    Completed Tasks
+                    <span id="completedCount" class="completed-count">(0)</span>
+                </h3>
+                <span class="toggle-icon" id="toggleIcon">▼</span>
+            </div>
+            <div class="completed-list-wrapper" id="completedWrapper">
+                <ul id="completedList"></ul>
+            </div>
+        </div>
+
+        <div class="clear-section">
+            <button id="clearCompleted" class="clear-bnt">Clear Completed</button>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Task</h3>
+                <span class="modal-close" onclick="todoApp.closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <label for="editTaskInput">Task:</label>
+                <input type="text" id="editTaskInput" class="edit-input">
+
+                <label for="editDescriptionInput">Description (Optional):</label>
+                <textarea id="editDescriptionInput" class="edit-textarea"></textarea>
+
+                <label for="editPrioritySelect">Priority:</label>
+                <select id="editPrioritySelect" class="edit-select">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+
+                <label for="editDeadlineInput">Deadline (Optional):</label>
+                <input type="date" id="editDeadlineInput" class="edit-input">
+            </div>
+            <div class="modal-footer">
+                <button class="format-btn" onclick="todoApp.saveEdit()">Save Changes</button>
+                <button class="clear-bnt" onclick="todoApp.closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../src/funcs.js"></script>
+    <script src="todo-app.js"></script>
+</body>
+
+</html>

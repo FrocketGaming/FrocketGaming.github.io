@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Tester - QoL Tools</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="regex-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="menu-toggle">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="logo">QoL Tools</div>
+        </div>
+    </nav>
+    <div class="menu-overlay">
+        <div class="menu-content">
+            <a href="../../index.html">home</a>
+            <div class="submenu-trigger">
+                tools
+                <span class="arrow">&#9656;</span>
+                <div class="submenu">
+                    <a href="../../index.html">txt formatter</a>
+                    <a href="../todo/index.html">to-do list</a>
+                    <a href="../csv-viewer/index.html">csv viewer</a>
+                    <a href="index.html">regex tester</a>
+                </div>
+            </div>
+            <a href="#about">about</a>
+        </div>
+    </div>
+
+    <h1>regex tester</h1>
+    <p>Test and debug regular expressions in real-time. All processing is done locally in your browser.</p>
+
+    <div class="regex-container">
+        <div class="pattern-section">
+            <div class="pattern-input-wrapper">
+                <label for="regexPattern">Regular Expression:</label>
+                <div class="pattern-input-group">
+                    <span class="pattern-delimiter">/</span>
+                    <input type="text" id="regexPattern" placeholder="Enter regex pattern..." spellcheck="false">
+                    <span class="pattern-delimiter">/</span>
+                    <input type="text" id="regexFlags" class="flags-input" placeholder="flags" maxlength="6" spellcheck="false">
+                </div>
+            </div>
+
+            <div class="flags-section">
+                <label>Flags:</label>
+                <div class="flags-checkboxes">
+                    <div class="flag-option">
+                        <input type="checkbox" id="flagG" value="g">
+                        <label for="flagG">g (global)</label>
+                    </div>
+                    <div class="flag-option">
+                        <input type="checkbox" id="flagI" value="i">
+                        <label for="flagI">i (case-insensitive)</label>
+                    </div>
+                    <div class="flag-option">
+                        <input type="checkbox" id="flagM" value="m">
+                        <label for="flagM">m (multiline)</label>
+                    </div>
+                    <div class="flag-option">
+                        <input type="checkbox" id="flagS" value="s">
+                        <label for="flagS">s (dotAll)</label>
+                    </div>
+                    <div class="flag-option">
+                        <input type="checkbox" id="flagU" value="u">
+                        <label for="flagU">u (unicode)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-display" id="errorDisplay"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-input-wrapper">
+                <label for="testString">Test String:</label>
+                <textarea id="testString" placeholder="Enter text to test against the regex..."></textarea>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-header">
+                <h3>Results</h3>
+                <span id="matchCount" class="match-count">0 matches</span>
+            </div>
+            <div id="highlightedText" class="highlighted-text"></div>
+            <div id="matchDetails" class="match-details"></div>
+        </div>
+
+        <div class="replace-section">
+            <h3>Replace</h3>
+            <div class="replace-controls">
+                <input type="text" id="replaceString" placeholder="Replacement string..." spellcheck="false">
+                <button id="replaceBtn" class="format-btn">Test Replace</button>
+            </div>
+            <div class="replace-result-wrapper">
+                <label>Result:</label>
+                <div id="replaceResult" class="replace-result"></div>
+            </div>
+        </div>
+
+        <div class="examples-section">
+            <h3>Common Patterns</h3>
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="web">Web</button>
+                <button class="category-tab" data-category="programming">Programming</button>
+                <button class="category-tab" data-category="numbers">Numbers</button>
+                <button class="category-tab" data-category="text">Text</button>
+                <button class="category-tab" data-category="files">Files</button>
+                <button class="category-tab" data-category="validation">Validation</button>
+            </div>
+            <div id="patternsContainer" class="examples-grid"></div>
+        </div>
+    </div>
+
+    <script src="../../src/funcs.js"></script>
+    <script src="regex-app.js"></script>
+</body>
+
+</html>

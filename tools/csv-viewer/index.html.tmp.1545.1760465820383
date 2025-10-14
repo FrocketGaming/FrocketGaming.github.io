@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Viewer - QoL Tools</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="csv-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="menu-toggle">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="logo">QoL Tools</div>
+        </div>
+    </nav>
+    <div class="menu-overlay">
+        <div class="menu-content">
+            <a href="../../index.html">home</a>
+            <div class="submenu-trigger">
+                tools
+                <span class="arrow">&#9656;</span>
+                <div class="submenu">
+                    <a href="../../index.html">txt formatter</a>
+                    <a href="../todo/index.html">to-do list</a>
+                    <a href="index.html">csv viewer</a>
+                    <a href="../regex-tester/index.html">regex tester</a>
+                </div>
+            </div>
+            <a href="#about">about</a>
+        </div>
+    </div>
+
+    <h1>csv viewer</h1>
+    <p>Upload a CSV file or paste your CSV data below. All processing is done locally in your browser.</p>
+
+    <div class="csv-container">
+        <div class="input-section">
+            <div class="controls">
+                <label for="delimiter">Delimiter:</label>
+                <select id="delimiter" class="delimiter-select">
+                    <option value="auto">Auto-detect</option>
+                    <option value=",">Comma (,)</option>
+                    <option value=";">Semicolon (;)</option>
+                    <option value="\t">Tab</option>
+                    <option value="|">Pipe (|)</option>
+                </select>
+                <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
+                <button id="uploadBtn" class="format-btn">
+                    <i class="fa-solid fa-upload"></i> Upload CSV
+                </button>
+                <button id="parseBtn" class="format-btn">Parse CSV</button>
+                <button id="clearBtn" class="clear-bnt">Clear</button>
+            </div>
+            <div class="box input-box">
+                <textarea id="csvInput" placeholder="Paste CSV data here...&#10;Example:&#10;Name,Age,City&#10;John,30,New York&#10;Jane,25,Los Angeles"></textarea>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div class="table-controls">
+                <input type="text" id="searchInput" placeholder="Search table..." class="search-input">
+                <button id="exportBtn" class="format-btn">Export CSV</button>
+            </div>
+            <div class="table-wrapper">
+                <div id="tableContainer" class="table-container">
+                    <div class="empty-state">Paste CSV data and click "Parse CSV" to view the table</div>
+                </div>
+            </div>
+            <div id="tableInfo" class="table-info"></div>
+        </div>
+    </div>
+
+    <script src="../../src/funcs.js"></script>
+    <script src="csv-app.js"></script>
+</body>
+
+</html>

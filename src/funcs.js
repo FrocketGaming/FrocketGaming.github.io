@@ -1,60 +1,72 @@
+// Text formatter specific code - only run if elements exist
 const quoteCheckbox = document.getElementById('quote');
 const parenthesisCheckbox = document.getElementById('parenthesis');
 const formatSQLCheckbox = document.getElementById('formatSQL');
 const options = document.querySelector('.options');
 const output = document.getElementById('output');
-const copyButton = document.getElementById('copyButton'); 
+const copyButton = document.getElementById('copyButton');
 const popup = document.querySelector('.copy-popup');
 
 // Function to update the copy button state
 function updateCopyButtonState() {
-    if (output.value.trim() === '') {
-        copyButton.disabled = true;
-        copyButton.classList.add('disabled');
-    } else {
-        copyButton.disabled = false;
-        copyButton.classList.remove('disabled');
+    if (output && copyButton) {
+        if (output.value.trim() === '') {
+            copyButton.disabled = true;
+            copyButton.classList.add('disabled');
+        } else {
+            copyButton.disabled = false;
+            copyButton.classList.remove('disabled');
+        }
     }
 }
 
-// Add event listener to the output box
-output.addEventListener('input', updateCopyButtonState);
+// Add event listener to the output box - only if it exists
+if (output) {
+    output.addEventListener('input', updateCopyButtonState);
+    // Initial call to set the correct state when the page loads
+    updateCopyButtonState();
+}
 
-// Initial call to set the correct state when the page loads
-updateCopyButtonState();
+if (formatSQLCheckbox) {
+    formatSQLCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            options.classList.add('disabled');
+            quoteCheckbox.checked = false;
+            parenthesisCheckbox.checked = false;
+            quoteCheckbox.disabled = true;
+            parenthesisCheckbox.disabled = true;
+        } else {
+            options.classList.remove('disabled');
+            quoteCheckbox.disabled = false;
+            parenthesisCheckbox.disabled = false;
+        }
+    });
+}
 
-formatSQLCheckbox.addEventListener('change', function() {
-    if (this.checked) {
-        options.classList.add('disabled');
-        quoteCheckbox.checked = false;
-        parenthesisCheckbox.checked = false;
-        quoteCheckbox.disabled = true;
-        parenthesisCheckbox.disabled = true;
-    } else {
+if (quoteCheckbox) {
+    quoteCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            formatSQLCheckbox.checked = false;
+            enableCheckboxes();
+        }
+    });
+}
+
+if (parenthesisCheckbox) {
+    parenthesisCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            formatSQLCheckbox.checked = false;
+            enableCheckboxes();
+        }
+    });
+}
+
+function enableCheckboxes() {
+    if (options && quoteCheckbox && parenthesisCheckbox) {
         options.classList.remove('disabled');
         quoteCheckbox.disabled = false;
         parenthesisCheckbox.disabled = false;
     }
-});
-
-quoteCheckbox.addEventListener('change', function() {
-    if (this.checked) {
-        formatSQLCheckbox.checked = false;
-        enableCheckboxes();
-    }
-});
-
-parenthesisCheckbox.addEventListener('change', function() {
-    if (this.checked) {
-        formatSQLCheckbox.checked = false;
-        enableCheckboxes();
-    }
-});
-
-function enableCheckboxes() {
-    options.classList.remove('disabled');
-    quoteCheckbox.disabled = false;
-    parenthesisCheckbox.disabled = false;
 }
 
 function formatInput() {
@@ -135,7 +147,9 @@ function copyToClipboard() {
 }
 
 // Add click event listener to the copy button
-copyButton.addEventListener('click', copyToClipboard);
+if (copyButton) {
+    copyButton.addEventListener('click', copyToClipboard);
+}
 
 // Menu =========
 document.addEventListener('DOMContentLoaded', () => {
@@ -151,17 +165,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toggle submenu
     submenuTrigger.addEventListener('click', (e) => {
+        // Only toggle if clicking on the trigger itself, not on submenu links
+        if (e.target.closest('.submenu a')) {
+            return; // Allow link navigation
+        }
         e.preventDefault();
         submenuTrigger.classList.toggle('active');
     });
 
     // Close menu when a link is clicked
-    document.querySelectorAll('.menu-content a:not(.submenu a)').forEach(link => {
-        link.addEventListener('click', () => {
-            menuToggle.classList.remove('active');
-            menuOverlay.classList.remove('active');
-            document.body.classList.remove('menu-open');
-            submenuTrigger.classList.remove('active');
+    document.querySelectorAll('.menu-content a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            // Don't prevent default for links with actual URLs (not hash links)
+            const href = link.getAttribute('href');
+            if (href && !href.startsWith('#')) {
+                // Allow navigation to occur
+                menuToggle.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                document.body.classList.remove('menu-open');
+                submenuTrigger.classList.remove('active');
+            } else if (href && href.startsWith('#')) {
+                // For hash links, close menu
+                menuToggle.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                document.body.classList.remove('menu-open');
+                submenuTrigger.classList.remove('active');
+            }
         });
     });
 
