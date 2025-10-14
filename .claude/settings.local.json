@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/c/Users/Chris/Dropbox/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
