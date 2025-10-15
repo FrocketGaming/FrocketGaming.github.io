@@ -66,6 +66,23 @@
             <textarea id="descriptionInput" placeholder="Add task description or notes..."></textarea>
         </div>
 
+        <div class="project-options-section">
+            <div class="project-checkbox-wrapper">
+                <label class="project-checkbox-label">
+                    <input type="checkbox" id="projectCheckbox" class="project-checkbox">
+                    <span class="project-checkbox-text">
+                        <i class="fa-solid fa-folder"></i> This is a project
+                    </span>
+                </label>
+            </div>
+            <div class="parent-project-wrapper" id="parentProjectWrapper">
+                <label for="parentProjectSelect" class="parent-project-label">Assign to Project:</label>
+                <select id="parentProjectSelect" class="parent-project-select">
+                    <option value="">None (standalone task)</option>
+                </select>
+            </div>
+        </div>
+
         <div class="stats-section" id="statsSection">
             <div class="stats-header" onclick="todoApp.toggleStatsSection()">
                 <h3 class="section-title">
@@ -155,6 +172,20 @@
 
                 <label for="editDeadlineInput">Deadline (Optional):</label>
                 <input type="date" id="editDeadlineInput" class="edit-input">
+
+                <div class="edit-project-options">
+                    <label class="edit-project-checkbox-label">
+                        <input type="checkbox" id="editProjectCheckbox" class="edit-project-checkbox">
+                        <span><i class="fa-solid fa-folder"></i> This is a project</span>
+                    </label>
+                </div>
+
+                <div id="editParentProjectWrapper">
+                    <label for="editParentProjectSelect">Parent Project (Optional):</label>
+                    <select id="editParentProjectSelect" class="edit-select">
+                        <option value="">None (standalone task)</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="format-btn" onclick="todoApp.saveEdit()">Save Changes</button>
