@@ -334,7 +334,7 @@ class TodoApp {
 
     populateParentProjectDropdown() {
         const dropdown = document.getElementById('parentProjectSelect');
-        const projects = this.todos.filter(t => t.isProject);
+        const projects = this.todos.filter(t => t.isProject && !t.completed);
 
         // Clear existing options except the first "None" option
         dropdown.innerHTML = '<option value="">None (standalone task)</option>';
@@ -607,7 +607,7 @@ class TodoApp {
 
         // Populate parent project dropdown
         const editParentSelect = document.getElementById('editParentProjectSelect');
-        const projects = this.todos.filter(t => t.isProject && t.id !== id); // Exclude current item if it's a project
+        const projects = this.todos.filter(t => t.isProject && t.id !== id && !t.completed); // Exclude current item if it's a project
         editParentSelect.innerHTML = '<option value="">None (standalone task)</option>';
         projects.forEach(project => {
             const option = document.createElement('option');
