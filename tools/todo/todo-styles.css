@@ -49,7 +49,7 @@
     border-radius: 5px;
     color: #ffffff;
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
 }
@@ -100,7 +100,7 @@
     border-radius: 5px;
     color: #ffffff;
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
@@ -130,7 +130,7 @@
     cursor: pointer;
     transition: all 0.3s;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .description-toggle-btn:hover {
@@ -155,7 +155,7 @@
     border-radius: 5px;
     color: #ffffff;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     resize: vertical;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
@@ -285,7 +285,7 @@
     cursor: pointer;
     transition: all 0.3s;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .filter-btn:hover {
@@ -425,7 +425,7 @@
     border-radius: 4px;
     color: #ffffff;
     font-size: 12px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
     transition: border-color 0.3s;
     outline: none;
@@ -489,7 +489,7 @@
     border-radius: 4px;
     color: #ffffff;
     font-size: 12px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
     outline: none;
     z-index: 100;
@@ -553,7 +553,7 @@
     max-width: 300px;
     width: max-content;
     font-size: 13px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     line-height: 1.4;
     pointer-events: none;
     z-index: 10000;
@@ -585,7 +585,7 @@
     cursor: pointer;
     transition: background 0.3s;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .edit-btn:hover {
@@ -602,7 +602,7 @@
     cursor: pointer;
     transition: background 0.3s;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .delete-btn:hover {
@@ -694,7 +694,7 @@
     border-radius: 5px;
     color: #ffffff;
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
     box-sizing: border-box;
@@ -933,7 +933,7 @@
     border-radius: 5px;
     color: #ffffff;
     font-size: 14px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
