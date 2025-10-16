@@ -570,9 +570,8 @@ class TodoApp {
     }
 
     renderFilterButtons() {
-        // Only show active (not completed) projects in filter
-        const projects = this.todos.filter(t => t.isProject && !t.completed);
-        const hasUngrouped = this.todos.some(t => !t.isProject && !t.parentId && !t.completed);
+        const projects = this.todos.filter(t => t.isProject);
+        const hasUngrouped = this.todos.some(t => !t.isProject && !t.parentId);
 
         let html = '<div class="filter-section">';
         html += `<button class="filter-btn ${this.activeFilter === 'all' ? 'active' : ''}" onclick="todoApp.setFilter('all')">All Tasks</button>`;
@@ -1001,9 +1000,6 @@ class TodoApp {
             filteredProjects = projects.filter(p => p.id === this.activeFilter);
             filteredStandalone = [];
         }
-
-        // Filter out completed projects from active display
-        filteredProjects = filteredProjects.filter(p => !p.completed);
 
         // Render active tasks (projects + standalone)
         let activeHtml = filterButtonsHtml;
