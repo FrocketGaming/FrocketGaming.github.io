@@ -1,23 +1,20 @@
-// Cookie management functions
-const CookieManager = {
-    setCookie(name, value, days = 365) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = "expires=" + date.toUTCString();
-        document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/";
+// Storage management functions (using localStorage)
+const StorageManager = {
+    setItem(name, value) {
+        try {
+            localStorage.setItem(name, value);
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+        }
     },
 
-    getCookie(name) {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) {
-                return decodeURIComponent(c.substring(nameEQ.length, c.length));
-            }
+    getItem(name) {
+        try {
+            return localStorage.getItem(name);
+        } catch (e) {
+            console.error('Failed to read from localStorage:', e);
+            return null;
         }
-        return null;
     }
 };
 
@@ -99,7 +96,7 @@ class TodoApp {
     }
 
     loadTodos() {
-        const savedTodos = CookieManager.getCookie('todos');
+        const savedTodos = StorageManager.getItem('todos');
         if (savedTodos) {
             try {
                 this.todos = JSON.parse(savedTodos);
@@ -125,7 +122,7 @@ class TodoApp {
     }
 
     saveTodos() {
-        CookieManager.setCookie('todos', JSON.stringify(this.todos));
+        StorageManager.setItem('todos', JSON.stringify(this.todos));
     }
 
     setupEventListeners() {
@@ -334,7 +331,7 @@ class TodoApp {
 
     populateParentProjectDropdown() {
         const dropdown = document.getElementById('parentProjectSelect');
-        const projects = this.todos.filter(t => t.isProject);
+        const projects = this.todos.filter(t => t.isProject && !t.completed);
 
         // Clear existing options except the first "None" option
         dropdown.innerHTML = '<option value="">None (standalone task)</option>';
@@ -606,7 +603,7 @@ class TodoApp {
 
         // Populate parent project dropdown
         const editParentSelect = document.getElementById('editParentProjectSelect');
-        const projects = this.todos.filter(t => t.isProject && t.id !== id); // Exclude current item if it's a project
+        const projects = this.todos.filter(t => t.isProject && t.id !== id && !t.completed); // Exclude current item if it's a project
         editParentSelect.innerHTML = '<option value="">None (standalone task)</option>';
         projects.forEach(project => {
             const option = document.createElement('option');
