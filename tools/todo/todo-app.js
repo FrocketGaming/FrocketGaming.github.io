@@ -946,7 +946,7 @@ class TodoApp {
         this.populateParentProjectDropdown();
 
         // Get active projects, standalone tasks, and completed tasks
-        const projects = this.getProjectTodos();
+        const projects = this.getProjectTodos().filter(t => !t.completed);
         const standaloneTodos = this.getStandaloneTodos().filter(t => !t.completed);
         const completedTodos = this.getCompletedTodos();
 
