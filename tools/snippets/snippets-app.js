@@ -1,48 +1,12 @@
 /**
  * Snippets App - Code Snippet Manager
- * Stores and organizes code snippets in localStorage
+ * Uses IndexedDB for storage via shared StorageManager
  */
-
-class StorageManager {
-    static SNIPPETS_KEY = 'snippets';
-    static TYPES_KEY = 'snippetTypes';
-
-    static getSnippets() {
-        const data = localStorage.getItem(this.SNIPPETS_KEY);
-        return data ? JSON.parse(data) : [];
-    }
-
-    static saveSnippets(snippets) {
-        localStorage.setItem(this.SNIPPETS_KEY, JSON.stringify(snippets));
-    }
-
-    static getTypes() {
-        const data = localStorage.getItem(this.TYPES_KEY);
-        if (data) {
-            return JSON.parse(data);
-        }
-        // Return default categories
-        const defaults = [
-            { id: 1, name: 'JavaScript' },
-            { id: 2, name: 'Python' },
-            { id: 3, name: 'SQL' },
-            { id: 4, name: 'HTML/CSS' },
-            { id: 5, name: 'Utilities' },
-            { id: 6, name: 'Other' }
-        ];
-        this.saveTypes(defaults);
-        return defaults;
-    }
-
-    static saveTypes(types) {
-        localStorage.setItem(this.TYPES_KEY, JSON.stringify(types));
-    }
-}
 
 class SnippetsApp {
     constructor() {
-        this.snippets = StorageManager.getSnippets();
-        this.types = StorageManager.getTypes();
+        this.snippets = [];
+        this.types = [];
         this.currentSnippet = null;
         this.editingSnippet = null;
         this.editingCategory = null;
@@ -74,14 +38,38 @@ class SnippetsApp {
             'txt': 'plaintext'
         };
 
-        this.init();
+        this.defaultTypes = [
+            { id: 1, name: 'JavaScript' },
+            { id: 2, name: 'Python' },
+            { id: 3, name: 'SQL' },
+            { id: 4, name: 'HTML/CSS' },
+            { id: 5, name: 'Utilities' },
+            { id: 6, name: 'Other' }
+        ];
     }
 
-    init() {
-        this.bindEvents();
-        this.renderCategories();
-        this.renderSnippetsList();
-        this.updateSnippetsCount();
+    async init() {
+        try {
+            // Migrate from localStorage if needed
+            await StorageManager.migrateSnippetsFromLocalStorage();
+
+            // Load data from IndexedDB
+            this.snippets = await StorageManager.getAll('snippets');
+            this.types = await StorageManager.getAll('snippetTypes');
+
+            // If no types exist, create defaults
+            if (this.types.length === 0) {
+                await StorageManager.putAll('snippetTypes', this.defaultTypes);
+                this.types = this.defaultTypes;
+            }
+
+            this.bindEvents();
+            this.renderCategories();
+            this.renderSnippetsList();
+            this.updateSnippetsCount();
+        } catch (error) {
+            console.error('Failed to initialize Snippets App:', error);
+        }
     }
 
     bindEvents() {
@@ -226,7 +214,7 @@ class SnippetsApp {
         this.editingCategory = null;
     }
 
-    saveCategory() {
+    async saveCategory() {
         const input = document.getElementById('categoryNameInput');
         const name = input.value.trim();
 
@@ -235,30 +223,37 @@ class SnippetsApp {
             return;
         }
 
-        if (this.editingCategory) {
-            // Edit existing
-            const category = this.types.find(t => t.id === this.editingCategory);
-            if (category) {
-                const oldName = category.name;
-                category.name = name;
-                // Update snippets with old category name
-                this.snippets.forEach(s => {
-                    if (s.type === oldName) {
-                        s.type = name;
-                    }
-                });
-                StorageManager.saveSnippets(this.snippets);
-            }
-        } else {
-            // Add new
-            const newId = Date.now();
-            this.types.push({ id: newId, name });
-        }
+        try {
+            if (this.editingCategory) {
+                // Edit existing
+                const category = this.types.find(t => t.id === this.editingCategory);
+                if (category) {
+                    const oldName = category.name;
+                    category.name = name;
+                    await StorageManager.put('snippetTypes', category);
 
-        StorageManager.saveTypes(this.types);
-        this.closeCategoryModal();
-        this.renderCategories();
-        this.renderSnippetsList();
+                    // Update snippets with old category name
+                    for (const snippet of this.snippets) {
+                        if (snippet.type === oldName) {
+                            snippet.type = name;
+                            await StorageManager.put('snippets', snippet);
+                        }
+                    }
+                }
+            } else {
+                // Add new
+                const newCategory = { id: Date.now(), name };
+                this.types.push(newCategory);
+                await StorageManager.put('snippetTypes', newCategory);
+            }
+
+            this.closeCategoryModal();
+            this.renderCategories();
+            this.renderSnippetsList();
+        } catch (error) {
+            console.error('Failed to save category:', error);
+            alert('Failed to save category. Please try again.');
+        }
     }
 
     // Snippets List
@@ -376,7 +371,7 @@ class SnippetsApp {
         this.editingSnippet = null;
     }
 
-    saveSnippet() {
+    async saveSnippet() {
         const name = document.getElementById('snippetNameInput').value.trim();
         const type = document.getElementById('snippetTypeSelect').value;
         const extension = document.getElementById('snippetExtSelect').value;
@@ -395,41 +390,47 @@ class SnippetsApp {
 
         const now = new Date().toISOString();
 
-        if (this.editingSnippet) {
-            // Update existing
-            const snippet = this.snippets.find(s => s.id === this.editingSnippet);
-            if (snippet) {
-                snippet.name = name;
-                snippet.type = type;
-                snippet.extension = extension;
-                snippet.description = description;
-                snippet.content = content;
-                snippet.updatedAt = now;
-                this.currentSnippet = snippet;
+        try {
+            if (this.editingSnippet) {
+                // Update existing
+                const snippet = this.snippets.find(s => s.id === this.editingSnippet);
+                if (snippet) {
+                    snippet.name = name;
+                    snippet.type = type;
+                    snippet.extension = extension;
+                    snippet.description = description;
+                    snippet.content = content;
+                    snippet.updatedAt = now;
+                    await StorageManager.put('snippets', snippet);
+                    this.currentSnippet = snippet;
+                }
+            } else {
+                // Create new
+                const newSnippet = {
+                    id: Date.now(),
+                    name,
+                    type,
+                    extension,
+                    description,
+                    content,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                this.snippets.push(newSnippet);
+                await StorageManager.put('snippets', newSnippet);
+                this.currentSnippet = newSnippet;
             }
-        } else {
-            // Create new
-            const newSnippet = {
-                id: Date.now(),
-                name,
-                type,
-                extension,
-                description,
-                content,
-                createdAt: now,
-                updatedAt: now
-            };
-            this.snippets.push(newSnippet);
-            this.currentSnippet = newSnippet;
-        }
 
-        StorageManager.saveSnippets(this.snippets);
-        this.closeModal();
-        this.renderCategories();
-        this.renderSnippetsList();
+            this.closeModal();
+            this.renderCategories();
+            this.renderSnippetsList();
 
-        if (this.currentSnippet) {
-            this.viewSnippet(this.currentSnippet.id);
+            if (this.currentSnippet) {
+                this.viewSnippet(this.currentSnippet.id);
+            }
+        } catch (error) {
+            console.error('Failed to save snippet:', error);
+            alert('Failed to save snippet. Please try again.');
         }
     }
 
@@ -456,40 +457,45 @@ class SnippetsApp {
         this.deleteTarget = null;
     }
 
-    confirmDelete() {
-        if (this.deleteType === 'snippet' && this.deleteTarget) {
-            this.snippets = this.snippets.filter(s => s.id !== this.deleteTarget.id);
-            StorageManager.saveSnippets(this.snippets);
+    async confirmDelete() {
+        try {
+            if (this.deleteType === 'snippet' && this.deleteTarget) {
+                await StorageManager.delete('snippets', this.deleteTarget.id);
+                this.snippets = this.snippets.filter(s => s.id !== this.deleteTarget.id);
 
-            if (this.currentSnippet && this.currentSnippet.id === this.deleteTarget.id) {
-                this.currentSnippet = null;
-                document.getElementById('snippetView').style.display = 'none';
-                document.getElementById('emptyState').style.display = 'flex';
-            }
-        } else if (this.deleteType === 'category' && this.deleteTarget) {
-            const category = this.types.find(t => t.id === this.deleteTarget);
-            if (category) {
-                // Move snippets to "Other"
-                this.snippets.forEach(s => {
-                    if (s.type === category.name) {
-                        s.type = 'Other';
+                if (this.currentSnippet && this.currentSnippet.id === this.deleteTarget.id) {
+                    this.currentSnippet = null;
+                    document.getElementById('snippetView').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'flex';
+                }
+            } else if (this.deleteType === 'category' && this.deleteTarget) {
+                const category = this.types.find(t => t.id === this.deleteTarget);
+                if (category) {
+                    // Move snippets to "Other"
+                    for (const snippet of this.snippets) {
+                        if (snippet.type === category.name) {
+                            snippet.type = 'Other';
+                            await StorageManager.put('snippets', snippet);
+                        }
                     }
-                });
-                StorageManager.saveSnippets(this.snippets);
 
-                // Remove category
-                this.types = this.types.filter(t => t.id !== this.deleteTarget);
-                StorageManager.saveTypes(this.types);
+                    // Remove category
+                    await StorageManager.delete('snippetTypes', this.deleteTarget);
+                    this.types = this.types.filter(t => t.id !== this.deleteTarget);
 
-                if (this.activeCategory === category.name) {
-                    this.activeCategory = null;
+                    if (this.activeCategory === category.name) {
+                        this.activeCategory = null;
+                    }
                 }
             }
-        }
 
-        this.closeDeleteModal();
-        this.renderCategories();
-        this.renderSnippetsList();
+            this.closeDeleteModal();
+            this.renderCategories();
+            this.renderSnippetsList();
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            alert('Failed to delete. Please try again.');
+        }
     }
 
     // Copy to Clipboard
@@ -520,7 +526,7 @@ class SnippetsApp {
     }
 
     // Export/Import
-    exportData() {
+    async exportData() {
         const data = {
             snippets: this.snippets,
             types: this.types,
@@ -538,12 +544,12 @@ class SnippetsApp {
         URL.revokeObjectURL(url);
     }
 
-    importData(event) {
+    async importData(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
 
@@ -551,16 +557,22 @@ class SnippetsApp {
                     // Merge snippets (avoid duplicates by id)
                     const existingIds = new Set(this.snippets.map(s => s.id));
                     const newSnippets = data.snippets.filter(s => !existingIds.has(s.id));
-                    this.snippets = [...this.snippets, ...newSnippets];
-                    StorageManager.saveSnippets(this.snippets);
+
+                    for (const snippet of newSnippets) {
+                        await StorageManager.put('snippets', snippet);
+                        this.snippets.push(snippet);
+                    }
                 }
 
                 if (data.types && Array.isArray(data.types)) {
                     // Merge types (avoid duplicates by name)
                     const existingNames = new Set(this.types.map(t => t.name));
                     const newTypes = data.types.filter(t => !existingNames.has(t.name));
-                    this.types = [...this.types, ...newTypes];
-                    StorageManager.saveTypes(this.types);
+
+                    for (const type of newTypes) {
+                        await StorageManager.put('snippetTypes', type);
+                        this.types.push(type);
+                    }
                 }
 
                 this.renderCategories();
@@ -594,5 +606,9 @@ class SnippetsApp {
     }
 }
 
-// Initialize app
-const snippetsApp = new SnippetsApp();
+// Initialize app when DOM is ready
+let snippetsApp;
+document.addEventListener('DOMContentLoaded', async () => {
+    snippetsApp = new SnippetsApp();
+    await snippetsApp.init();
+});

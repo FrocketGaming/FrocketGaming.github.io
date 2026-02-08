@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="./src/stylesheet.css">
@@ -16,7 +24,13 @@
 
 <body class="raleway-fnt">
     <div class="header">
-        <div class="logo">QoL Tools</div>
+        <div class="header-top">
+            <div class="logo">QoL Tools</div>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
         <nav class="tool-nav">
             <a href="./index.html" class="tool-btn active">txt formatter</a>
             <a href="./tools/todo/index.html" class="tool-btn">to-do list</a>
@@ -59,6 +73,7 @@
             </div>
         </div>
     </div>
+    <script src="./src/theme-manager.js"></script>
     <script src="./src/funcs.js"></script>
 </body>
 

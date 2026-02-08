@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Regex Tester - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
@@ -17,7 +25,13 @@
 
 <body class="raleway-fnt">
     <div class="header">
-        <div class="logo">QoL Tools</div>
+        <div class="header-top">
+            <div class="logo">QoL Tools</div>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
         <nav class="tool-nav">
             <a href="../../index.html" class="tool-btn">txt formatter</a>
             <a href="../todo/index.html" class="tool-btn">to-do list</a>
@@ -70,31 +84,37 @@
             <div class="error-display" id="errorDisplay"></div>
         </div>
 
-        <div class="test-section">
-            <div class="test-input-wrapper">
-                <label for="testString">Test String:</label>
-                <textarea id="testString" placeholder="Enter text to test against the regex..."></textarea>
-            </div>
-        </div>
+        <div class="regex-main-content">
+            <div class="left-column">
+                <div class="test-section">
+                    <div class="test-input-wrapper">
+                        <label for="testString">Test String:</label>
+                        <textarea id="testString" placeholder="Enter text to test against the regex..."></textarea>
+                    </div>
+                </div>
 
-        <div class="results-section">
-            <div class="results-header">
-                <h3>Results</h3>
-                <span id="matchCount" class="match-count">0 matches</span>
+                <div class="results-section">
+                    <div class="results-header">
+                        <h3>Results</h3>
+                        <span id="matchCount" class="match-count">0 matches</span>
+                    </div>
+                    <div id="highlightedText" class="highlighted-text"></div>
+                    <div id="matchDetails" class="match-details"></div>
+                </div>
             </div>
-            <div id="highlightedText" class="highlighted-text"></div>
-            <div id="matchDetails" class="match-details"></div>
-        </div>
 
-        <div class="replace-section">
-            <h3>Replace</h3>
-            <div class="replace-controls">
-                <input type="text" id="replaceString" placeholder="Replacement string..." spellcheck="false">
-                <button id="replaceBtn" class="format-btn">Test Replace</button>
-            </div>
-            <div class="replace-result-wrapper">
-                <label>Result:</label>
-                <div id="replaceResult" class="replace-result"></div>
+            <div class="right-column">
+                <div class="replace-section">
+                    <h3>Replace</h3>
+                    <div class="replace-controls">
+                        <input type="text" id="replaceString" placeholder="Replacement string..." spellcheck="false">
+                        <button id="replaceBtn" class="format-btn">Test Replace</button>
+                    </div>
+                    <div class="replace-result-wrapper">
+                        <label>Result:</label>
+                        <div id="replaceResult" class="replace-result"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -112,6 +132,7 @@
         </div>
     </div>
 
+    <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="regex-app.js"></script>
 </body>

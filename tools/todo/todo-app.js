@@ -1,40 +1,50 @@
-// Storage management functions (using localStorage)
-const StorageManager = {
-    setItem(name, value) {
-        try {
-            localStorage.setItem(name, value);
-        } catch (e) {
-            console.error('Failed to save to localStorage:', e);
-        }
-    },
+/**
+ * To-Do App - Task Manager
+ * Uses IndexedDB for storage via shared StorageManager
+ */
 
-    getItem(name) {
-        try {
-            return localStorage.getItem(name);
-        } catch (e) {
-            console.error('Failed to read from localStorage:', e);
-            return null;
-        }
-    }
-};
-
-// To-Do App
 class TodoApp {
     constructor() {
         this.todos = [];
         this.completedSectionExpanded = true;
         this.statsSectionExpanded = false;
         this.editingTodoId = null;
-        this.collapsedProjects = new Set();  // Track collapsed project IDs
-        this.activeFilter = 'all';  // Track active filter: 'all', 'ungrouped', or project ID
-        this.init();
+        this.collapsedProjects = new Set();
+        this.activeFilter = 'all';
     }
 
-    init() {
-        this.loadTodos();
-        this.setupEventListeners();
-        this.setupTooltip();
-        this.render();
+    async init() {
+        try {
+            // Migrate from localStorage if needed
+            await StorageManager.migrateTodosFromLocalStorage();
+
+            // Load data from IndexedDB
+            this.todos = await StorageManager.getAll('todos');
+
+            // Backward compatibility: add missing project fields to old todos
+            let needsSave = false;
+            this.todos.forEach(todo => {
+                if (todo.isProject === undefined) {
+                    todo.isProject = false;
+                    needsSave = true;
+                }
+                if (todo.parentId === undefined) {
+                    todo.parentId = null;
+                    needsSave = true;
+                }
+            });
+
+            // Save updated todos with new fields
+            if (needsSave && this.todos.length > 0) {
+                await StorageManager.putAll('todos', this.todos);
+            }
+
+            this.setupEventListeners();
+            this.setupTooltip();
+            this.render();
+        } catch (error) {
+            console.error('Failed to initialize Todo App:', error);
+        }
     }
 
     setupTooltip() {
@@ -95,34 +105,12 @@ class TodoApp {
         this.tooltip.classList.remove('visible');
     }
 
-    loadTodos() {
-        const savedTodos = StorageManager.getItem('todos');
-        if (savedTodos) {
-            try {
-                this.todos = JSON.parse(savedTodos);
-
-                // Backward compatibility: add missing project fields to old todos
-                this.todos.forEach(todo => {
-                    if (todo.isProject === undefined) {
-                        todo.isProject = false;
-                    }
-                    if (todo.parentId === undefined) {
-                        todo.parentId = null;
-                    }
-                });
-
-                // Save updated todos with new fields
-                if (this.todos.length > 0) {
-                    this.saveTodos();
-                }
-            } catch (e) {
-                this.todos = [];
-            }
+    async saveTodos() {
+        try {
+            await StorageManager.putAll('todos', this.todos);
+        } catch (error) {
+            console.error('Failed to save todos:', error);
         }
-    }
-
-    saveTodos() {
-        StorageManager.setItem('todos', JSON.stringify(this.todos));
     }
 
     setupEventListeners() {
@@ -199,12 +187,12 @@ class TodoApp {
         URL.revokeObjectURL(url);
     }
 
-    importTodos(event) {
+    async importTodos(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const importedTodos = JSON.parse(e.target.result);
 
@@ -217,6 +205,8 @@ class TodoApp {
                 const replace = confirm('Replace existing todos? (Cancel to append instead)');
 
                 if (replace) {
+                    // Clear existing todos from IndexedDB
+                    await StorageManager.clear('todos');
                     this.todos = importedTodos;
                 } else {
                     // Append and update IDs to avoid conflicts
@@ -227,7 +217,7 @@ class TodoApp {
                     });
                 }
 
-                this.saveTodos();
+                await this.saveTodos();
                 this.render();
                 alert(`Successfully imported ${importedTodos.length} todos!`);
             } catch (error) {
@@ -236,7 +226,7 @@ class TodoApp {
             }
         };
         reader.readAsText(file);
-        event.target.value = ''; // Reset file input
+        event.target.value = '';
     }
 
     toggleDescriptionInput() {
@@ -307,7 +297,7 @@ class TodoApp {
         return { text: cleanText, priority, deadline, projectName };
     }
 
-    findOrCreateProject(projectName) {
+    async findOrCreateProject(projectName) {
         // Find existing project by name
         let project = this.todos.find(t => t.isProject && t.text.toLowerCase() === projectName.toLowerCase());
 
@@ -324,6 +314,7 @@ class TodoApp {
                 parentId: null
             };
             this.todos.push(project);
+            await StorageManager.put('todos', project);
         }
 
         return project.id;
@@ -345,7 +336,7 @@ class TodoApp {
         });
     }
 
-    addTodo() {
+    async addTodo() {
         const input = document.getElementById('todoInput');
         const prioritySelect = document.getElementById('prioritySelect');
         const descriptionInput = document.getElementById('descriptionInput');
@@ -366,7 +357,7 @@ class TodoApp {
         // Handle project assignment from shorthand or UI
         let parentId = null;
         if (parsed.projectName) {
-            parentId = this.findOrCreateProject(parsed.projectName);
+            parentId = await this.findOrCreateProject(parsed.projectName);
         } else if (!projectCheckbox.checked && parentProjectSelect.value) {
             parentId = parseInt(parentProjectSelect.value);
         }
@@ -389,10 +380,11 @@ class TodoApp {
             const parentProject = this.todos.find(t => t.id === parentId);
             if (parentProject && parentProject.completed) {
                 parentProject.completed = false;
+                await StorageManager.put('todos', parentProject);
             }
         }
 
-        this.saveTodos();
+        await StorageManager.put('todos', todo);
         this.render();
         input.value = '';
         descriptionInput.value = '';
@@ -412,18 +404,20 @@ class TodoApp {
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Description (Optional)';
     }
 
-    toggleTodo(id) {
+    async toggleTodo(id) {
         const todo = this.todos.find(t => t.id === id);
         if (!todo) return;
 
         todo.completed = !todo.completed;
+        await StorageManager.put('todos', todo);
 
         // If this is a project, toggle all its subtasks
         if (todo.isProject) {
             const subtasks = this.getSubtasks(id);
-            subtasks.forEach(subtask => {
+            for (const subtask of subtasks) {
                 subtask.completed = todo.completed;
-            });
+                await StorageManager.put('todos', subtask);
+            }
         }
         // If this is a subtask, check if all siblings are completed
         else if (todo.parentId) {
@@ -432,34 +426,35 @@ class TodoApp {
                 const subtasks = this.getSubtasks(todo.parentId);
                 const allCompleted = subtasks.every(t => t.completed);
                 parent.completed = allCompleted;
+                await StorageManager.put('todos', parent);
             }
         }
 
-        this.saveTodos();
         this.render();
     }
 
-    deleteTodo(id) {
+    async deleteTodo(id) {
         const todo = this.todos.find(t => t.id === id);
 
         // If deleting a project, convert all its subtasks to ungrouped tasks
         if (todo && todo.isProject) {
             const subtasks = this.getSubtasks(id);
-            subtasks.forEach(subtask => {
+            for (const subtask of subtasks) {
                 subtask.parentId = null;
-            });
+                await StorageManager.put('todos', subtask);
+            }
         }
 
+        await StorageManager.delete('todos', id);
         this.todos = this.todos.filter(t => t.id !== id);
-        this.saveTodos();
         this.render();
     }
 
-    changePriority(id, newPriority) {
+    async changePriority(id, newPriority) {
         const todo = this.todos.find(t => t.id === id);
         if (todo) {
             todo.priority = newPriority;
-            this.saveTodos();
+            await StorageManager.put('todos', todo);
             this.render();
         }
     }
@@ -482,24 +477,24 @@ class TodoApp {
         }, 200);
     }
 
-    clearCompleted() {
+    async clearCompleted() {
+        const completedIds = this.todos.filter(t => t.completed).map(t => t.id);
+        for (const id of completedIds) {
+            await StorageManager.delete('todos', id);
+        }
         this.todos = this.todos.filter(t => !t.completed);
-        this.saveTodos();
         this.render();
     }
 
     getProjectTodos() {
-        // Get all projects (both active and completed, since subtasks are shown under them)
         return this.todos.filter(t => t.isProject);
     }
 
     getSubtasks(projectId) {
-        // Get all subtasks for a project (both active and completed)
         return this.todos.filter(t => t.parentId === projectId);
     }
 
     getStandaloneTodos() {
-        // Get tasks that are not projects and have no parent (ungrouped tasks)
         return this.todos.filter(t => !t.isProject && !t.parentId);
     }
 
@@ -523,7 +518,7 @@ class TodoApp {
         return this.collapsedProjects.has(projectId);
     }
 
-    showQuickAddSubtask(projectId) {
+    async showQuickAddSubtask(projectId) {
         const taskText = prompt('Enter subtask (supports ::h/::m/::l, ::today, ::tomorrow, ::Xd):');
         if (taskText && taskText.trim()) {
             const project = this.todos.find(t => t.id === projectId);
@@ -545,10 +540,12 @@ class TodoApp {
             };
 
             this.todos.push(subtask);
+            await StorageManager.put('todos', subtask);
 
             // If adding to a completed project, uncomplete it
             if (project.completed) {
                 project.completed = false;
+                await StorageManager.put('todos', project);
             }
 
             // Expand the project if it was collapsed
@@ -556,7 +553,6 @@ class TodoApp {
                 this.collapsedProjects.delete(projectId);
             }
 
-            this.saveTodos();
             this.render();
         }
     }
@@ -603,7 +599,7 @@ class TodoApp {
 
         // Populate parent project dropdown
         const editParentSelect = document.getElementById('editParentProjectSelect');
-        const projects = this.todos.filter(t => t.isProject && t.id !== id && !t.completed); // Exclude current item if it's a project
+        const projects = this.todos.filter(t => t.isProject && t.id !== id && !t.completed);
         editParentSelect.innerHTML = '<option value="">None (standalone task)</option>';
         projects.forEach(project => {
             const option = document.createElement('option');
@@ -635,7 +631,7 @@ class TodoApp {
         document.getElementById('editModal').style.display = 'flex';
     }
 
-    saveEdit() {
+    async saveEdit() {
         if (!this.editingTodoId) return;
 
         const todo = this.todos.find(t => t.id === this.editingTodoId);
@@ -659,6 +655,8 @@ class TodoApp {
         todo.isProject = isProject;
         todo.parentId = newParentId;
 
+        await StorageManager.put('todos', todo);
+
         // Handle parent project completion status changes
         if (oldParentId !== newParentId) {
             // If moved to a completed project, uncomplete it
@@ -666,6 +664,7 @@ class TodoApp {
                 const newParent = this.todos.find(t => t.id === newParentId);
                 if (newParent && newParent.completed && !todo.completed) {
                     newParent.completed = false;
+                    await StorageManager.put('todos', newParent);
                 }
             }
 
@@ -676,11 +675,11 @@ class TodoApp {
                     const remainingSubtasks = this.getSubtasks(oldParentId);
                     const allCompleted = remainingSubtasks.length > 0 && remainingSubtasks.every(t => t.completed);
                     oldParent.completed = allCompleted;
+                    await StorageManager.put('todos', oldParent);
                 }
             }
         }
 
-        this.saveTodos();
         this.render();
         this.closeEditModal();
     }
@@ -692,25 +691,22 @@ class TodoApp {
 
     getActiveTodos() {
         const activeTodos = this.todos.filter(t => !t.completed);
-        // Sort by priority: High > Medium > Low, then by deadline
         const priorityOrder = { high: 0, medium: 1, low: 2 };
         return activeTodos.sort((a, b) => {
             const aPriority = a.priority || 'medium';
             const bPriority = b.priority || 'medium';
 
-            // First sort by priority
             const priorityDiff = priorityOrder[aPriority] - priorityOrder[bPriority];
             if (priorityDiff !== 0) return priorityDiff;
 
-            // Then sort by deadline (overdue first, then by date)
             const aDeadline = a.deadline ? new Date(a.deadline) : null;
             const bDeadline = b.deadline ? new Date(b.deadline) : null;
 
             if (!aDeadline && !bDeadline) return 0;
-            if (!aDeadline) return 1;  // No deadline goes to end
-            if (!bDeadline) return -1; // No deadline goes to end
+            if (!aDeadline) return 1;
+            if (!bDeadline) return -1;
 
-            return aDeadline - bDeadline; // Earlier dates first
+            return aDeadline - bDeadline;
         });
     }
 
@@ -720,7 +716,6 @@ class TodoApp {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Parse deadline as local date to avoid timezone issues
         const [year, month, day] = deadline.split('-').map(Number);
         const deadlineDate = new Date(year, month - 1, day);
         deadlineDate.setHours(0, 0, 0, 0);
@@ -737,7 +732,6 @@ class TodoApp {
     formatDeadline(deadline) {
         if (!deadline) return '';
 
-        // Parse deadline as local date to avoid timezone issues
         const [year, month, day] = deadline.split('-').map(Number);
         const deadlineDate = new Date(year, month - 1, day);
         deadlineDate.setHours(0, 0, 0, 0);
@@ -758,7 +752,6 @@ class TodoApp {
     }
 
     getCompletedTodos() {
-        // Only show completed projects and standalone tasks (not subtasks, as they're shown under their project)
         return this.todos.filter(t => t.completed && !t.parentId);
     }
 
@@ -814,7 +807,7 @@ class TodoApp {
     }
 
     renderTodoItem(todo) {
-        const priority = todo.priority || 'medium'; // backwards compatibility
+        const priority = todo.priority || 'medium';
         const hasDescription = todo.description && todo.description.length > 0;
         const deadlineStatus = this.getDeadlineStatus(todo.deadline);
         const formattedDeadline = this.formatDeadline(todo.deadline);
@@ -993,7 +986,6 @@ class TodoApp {
         if (this.activeFilter === 'ungrouped') {
             filteredProjects = [];
         } else if (this.activeFilter !== 'all') {
-            // Filter to show only one specific project
             filteredProjects = projects.filter(p => p.id === this.activeFilter);
             filteredStandalone = [];
         }
@@ -1046,5 +1038,9 @@ class TodoApp {
     }
 }
 
-// Initialize the app
-const todoApp = new TodoApp();
+// Initialize the app when DOM is ready
+let todoApp;
+document.addEventListener('DOMContentLoaded', async () => {
+    todoApp = new TodoApp();
+    await todoApp.init();
+});
