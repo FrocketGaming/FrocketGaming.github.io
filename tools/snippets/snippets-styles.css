@@ -48,7 +48,6 @@
 
 .search-wrapper {
     position: relative;
-    flex: 1;
     min-width: 200px;
     max-width: 400px;
     margin-left: auto;
@@ -69,8 +68,10 @@
     border-radius: 5px;
     color: var(--text-primary);
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    font-family: "Raleway", sans-serif;
+    transition:
+        border-color 0.3s,
+        box-shadow 0.3s;
     outline: none;
 }
 
@@ -250,7 +251,7 @@
     color: var(--text-secondary);
     cursor: pointer;
     font-size: 13px;
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     transition: all 0.3s;
 }
 
@@ -443,7 +444,7 @@
 }
 
 .code-container code {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
     font-size: 14px;
     line-height: 1.6;
     white-space: pre;
@@ -581,8 +582,10 @@
     border-radius: 5px;
     color: var(--text-primary);
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    font-family: "Raleway", sans-serif;
+    transition:
+        border-color 0.3s,
+        box-shadow 0.3s;
     outline: none;
     box-sizing: border-box;
 }
@@ -593,7 +596,7 @@
 }
 
 .edit-textarea.code-textarea {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
     min-height: 300px;
     font-size: 14px;
     line-height: 1.5;
