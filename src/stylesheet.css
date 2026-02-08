@@ -329,7 +329,6 @@ input[type="checkbox"]:focus:ring-offset-0 {
     background-color: #c6ee86;
     border-color: #c6ee86;
     color: #1a1a1a;
-    font-weight: 500;
 }
 
 /* Header Media CSS */
