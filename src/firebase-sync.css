@@ -1,0 +1,187 @@
+/* Firebase Sync - Auth UI & Sync Status */
+
+/* Auth Section in Header */
+.auth-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Sign-in Button */
+.sign-in-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'Raleway', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.sign-in-btn:hover {
+    background-color: var(--accent-primary);
+    color: var(--bg-primary);
+    border-color: var(--accent-primary);
+}
+
+.sign-in-btn i {
+    font-size: 14px;
+}
+
+/* User Info (signed-in state) */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-primary);
+    object-fit: cover;
+}
+
+.user-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Sync Status Indicator */
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 3px;
+    background-color: var(--bg-tertiary);
+}
+
+.sync-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.sync-status-dot.synced {
+    background-color: var(--accent-primary);
+}
+
+.sync-status-dot.syncing {
+    background-color: #f0ad4e;
+    animation: pulse 1s infinite;
+}
+
+.sync-status-dot.error {
+    background-color: var(--error-color);
+}
+
+.sync-status-dot.offline {
+    background-color: var(--text-secondary);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Sign-out Button */
+.sign-out-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 13px;
+    transition: color 0.3s;
+}
+
+.sign-out-btn:hover {
+    color: var(--error-color);
+}
+
+/* Auth Divider */
+.auth-divider {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-color);
+    flex-shrink: 0;
+}
+
+/* Merge Modal */
+.merge-modal-body {
+    text-align: center;
+}
+
+.merge-modal-body p {
+    text-align: center;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.merge-stats {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: var(--bg-primary);
+    border-radius: 5px;
+}
+
+.merge-stat {
+    text-align: center;
+}
+
+.merge-stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent-secondary);
+}
+
+.merge-stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .user-name {
+        display: none;
+    }
+
+    .auth-section {
+        gap: 6px;
+    }
+
+    .sign-in-btn span {
+        display: none;
+    }
+}
+
+@media (max-width: 540px) {
+    .auth-section {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .sync-status span:not(.sync-status-dot) {
+        display: none;
+    }
+}

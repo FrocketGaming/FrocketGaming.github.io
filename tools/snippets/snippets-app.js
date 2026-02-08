@@ -1,6 +1,7 @@
 /**
  * Snippets App - Code Snippet Manager
  * Uses IndexedDB for storage via shared StorageManager
+ * Optional cloud sync via FirebaseSync
  */
 
 class SnippetsApp {
@@ -67,6 +68,16 @@ class SnippetsApp {
             this.renderCategories();
             this.renderSnippetsList();
             this.updateSnippetsCount();
+
+            // Initialize Firebase sync if available
+            if (typeof FirebaseSync !== 'undefined') {
+                FirebaseSync.init({
+                    onAuthChange: (user) => this.handleAuthChange(user),
+                    onSyncStatus: (status) => this.updateSyncStatusUI(status),
+                    onRemoteSnippets: (snippets) => this.handleRemoteSnippets(snippets),
+                    onRemoteTypes: (types) => this.handleRemoteTypes(types)
+                });
+            }
         } catch (error) {
             console.error('Failed to initialize Snippets App:', error);
         }
@@ -103,12 +114,23 @@ class SnippetsApp {
         });
         document.getElementById('importFileInput').addEventListener('change', (e) => this.importData(e));
 
+        // Auth buttons
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const mergeConfirmBtn = document.getElementById('mergeConfirmBtn');
+        const mergeSkipBtn = document.getElementById('mergeSkipBtn');
+        if (signInBtn) signInBtn.addEventListener('click', () => this.handleSignIn());
+        if (signOutBtn) signOutBtn.addEventListener('click', () => this.handleSignOut());
+        if (mergeConfirmBtn) mergeConfirmBtn.addEventListener('click', () => this.handleMergeConfirm());
+        if (mergeSkipBtn) mergeSkipBtn.addEventListener('click', () => this.handleMergeSkip());
+
         // Close modals on outside click
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 this.closeModal();
                 this.closeCategoryModal();
                 this.closeDeleteModal();
+                this.closeMergeModal();
             }
         });
 
@@ -118,6 +140,7 @@ class SnippetsApp {
                 this.closeModal();
                 this.closeCategoryModal();
                 this.closeDeleteModal();
+                this.closeMergeModal();
             }
         });
 
@@ -231,12 +254,14 @@ class SnippetsApp {
                     const oldName = category.name;
                     category.name = name;
                     await StorageManager.put('snippetTypes', category);
+                    this._syncSnippetType(category);
 
                     // Update snippets with old category name
                     for (const snippet of this.snippets) {
                         if (snippet.type === oldName) {
                             snippet.type = name;
                             await StorageManager.put('snippets', snippet);
+                            this._syncSnippet(snippet);
                         }
                     }
                 }
@@ -245,6 +270,7 @@ class SnippetsApp {
                 const newCategory = { id: Date.now(), name };
                 this.types.push(newCategory);
                 await StorageManager.put('snippetTypes', newCategory);
+                this._syncSnippetType(newCategory);
             }
 
             this.closeCategoryModal();
@@ -403,6 +429,7 @@ class SnippetsApp {
                     snippet.updatedAt = now;
                     await StorageManager.put('snippets', snippet);
                     this.currentSnippet = snippet;
+                    this._syncSnippet(snippet);
                 }
             } else {
                 // Create new
@@ -419,6 +446,7 @@ class SnippetsApp {
                 this.snippets.push(newSnippet);
                 await StorageManager.put('snippets', newSnippet);
                 this.currentSnippet = newSnippet;
+                this._syncSnippet(newSnippet);
             }
 
             this.closeModal();
@@ -460,10 +488,12 @@ class SnippetsApp {
     async confirmDelete() {
         try {
             if (this.deleteType === 'snippet' && this.deleteTarget) {
-                await StorageManager.delete('snippets', this.deleteTarget.id);
-                this.snippets = this.snippets.filter(s => s.id !== this.deleteTarget.id);
+                const deletedId = this.deleteTarget.id;
+                await StorageManager.delete('snippets', deletedId);
+                this.snippets = this.snippets.filter(s => s.id !== deletedId);
+                this._deleteSnippetFromCloud(deletedId);
 
-                if (this.currentSnippet && this.currentSnippet.id === this.deleteTarget.id) {
+                if (this.currentSnippet && this.currentSnippet.id === deletedId) {
                     this.currentSnippet = null;
                     document.getElementById('snippetView').style.display = 'none';
                     document.getElementById('emptyState').style.display = 'flex';
@@ -476,12 +506,15 @@ class SnippetsApp {
                         if (snippet.type === category.name) {
                             snippet.type = 'Other';
                             await StorageManager.put('snippets', snippet);
+                            this._syncSnippet(snippet);
                         }
                     }
 
                     // Remove category
-                    await StorageManager.delete('snippetTypes', this.deleteTarget);
-                    this.types = this.types.filter(t => t.id !== this.deleteTarget);
+                    const deletedTypeId = this.deleteTarget;
+                    await StorageManager.delete('snippetTypes', deletedTypeId);
+                    this.types = this.types.filter(t => t.id !== deletedTypeId);
+                    this._deleteSnippetTypeFromCloud(deletedTypeId);
 
                     if (this.activeCategory === category.name) {
                         this.activeCategory = null;
@@ -561,6 +594,7 @@ class SnippetsApp {
                     for (const snippet of newSnippets) {
                         await StorageManager.put('snippets', snippet);
                         this.snippets.push(snippet);
+                        this._syncSnippet(snippet);
                     }
                 }
 
@@ -572,6 +606,7 @@ class SnippetsApp {
                     for (const type of newTypes) {
                         await StorageManager.put('snippetTypes', type);
                         this.types.push(type);
+                        this._syncSnippetType(type);
                     }
                 }
 
@@ -585,6 +620,260 @@ class SnippetsApp {
         };
         reader.readAsText(file);
         event.target.value = '';
+    }
+
+    // ─── Firebase Sync Helpers ─────────────────────────────────
+
+    /** Push snippet to cloud (non-blocking) */
+    _syncSnippet(snippet) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.pushSnippet(snippet);
+        }
+    }
+
+    /** Push snippet type to cloud (non-blocking) */
+    _syncSnippetType(snippetType) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.pushSnippetType(snippetType);
+        }
+    }
+
+    /** Delete snippet from cloud (non-blocking) */
+    _deleteSnippetFromCloud(snippetId) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.deleteSnippet(snippetId);
+        }
+    }
+
+    /** Delete snippet type from cloud (non-blocking) */
+    _deleteSnippetTypeFromCloud(typeId) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.deleteSnippetType(typeId);
+        }
+    }
+
+    // ─── Auth Handlers ─────────────────────────────────────────
+
+    async handleSignIn() {
+        try {
+            await FirebaseSync.signInWithGoogle();
+        } catch (error) {
+            console.error('Sign-in failed:', error);
+        }
+    }
+
+    async handleSignOut() {
+        try {
+            await FirebaseSync.signOut();
+        } catch (error) {
+            console.error('Sign-out failed:', error);
+        }
+    }
+
+    handleAuthChange(user) {
+        this.updateAuthUI(user);
+        if (user && FirebaseSync.needsMerge()) {
+            this.openMergeModal();
+        }
+    }
+
+    updateAuthUI(user) {
+        const signInBtn = document.getElementById('signInBtn');
+        const userInfo = document.getElementById('userInfo');
+        const authDivider = document.getElementById('authDivider');
+
+        if (!signInBtn || !userInfo) return;
+
+        if (user) {
+            signInBtn.style.display = 'none';
+            userInfo.style.display = 'flex';
+            if (authDivider) authDivider.style.display = '';
+
+            const avatar = document.getElementById('userAvatar');
+            const name = document.getElementById('userName');
+            if (avatar) avatar.src = user.photoURL || '';
+            if (name) name.textContent = user.displayName || user.email || '';
+        } else {
+            signInBtn.style.display = '';
+            userInfo.style.display = 'none';
+            if (authDivider) authDivider.style.display = '';
+        }
+    }
+
+    updateSyncStatusUI(status) {
+        const syncStatus = document.getElementById('syncStatus');
+        const syncDot = document.getElementById('syncDot');
+        const syncLabel = document.getElementById('syncLabel');
+
+        if (!syncStatus || !syncDot || !syncLabel) return;
+
+        if (!status) {
+            syncStatus.style.display = 'none';
+            return;
+        }
+
+        syncStatus.style.display = 'flex';
+        syncDot.className = 'sync-status-dot ' + status;
+
+        const labels = {
+            syncing: 'Syncing...',
+            synced: 'Synced',
+            error: 'Sync error',
+            offline: 'Offline'
+        };
+        syncLabel.textContent = labels[status] || status;
+    }
+
+    // ─── Remote Change Handlers ────────────────────────────────
+
+    async handleRemoteSnippets(remoteSnippets) {
+        // Build a map of remote snippets by ID
+        const remoteMap = new Map();
+        for (const s of remoteSnippets) {
+            const { _syncedAt, _firestoreId, ...clean } = s;
+            remoteMap.set(clean.id, clean);
+        }
+
+        // Update local data: add new, update changed
+        let changed = false;
+        for (const [id, remote] of remoteMap) {
+            const localIdx = this.snippets.findIndex(s => s.id === id);
+            if (localIdx === -1) {
+                // New snippet from another device
+                this.snippets.push(remote);
+                await StorageManager.put('snippets', remote);
+                changed = true;
+            } else {
+                const local = this.snippets[localIdx];
+                const remoteTime = new Date(remote.updatedAt || 0).getTime();
+                const localTime = new Date(local.updatedAt || 0).getTime();
+                if (remoteTime > localTime) {
+                    this.snippets[localIdx] = remote;
+                    await StorageManager.put('snippets', remote);
+                    changed = true;
+                }
+            }
+        }
+
+        // Remove local snippets not in remote (deleted on other device)
+        const remoteIds = new Set(remoteMap.keys());
+        const toRemove = this.snippets.filter(s => !remoteIds.has(s.id));
+        for (const s of toRemove) {
+            await StorageManager.delete('snippets', s.id);
+            changed = true;
+        }
+        if (toRemove.length > 0) {
+            this.snippets = this.snippets.filter(s => remoteIds.has(s.id));
+        }
+
+        if (changed) {
+            this.renderCategories();
+            this.renderSnippetsList();
+            if (this.currentSnippet) {
+                const updated = this.snippets.find(s => s.id === this.currentSnippet.id);
+                if (updated) {
+                    this.viewSnippet(updated.id);
+                } else {
+                    this.currentSnippet = null;
+                    document.getElementById('snippetView').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'flex';
+                }
+            }
+        }
+    }
+
+    async handleRemoteTypes(remoteTypes) {
+        const remoteMap = new Map();
+        for (const t of remoteTypes) {
+            const { _syncedAt, _firestoreId, ...clean } = t;
+            remoteMap.set(clean.id, clean);
+        }
+
+        let changed = false;
+        for (const [id, remote] of remoteMap) {
+            const localIdx = this.types.findIndex(t => t.id === id);
+            if (localIdx === -1) {
+                this.types.push(remote);
+                await StorageManager.put('snippetTypes', remote);
+                changed = true;
+            } else if (this.types[localIdx].name !== remote.name) {
+                this.types[localIdx] = remote;
+                await StorageManager.put('snippetTypes', remote);
+                changed = true;
+            }
+        }
+
+        // Remove local types not in remote
+        const remoteIds = new Set(remoteMap.keys());
+        const toRemove = this.types.filter(t => !remoteIds.has(t.id));
+        for (const t of toRemove) {
+            await StorageManager.delete('snippetTypes', t.id);
+            changed = true;
+        }
+        if (toRemove.length > 0) {
+            this.types = this.types.filter(t => remoteIds.has(t.id));
+        }
+
+        if (changed) {
+            this.renderCategories();
+            this.renderSnippetsList();
+        }
+    }
+
+    // ─── Merge Modal ───────────────────────────────────────────
+
+    openMergeModal() {
+        const localCount = document.getElementById('mergeLocalCount');
+        const cloudCount = document.getElementById('mergeCloudCount');
+        if (localCount) localCount.textContent = this.snippets.length;
+        if (cloudCount) cloudCount.textContent = '?';
+        document.getElementById('mergeModal').style.display = 'flex';
+    }
+
+    closeMergeModal() {
+        const modal = document.getElementById('mergeModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async handleMergeConfirm() {
+        this.closeMergeModal();
+        try {
+            const result = await FirebaseSync.mergeOnFirstLogin(this.snippets, this.types);
+
+            // Update local state with merged data
+            this.snippets = result.snippets;
+            this.types = result.types;
+
+            // Persist merged data to IndexedDB
+            await StorageManager.clear('snippets');
+            await StorageManager.clear('snippetTypes');
+            if (this.snippets.length > 0) {
+                await StorageManager.putAll('snippets', this.snippets);
+            }
+            if (this.types.length > 0) {
+                await StorageManager.putAll('snippetTypes', this.types);
+            }
+
+            this.renderCategories();
+            this.renderSnippetsList();
+
+            // Reset view if current snippet was removed
+            if (this.currentSnippet && !this.snippets.find(s => s.id === this.currentSnippet.id)) {
+                this.currentSnippet = null;
+                document.getElementById('snippetView').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'flex';
+            }
+        } catch (error) {
+            console.error('Merge failed:', error);
+            alert('Failed to merge data. Your local data is unchanged.');
+        }
+    }
+
+    handleMergeSkip() {
+        this.closeMergeModal();
+        if (typeof FirebaseSync !== 'undefined') {
+            FirebaseSync.markMergeComplete();
+        }
     }
 
     // Utilities
