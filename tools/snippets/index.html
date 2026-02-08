@@ -55,37 +55,28 @@
             </button>
         </div>
 
-        <!-- Main Layout -->
+        <!-- Main Layout - Three Panel -->
         <div class="main-layout">
-            <!-- Left Sidebar -->
-            <div class="sidebar" id="sidebar">
-                <div class="sidebar-toggle" id="sidebarToggle">
-                    <i class="fa-solid fa-chevron-left"></i>
+            <!-- Left Panel - Categories -->
+            <div class="categories-panel" id="categoriesPanel">
+                <div class="panel-header">
+                    <h3><i class="fa-solid fa-folder"></i> Categories</h3>
                 </div>
-
-                <!-- Categories Section -->
-                <div class="sidebar-section">
-                    <div class="sidebar-header" onclick="snippetsApp.toggleSection('categories')">
-                        <h3><i class="fa-solid fa-folder"></i> Categories</h3>
-                        <span class="toggle-icon" id="categoriesToggleIcon">▼</span>
-                    </div>
-                    <div class="sidebar-content" id="categoriesContent">
-                        <ul id="categoryList" class="category-list"></ul>
-                        <button id="addCategoryBtn" class="add-category-btn">
-                            <i class="fa-solid fa-plus"></i> Add Category
-                        </button>
-                    </div>
+                <div class="panel-content">
+                    <ul id="categoryList" class="category-list"></ul>
+                    <button id="addCategoryBtn" class="add-category-btn">
+                        <i class="fa-solid fa-plus"></i> Add Category
+                    </button>
                 </div>
+            </div>
 
-                <!-- Snippets List Section -->
-                <div class="sidebar-section">
-                    <div class="sidebar-header" onclick="snippetsApp.toggleSection('snippetsList')">
-                        <h3><i class="fa-solid fa-code"></i> Snippets <span id="snippetsCount" class="count-badge">(0)</span></h3>
-                        <span class="toggle-icon" id="snippetsListToggleIcon">▼</span>
-                    </div>
-                    <div class="sidebar-content" id="snippetsListContent">
-                        <ul id="snippetsList" class="snippets-list"></ul>
-                    </div>
+            <!-- Middle Panel - Snippets List -->
+            <div class="snippets-panel" id="snippetsPanel">
+                <div class="panel-header">
+                    <h3><i class="fa-solid fa-code"></i> Snippets <span id="snippetsCount" class="count-badge">(0)</span></h3>
+                </div>
+                <div class="panel-content">
+                    <ul id="snippetsList" class="snippets-list"></ul>
                 </div>
             </div>
 

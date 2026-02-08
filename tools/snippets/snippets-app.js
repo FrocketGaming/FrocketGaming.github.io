@@ -115,11 +115,6 @@ class SnippetsApp {
         });
         document.getElementById('importFileInput').addEventListener('change', (e) => this.importData(e));
 
-        // Sidebar toggle for mobile
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-        });
-
         // Close modals on outside click
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
@@ -149,20 +144,6 @@ class SnippetsApp {
                 textarea.selectionStart = textarea.selectionEnd = start + 4;
             }
         });
-    }
-
-    // Section toggle
-    toggleSection(section) {
-        const content = document.getElementById(`${section}Content`);
-        const icon = document.getElementById(`${section}ToggleIcon`);
-
-        if (content.style.display === 'none') {
-            content.style.display = 'block';
-            icon.textContent = '▼';
-        } else {
-            content.style.display = 'none';
-            icon.textContent = '▶';
-        }
     }
 
     // Categories
