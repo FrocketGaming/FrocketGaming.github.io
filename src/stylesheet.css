@@ -288,6 +288,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
 }
 
 .logo {
+    font-family: 'Raleway', sans-serif;
     font-size: 1.8rem;
     font-weight: bold;
     color: #c6ee86;

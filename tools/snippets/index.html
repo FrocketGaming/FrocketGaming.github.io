@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snippets - QoL Tools</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="snippets-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="logo">QoL Tools</div>
+        <nav class="tool-nav">
+            <a href="../../index.html" class="tool-btn">txt formatter</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../snippets/index.html" class="tool-btn active">snippets</a>
+        </nav>
+    </div>
+
+    <div class="header-section">
+        <div class="header-content">
+            <p>Store and organize your code snippets. Your data is saved in browser localStorage.</p>
+            <div class="header-actions">
+                <button id="exportBtn" class="format-btn">
+                    <i class="fa-solid fa-download"></i> Export
+                </button>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                <button id="importBtn" class="format-btn">
+                    <i class="fa-solid fa-upload"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="snippets-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-wrapper">
+                <i class="fa-solid fa-search search-icon"></i>
+                <input type="text" id="searchInput" placeholder="Search snippets..." />
+            </div>
+            <button id="newSnippetBtn" class="format-btn">
+                <i class="fa-solid fa-plus"></i> New Snippet
+            </button>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Left Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </div>
+
+                <!-- Categories Section -->
+                <div class="sidebar-section">
+                    <div class="sidebar-header" onclick="snippetsApp.toggleSection('categories')">
+                        <h3><i class="fa-solid fa-folder"></i> Categories</h3>
+                        <span class="toggle-icon" id="categoriesToggleIcon">▼</span>
+                    </div>
+                    <div class="sidebar-content" id="categoriesContent">
+                        <ul id="categoryList" class="category-list"></ul>
+                        <button id="addCategoryBtn" class="add-category-btn">
+                            <i class="fa-solid fa-plus"></i> Add Category
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Snippets List Section -->
+                <div class="sidebar-section">
+                    <div class="sidebar-header" onclick="snippetsApp.toggleSection('snippetsList')">
+                        <h3><i class="fa-solid fa-code"></i> Snippets <span id="snippetsCount" class="count-badge">(0)</span></h3>
+                        <span class="toggle-icon" id="snippetsListToggleIcon">▼</span>
+                    </div>
+                    <div class="sidebar-content" id="snippetsListContent">
+                        <ul id="snippetsList" class="snippets-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Viewer/Editor -->
+            <div class="content-panel" id="contentPanel">
+                <div class="empty-state" id="emptyState">
+                    <i class="fa-solid fa-code"></i>
+                    <p>Select a snippet or create a new one</p>
+                </div>
+
+                <div class="snippet-view" id="snippetView" style="display: none;">
+                    <div class="snippet-header">
+                        <div class="snippet-title-section">
+                            <h2 id="snippetTitle"></h2>
+                            <span class="snippet-type-badge" id="snippetTypeBadge"></span>
+                        </div>
+                        <div class="snippet-actions">
+                            <button class="action-btn" id="copyBtn" title="Copy to clipboard">
+                                <i class="fa-solid fa-copy"></i>
+                            </button>
+                            <button class="action-btn" id="editBtn" title="Edit snippet">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete" id="deleteBtn" title="Delete snippet">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="snippet-description" id="snippetDescription"></p>
+                    <div class="code-container">
+                        <pre><code id="snippetCode"></code></pre>
+                    </div>
+                    <div class="snippet-meta">
+                        <span id="snippetCreated"></span>
+                        <span id="snippetUpdated"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snippet Modal (Create/Edit) -->
+    <div id="snippetModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="modalTitle">New Snippet</h3>
+                <span class="modal-close" onclick="snippetsApp.closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="snippetNameInput">Name:</label>
+                        <input type="text" id="snippetNameInput" class="edit-input" placeholder="Snippet name">
+                    </div>
+                    <div class="form-group">
+                        <label for="snippetTypeSelect">Category:</label>
+                        <select id="snippetTypeSelect" class="edit-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="snippetExtSelect">Extension:</label>
+                        <select id="snippetExtSelect" class="edit-select">
+                            <option value="js">JavaScript (.js)</option>
+                            <option value="ts">TypeScript (.ts)</option>
+                            <option value="py">Python (.py)</option>
+                            <option value="html">HTML (.html)</option>
+                            <option value="css">CSS (.css)</option>
+                            <option value="json">JSON (.json)</option>
+                            <option value="md">Markdown (.md)</option>
+                            <option value="sql">SQL (.sql)</option>
+                            <option value="sh">Shell (.sh)</option>
+                            <option value="ps1">PowerShell (.ps1)</option>
+                            <option value="yml">YAML (.yml)</option>
+                            <option value="dockerfile">Dockerfile</option>
+                            <option value="go">Go (.go)</option>
+                            <option value="rs">Rust (.rs)</option>
+                            <option value="java">Java (.java)</option>
+                            <option value="cpp">C++ (.cpp)</option>
+                            <option value="c">C (.c)</option>
+                            <option value="php">PHP (.php)</option>
+                            <option value="rb">Ruby (.rb)</option>
+                            <option value="txt">Plain Text (.txt)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="snippetDescInput">Description (optional):</label>
+                    <input type="text" id="snippetDescInput" class="edit-input" placeholder="Brief description">
+                </div>
+                <div class="form-group">
+                    <label for="snippetContentInput">Content:</label>
+                    <textarea id="snippetContentInput" class="edit-textarea code-textarea" placeholder="Paste your code here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="format-btn" id="saveSnippetBtn">Save Snippet</button>
+                <button class="clear-bnt" onclick="snippetsApp.closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">Add Category</h3>
+                <span class="modal-close" onclick="snippetsApp.closeCategoryModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="categoryNameInput">Category Name:</label>
+                    <input type="text" id="categoryNameInput" class="edit-input" placeholder="e.g., React, Docker, Bash">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="format-btn" id="saveCategoryBtn">Save Category</button>
+                <button class="clear-bnt" onclick="snippetsApp.closeCategoryModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <span class="modal-close" onclick="snippetsApp.closeDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage">Are you sure you want to delete this snippet?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="clear-bnt" id="confirmDeleteBtn">Delete</button>
+                <button class="format-btn" onclick="snippetsApp.closeDeleteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Notification -->
+    <div id="copyNotification" class="copy-notification">
+        <i class="fa-solid fa-check"></i> Copied to clipboard
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="snippets-app.js"></script>
+</body>
+
+</html>
