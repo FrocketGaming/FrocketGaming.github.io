@@ -43,9 +43,9 @@
 }
 
 .search-wrapper {
-    flex: 1;
     position: relative;
-    max-width: 400px;
+    width: 350px;
+    flex-shrink: 0;
 }
 
 .search-icon {
@@ -78,6 +78,7 @@
     margin-top: 0;
     padding: 12px 20px;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Main Layout - Three Panel */
@@ -101,13 +102,13 @@
 
 /* Categories Panel - Left */
 .categories-panel {
-    width: 200px;
+    width: 240px;
     flex-shrink: 0;
 }
 
 /* Snippets Panel - Middle */
 .snippets-panel {
-    width: 280px;
+    width: 320px;
     flex-shrink: 0;
 }
 
@@ -654,11 +655,15 @@
 /* Mobile Responsive */
 @media (max-width: 1200px) {
     .categories-panel {
-        width: 180px;
+        width: 200px;
     }
 
     .snippets-panel {
-        width: 240px;
+        width: 280px;
+    }
+
+    .search-wrapper {
+        width: 280px;
     }
 }
 
@@ -692,7 +697,6 @@
     }
 
     .search-wrapper {
-        max-width: 100%;
         width: 100%;
     }
 
