@@ -39,6 +39,36 @@ class SnippetsApp {
             'txt': 'plaintext'
         };
 
+        this.categoryIconMap = {
+            'javascript': 'fa-brands fa-js',
+            'python': 'fa-brands fa-python',
+            'html': 'fa-brands fa-html5',
+            'html/css': 'fa-brands fa-html5',
+            'css': 'fa-brands fa-css3-alt',
+            'java': 'fa-brands fa-java',
+            'php': 'fa-brands fa-php',
+            'rust': 'fa-brands fa-rust',
+            'go': 'fa-brands fa-golang',
+            'golang': 'fa-brands fa-golang',
+            'markdown': 'fa-brands fa-markdown',
+            'docker': 'fa-brands fa-docker',
+            'node': 'fa-brands fa-node-js',
+            'node.js': 'fa-brands fa-node-js',
+            'react': 'fa-brands fa-react',
+            'angular': 'fa-brands fa-angular',
+            'vue': 'fa-brands fa-vuejs',
+            'sql': 'fa-solid fa-database',
+            'shell': 'fa-solid fa-terminal',
+            'bash': 'fa-solid fa-terminal',
+            'powershell': 'fa-solid fa-terminal',
+            'ruby': 'fa-solid fa-gem',
+            'c': 'fa-solid fa-code',
+            'c++': 'fa-solid fa-code',
+            'typescript': 'fa-solid fa-code',
+            'yaml': 'fa-solid fa-file-code',
+            'yml': 'fa-solid fa-file-code'
+        };
+
         this.defaultTypes = [
             { id: 1, name: 'JavaScript' },
             { id: 2, name: 'Python' },
@@ -157,6 +187,10 @@ class SnippetsApp {
         });
     }
 
+    getCategoryIcon(categoryName) {
+        return this.categoryIconMap[categoryName.toLowerCase()] || 'fa-solid fa-folder';
+    }
+
     // Categories
     renderCategories() {
         const list = document.getElementById('categoryList');
@@ -178,7 +212,7 @@ class SnippetsApp {
             const item = document.createElement('li');
             item.className = `category-item${this.activeCategory === type.name ? ' active' : ''}`;
             item.innerHTML = `
-                <span class="category-name"><i class="fa-solid fa-folder"></i> ${type.name}</span>
+                <span class="category-name"><i class="${this.getCategoryIcon(type.name)}"></i> ${type.name}</span>
                 <span class="category-count">${count}</span>
                 <div class="category-actions">
                     <button class="category-action-btn" onclick="event.stopPropagation(); snippetsApp.openEditCategoryModal(${type.id})">
@@ -321,6 +355,9 @@ class SnippetsApp {
                     <span class="snippet-item-ext">.${snippet.extension}</span>
                 </div>
             `;
+            if (snippet.description) {
+                item.title = snippet.description;
+            }
             item.addEventListener('click', () => this.viewSnippet(snippet.id));
             list.appendChild(item);
         });

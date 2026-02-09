@@ -27,6 +27,13 @@ class CSVViewer {
         // Handle file upload
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
 
+        // Data Profile toggle
+        document.getElementById('profileToggleBtn').addEventListener('click', () => this.toggleProfile());
+        document.getElementById('dataProfileSection').querySelector('.data-profile-header').addEventListener('click', (e) => {
+            if (e.target.closest('#profileToggleBtn')) return;
+            this.toggleProfile();
+        });
+
         // SQL playground listeners
         document.getElementById('sqlRunBtn').addEventListener('click', () => this.runQuery());
         document.getElementById('sqlExportBtn').addEventListener('click', () => this.exportQueryResults());
@@ -46,8 +53,11 @@ class CSVViewer {
             }
         });
 
-        // Syntax highlighting sync
-        sqlTextarea.addEventListener('input', () => this.updateHighlight());
+        // Syntax highlighting sync + auto-resize
+        sqlTextarea.addEventListener('input', () => {
+            this.updateHighlight();
+            this.autoResizeSQL();
+        });
         sqlTextarea.addEventListener('scroll', () => this.updateHighlight());
 
         // Sync highlight layer size when textarea is resized
@@ -167,6 +177,9 @@ class CSVViewer {
             this.renderTable();
             this.updateInfo();
             this.loadIntoSQL();
+
+            const profile = this.computeDataProfile();
+            this.renderDataProfile(profile);
         } catch (error) {
             this.showEmptyState('Error parsing CSV: ' + error.message);
         }
@@ -286,6 +299,7 @@ class CSVViewer {
         this.sortColumn = -1;
         this.showEmptyState('Upload a CSV file to get started');
         this.clearSQL();
+        this.clearDataProfile();
         document.getElementById('fileInput').value = '';
     }
 
@@ -412,7 +426,7 @@ class CSVViewer {
             const stmt = this.db.prepare(insertSQL);
 
             for (const row of this.data) {
-                const values = row.map((cell, i) => {
+                const values = row.slice(0, sanitizedHeaders.length).map((cell, i) => {
                     if (cell === '') return null;
                     if (types[i] === 'INTEGER') {
                         const num = parseInt(cell, 10);
@@ -531,6 +545,7 @@ class CSVViewer {
             btn.addEventListener('click', () => {
                 document.getElementById('sqlQuery').value = ex.query;
                 this.updateHighlight();
+                this.autoResizeSQL();
             });
             container.appendChild(btn);
         });
@@ -638,9 +653,172 @@ class CSVViewer {
         window.URL.revokeObjectURL(url);
     }
 
+    // --- Data Profile Methods ---
+
+    computeDataProfile() {
+        const profile = [];
+
+        for (let i = 0; i < this.headers.length; i++) {
+            const colType = this.inferColumnType(i);
+            const isNumeric = colType === 'INTEGER' || colType === 'REAL';
+
+            let count = 0;
+            let nulls = 0;
+            const uniqueValues = new Set();
+            const numericValues = [];
+
+            for (let r = 0; r < this.data.length; r++) {
+                const val = this.data[r][i];
+                if (val === undefined || val === null || val === '') {
+                    nulls++;
+                } else {
+                    count++;
+                    uniqueValues.add(val);
+                    if (isNumeric) {
+                        const num = Number(val);
+                        if (!isNaN(num)) {
+                            numericValues.push(num);
+                        }
+                    }
+                }
+            }
+
+            const entry = {
+                column: this.headers[i],
+                type: isNumeric ? 'numeric' : 'text',
+                count: count,
+                nulls: nulls,
+                unique: uniqueValues.size,
+                mean: null,
+                std: null,
+                min: null,
+                p25: null,
+                p50: null,
+                p75: null,
+                max: null
+            };
+
+            if (isNumeric && numericValues.length > 0) {
+                numericValues.sort((a, b) => a - b);
+                const n = numericValues.length;
+                const sum = numericValues.reduce((a, b) => a + b, 0);
+                const mean = sum / n;
+                const variance = numericValues.reduce((acc, v) => acc + (v - mean) ** 2, 0) / n;
+
+                entry.mean = mean;
+                entry.std = Math.sqrt(variance);
+                entry.min = numericValues[0];
+                entry.max = numericValues[n - 1];
+                entry.p25 = this.percentile(numericValues, 0.25);
+                entry.p50 = this.percentile(numericValues, 0.50);
+                entry.p75 = this.percentile(numericValues, 0.75);
+            }
+
+            profile.push(entry);
+        }
+
+        return profile;
+    }
+
+    percentile(sortedArr, p) {
+        const n = sortedArr.length;
+        if (n === 0) return null;
+        if (n === 1) return sortedArr[0];
+
+        const index = p * (n - 1);
+        const lower = Math.floor(index);
+        const upper = Math.ceil(index);
+        const frac = index - lower;
+
+        if (lower === upper) return sortedArr[lower];
+        return sortedArr[lower] + frac * (sortedArr[upper] - sortedArr[lower]);
+    }
+
+    renderDataProfile(profile) {
+        const section = document.getElementById('dataProfileSection');
+        const container = document.getElementById('profileTableContainer');
+        const summary = document.getElementById('profileSummary');
+
+        const totalRows = this.data.length;
+        const totalCols = this.headers.length;
+        summary.textContent = `${totalCols.toLocaleString()} column${totalCols !== 1 ? 's' : ''}, ${totalRows.toLocaleString()} row${totalRows !== 1 ? 's' : ''}`;
+
+        const statHeaders = ['Column', 'Type', 'Count', 'Nulls', 'Unique', 'Mean', 'Std', 'Min', '25%', '50%', '75%', 'Max'];
+
+        let html = '<table class="csv-table"><thead><tr>';
+        statHeaders.forEach(h => {
+            html += `<th>${h}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        profile.forEach(entry => {
+            html += '<tr>';
+            html += `<td>${this.escapeHtml(entry.column)}</td>`;
+            html += `<td>${entry.type}</td>`;
+            html += `<td>${entry.count.toLocaleString()}</td>`;
+            html += `<td>${entry.nulls.toLocaleString()}</td>`;
+            html += `<td>${entry.unique.toLocaleString()}</td>`;
+
+            if (entry.type === 'numeric') {
+                html += `<td>${this.formatStat(entry.mean)}</td>`;
+                html += `<td>${this.formatStat(entry.std)}</td>`;
+                html += `<td>${this.formatStat(entry.min)}</td>`;
+                html += `<td>${this.formatStat(entry.p25)}</td>`;
+                html += `<td>${this.formatStat(entry.p50)}</td>`;
+                html += `<td>${this.formatStat(entry.p75)}</td>`;
+                html += `<td>${this.formatStat(entry.max)}</td>`;
+            } else {
+                for (let i = 0; i < 7; i++) {
+                    html += '<td class="profile-dash">\u2014</td>';
+                }
+            }
+
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        section.style.display = '';
+    }
+
+    formatStat(value) {
+        if (value === null || value === undefined) return '\u2014';
+        if (Number.isInteger(value)) return value.toLocaleString();
+        return value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+    }
+
+    toggleProfile() {
+        const content = document.getElementById('profileContent');
+        const btn = document.getElementById('profileToggleBtn');
+        const isCollapsed = content.style.display === 'none';
+
+        content.style.display = isCollapsed ? '' : 'none';
+        btn.classList.toggle('collapsed', !isCollapsed);
+    }
+
+    clearDataProfile() {
+        const section = document.getElementById('dataProfileSection');
+        section.style.display = 'none';
+        document.getElementById('profileTableContainer').innerHTML = '';
+        document.getElementById('profileSummary').textContent = '';
+        // Reset toggle state
+        document.getElementById('profileContent').style.display = '';
+        document.getElementById('profileToggleBtn').classList.remove('collapsed');
+    }
+
+    // --- Auto-resize SQL Textarea ---
+
+    autoResizeSQL() {
+        const textarea = document.getElementById('sqlQuery');
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(80, textarea.scrollHeight) + 'px';
+    }
+
     clearSQL() {
         document.getElementById('sqlSection').style.display = 'none';
-        document.getElementById('sqlQuery').value = '';
+        const sqlTextarea = document.getElementById('sqlQuery');
+        sqlTextarea.value = '';
+        sqlTextarea.style.height = '80px';
         this.updateHighlight();
         document.getElementById('sqlExamples').innerHTML = '';
         document.getElementById('sqlResultsContainer').innerHTML = '';

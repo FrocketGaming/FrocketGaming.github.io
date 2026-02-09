@@ -178,6 +178,84 @@
     background: var(--accent-secondary);
 }
 
+/* Data Profile Panel */
+.data-profile-section {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    box-shadow: 0 0 4px var(--shadow-color);
+    overflow: hidden;
+}
+
+.data-profile-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.data-profile-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.data-profile-header h3 i {
+    margin-right: 8px;
+    color: var(--accent-secondary);
+}
+
+.data-profile-summary {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.profile-toggle-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.profile-toggle-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.profile-toggle-btn.collapsed i {
+    transform: rotate(180deg);
+}
+
+.profile-toggle-btn i {
+    transition: transform 0.3s;
+}
+
+.data-profile-content {
+    padding: 0 15px 15px;
+}
+
+.data-profile-content .table-container {
+    max-height: 350px;
+}
+
+.data-profile-content .csv-table td {
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+}
+
+.data-profile-content .csv-table td.profile-dash {
+    color: var(--text-secondary);
+    text-align: center;
+}
+
 /* SQL Playground */
 .sql-header {
     display: flex;
@@ -303,7 +381,6 @@
     display: block;
     width: 100%;
     min-width: 0;
-    height: 80px;
     min-height: 80px;
     padding: 8px 10px;
     background-color: transparent;
@@ -313,7 +390,8 @@
     border-radius: 5px;
     font-family: "Courier New", monospace;
     font-size: 13px;
-    resize: vertical;
+    resize: none;
+    overflow: hidden;
     outline: none;
     transition: border-color 0.3s;
     box-sizing: border-box;
