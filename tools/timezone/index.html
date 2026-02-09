@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timezone Converter - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="timezone-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="header-top">
+            <div class="logo">QoL Tools</div>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+        <nav class="tool-nav">
+            <a href="../../index.html" class="tool-btn">txt formatter</a>
+            <a href="../snippets/index.html" class="tool-btn">snippets</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../markdown/index.html" class="tool-btn">markdown preview</a>
+            <a href="../epoch-converter/index.html" class="tool-btn">epoch converter</a>
+            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+            <a href="../timezone/index.html" class="tool-btn active">timezone</a>
+        </nav>
+    </div>
+
+    <p>Convert times across timezones, view a world clock, and plan meetings across time zones. All processing is done locally in your browser.</p>
+
+    <div class="tz-add-bar">
+        <input type="text" id="addTimezoneInput" list="addTimezoneList" placeholder="Add timezone / city..." class="tz-input" aria-label="Add timezone or city">
+        <datalist id="addTimezoneList"></datalist>
+        <button id="addTimezoneBtn" class="format-btn" aria-label="Add timezone"><i class="fa-solid fa-plus"></i> Add Timezone</button>
+    </div>
+
+    <div class="tz-container">
+        <!-- Left Column: Converter + World Clock -->
+        <div class="tz-left-col">
+            <!-- Converter Section -->
+            <div class="tz-converter">
+                <h3><i class="fa-solid fa-right-left"></i> Timezone Converter</h3>
+                <div class="tz-source">
+                    <div class="tz-row">
+                        <label>Source</label>
+                        <input type="datetime-local" id="sourceDateTime" step="60" aria-label="Source date and time">
+                        <input type="text" id="sourceTimezone" list="sourceTimezoneList" placeholder="Type timezone..." class="tz-input" aria-label="Source timezone">
+                        <datalist id="sourceTimezoneList"></datalist>
+                    </div>
+                </div>
+                <div class="tz-targets" id="targetContainer">
+                    <!-- Target rows added dynamically -->
+                </div>
+            </div>
+
+            <!-- World Clock Section -->
+            <div class="tz-world-clock">
+                <h3><i class="fa-solid fa-globe"></i> World Clock</h3>
+                <div class="tz-clock-grid" id="clockGrid">
+                    <!-- Clock cards added dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Meeting Planner -->
+        <div class="tz-meeting-planner">
+            <div class="tz-section-header">
+                <h3><i class="fa-solid fa-calendar-check"></i> Meeting Planner</h3>
+                <div class="tz-planner-controls">
+                    <label>Source Hour:</label>
+                    <select id="plannerHour" class="tz-select" aria-label="Source hour"></select>
+                    <label>in</label>
+                    <input type="text" id="plannerSourceTz" list="plannerTzList" placeholder="Source timezone..." class="tz-input" aria-label="Planner source timezone">
+                    <datalist id="plannerTzList"></datalist>
+                </div>
+            </div>
+            <div class="tz-planner-grid" id="plannerGrid">
+                <!-- Meeting planner grid added dynamically -->
+            </div>
+            <div class="tz-planner-legend">
+                <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-good"></span> Business hours (9-17)</span>
+                <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-ok"></span> Early/Late (7-9, 17-21)</span>
+                <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-bad"></span> Night (21-7)</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/funcs.js"></script>
+    <script src="timezone-app.js"></script>
+</body>
+
+</html>
