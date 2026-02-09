@@ -1,152 +1,276 @@
-// Text formatter specific code - only run if elements exist
-const quoteCheckbox = document.getElementById('quote');
-const parenthesisCheckbox = document.getElementById('parenthesis');
-const formatSQLCheckbox = document.getElementById('formatSQL');
-const options = document.querySelector('.options');
+// Text formatter - toolbar-based UI
 const output = document.getElementById('output');
-const copyButton = document.getElementById('copyButton');
+const inputEl = document.getElementById('input');
 const popup = document.querySelector('.copy-popup');
+const separatorSelect = document.getElementById('separatorSelect');
+const customSeparatorInput = document.getElementById('customSeparator');
 
-// Function to update the copy button state
-function updateCopyButtonState() {
-    if (output && copyButton) {
-        if (output.value.trim() === '') {
-            copyButton.disabled = true;
-            copyButton.classList.add('disabled');
+// ========== Dropdown Management ==========
+
+function toggleDropdown(id) {
+    const dropdown = document.getElementById(id);
+    const isOpen = dropdown.classList.contains('open');
+    closeAllDropdowns();
+    if (!isOpen) {
+        dropdown.classList.add('open');
+    }
+}
+
+function closeAllDropdowns() {
+    document.querySelectorAll('.toolbar-dropdown').forEach(d => d.classList.remove('open'));
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.toolbar-group.dropdown')) {
+        closeAllDropdowns();
+    }
+});
+
+// Show/hide custom separator input
+if (separatorSelect) {
+    separatorSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customSeparatorInput.classList.remove('hidden');
+            customSeparatorInput.focus();
         } else {
-            copyButton.disabled = false;
-            copyButton.classList.remove('disabled');
-        }
-    }
-}
-
-// Add event listener to the output box - only if it exists
-if (output) {
-    output.addEventListener('input', updateCopyButtonState);
-    // Initial call to set the correct state when the page loads
-    updateCopyButtonState();
-}
-
-if (formatSQLCheckbox) {
-    formatSQLCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            options.classList.add('disabled');
-            quoteCheckbox.checked = false;
-            parenthesisCheckbox.checked = false;
-            quoteCheckbox.disabled = true;
-            parenthesisCheckbox.disabled = true;
-        } else {
-            options.classList.remove('disabled');
-            quoteCheckbox.disabled = false;
-            parenthesisCheckbox.disabled = false;
+            customSeparatorInput.classList.add('hidden');
         }
     });
 }
 
-if (quoteCheckbox) {
-    quoteCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            formatSQLCheckbox.checked = false;
-            enableCheckboxes();
+// ========== Source Text (auto-chaining) ==========
+
+// If output has content, transform that (chaining). Otherwise read from input.
+function getSourceText() {
+    if (output.value.trim()) return output.value;
+    return inputEl.value;
+}
+
+// ========== List Formatting ==========
+
+function formatList() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    const quoteStyle = document.getElementById('quoteStyleSelect').value;
+    const parenToggle = document.getElementById('parenToggle').checked;
+    let separator = separatorSelect.value;
+
+    if (separator === 'custom') {
+        separator = customSeparatorInput.value;
+    } else if (separator === '\\n') {
+        separator = '\n';
+    } else if (separator === '\\t') {
+        separator = '\t';
+    }
+
+    // Split on commas, whitespace, or newlines
+    let items = text.split(/[,\s]+/).filter(item => item.trim() !== '');
+
+    // Apply quote style
+    items = items.map(item => {
+        switch (quoteStyle) {
+            case 'single': return `'${item}'`;
+            case 'double': return `"${item}"`;
+            case 'backtick': return `\`${item}\``;
+            default: return item;
         }
     });
-}
 
-if (parenthesisCheckbox) {
-    parenthesisCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            formatSQLCheckbox.checked = false;
-            enableCheckboxes();
-        }
-    });
-}
+    let result = items.join(separator);
 
-function enableCheckboxes() {
-    if (options && quoteCheckbox && parenthesisCheckbox) {
-        options.classList.remove('disabled');
-        quoteCheckbox.disabled = false;
-        parenthesisCheckbox.disabled = false;
+    if (parenToggle) {
+        result = `(${result})`;
     }
-}
 
-function formatInput() {
-    const input = document.getElementById('input').value;
-    const quote = quoteCheckbox.checked;
-    const parenthesis = parenthesisCheckbox.checked;
-    const formatSQL = formatSQLCheckbox.checked;
-    
-    let result;
-
-    if (formatSQL) {
-        result = formatSQLQuery(input);
-    } else {
-        // Always split by both commas and whitespace
-        let items = input.split(/[,\s]+/).filter(item => item.trim() !== '');
-        
-        if (quote) {
-            items = items.map(item => `'${item}'`);
-        }
-        
-        result = items.join(', ');
-        
-        if (parenthesis) {
-            result = `(${result})`;
-        }
-    }
-    
     output.value = result;
-    updateCopyButtonState(); // Update copy button state after formatting
+    closeAllDropdowns();
 }
 
-function formatSQLQuery(query) {
-    const keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY', 'GROUP BY', 'HAVING', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'ON', 'IN', 'UNION', 'ALL', 'INSERT', 'UPDATE', 'DELETE'];
-    
-    let formattedQuery = query.toUpperCase();
+// ========== Case Conversion ==========
 
-    // Replace multiple spaces with a single space
-    formattedQuery = formattedQuery.replace(/\s+/g, ' ');
+function splitIntoWords(text) {
+    // Split on spaces, underscores, hyphens, and camelCase boundaries
+    return text
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+        .split(/[\s_\-]+/)
+        .filter(w => w.length > 0);
+}
 
-    keywords.forEach(keyword => {
-        formattedQuery = formattedQuery.replace(new RegExp(`\\b${keyword}\\b`, 'g'), `\n${keyword}`);
+function convertCase(type) {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    let result;
+    switch (type) {
+        case 'upper':
+            result = text.toUpperCase();
+            break;
+        case 'lower':
+            result = text.toLowerCase();
+            break;
+        case 'title':
+            result = text.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+            break;
+        case 'camel': {
+            const words = splitIntoWords(text);
+            result = words.map((w, i) => {
+                const lower = w.toLowerCase();
+                return i === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+            }).join('');
+            break;
+        }
+        case 'snake': {
+            const words = splitIntoWords(text);
+            result = words.map(w => w.toLowerCase()).join('_');
+            break;
+        }
+        case 'kebab': {
+            const words = splitIntoWords(text);
+            result = words.map(w => w.toLowerCase()).join('-');
+            break;
+        }
+        case 'pascal': {
+            const words = splitIntoWords(text);
+            result = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+            break;
+        }
+        case 'constant': {
+            const words = splitIntoWords(text);
+            result = words.map(w => w.toUpperCase()).join('_');
+            break;
+        }
+        default:
+            result = text;
+    }
+
+    output.value = result;
+    closeAllDropdowns();
+}
+
+// ========== Sort & Deduplicate ==========
+
+function sortLines(direction) {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    lines.sort((a, b) => {
+        const cmp = a.localeCompare(b, undefined, { sensitivity: 'base' });
+        return direction === 'desc' ? -cmp : cmp;
     });
 
-    // Remove empty lines and trim each line
-    formattedQuery = formattedQuery.split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .join('\n');
+    output.value = lines.join('\n');
+    closeAllDropdowns();
+}
 
-    return formattedQuery;
+function sortNumeric() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    lines.sort((a, b) => {
+        const numA = parseFloat(a) || 0;
+        const numB = parseFloat(b) || 0;
+        return numA - numB;
+    });
+
+    output.value = lines.join('\n');
+    closeAllDropdowns();
+}
+
+function removeDuplicates(andSort) {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    let unique = [...new Set(lines)];
+
+    if (andSort) {
+        unique.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
+
+    output.value = unique.join('\n');
+    closeAllDropdowns();
+}
+
+// ========== JSON Formatting ==========
+
+function prettifyJSON() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    try {
+        const parsed = JSON.parse(text);
+        output.value = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+        output.value = 'Error: Invalid JSON — ' + e.message;
+    }
+    closeAllDropdowns();
+}
+
+function minifyJSON() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    try {
+        const parsed = JSON.parse(text);
+        output.value = JSON.stringify(parsed);
+    } catch (e) {
+        output.value = 'Error: Invalid JSON — ' + e.message;
+    }
+    closeAllDropdowns();
+}
+
+// ========== Live Stats ==========
+
+function updateStats() {
+    const text = inputEl.value;
+    const charCount = text.length;
+    const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+    const lineCount = text === '' ? 0 : text.split('\n').length;
+
+    document.getElementById('charCount').textContent = charCount + ' chars';
+    document.getElementById('wordCount').textContent = wordCount + ' words';
+    document.getElementById('lineCount').textContent = lineCount + ' lines';
+}
+
+if (inputEl) {
+    inputEl.addEventListener('input', function() {
+        output.value = '';
+        updateStats();
+    });
+    updateStats();
+}
+
+// ========== Copy & Clear ==========
+
+function copyToClipboard() {
+    if (!output.value.trim()) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(output.value).then(() => {
+            showCopyPopup();
+        });
+    } else {
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = output.value;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextArea);
+        showCopyPopup();
+    }
+}
+
+function showCopyPopup() {
+    if (popup) {
+        popup.classList.add('show');
+        setTimeout(() => popup.classList.remove('show'), 2000);
+    }
 }
 
 function clearOutput() {
     output.value = '';
-    updateCopyButtonState(); // Update copy button state after clearing
-}
-
-function copyToClipboard() {
-    if (output.value.trim() === '') return; // Exit if output is empty
-
-    // Create a temporary textarea element to copy from
-    const tempTextArea = document.createElement('textarea');
-    tempTextArea.value = output.value;
-    document.body.appendChild(tempTextArea);
-    
-    // Copy the text without visual selection
-    tempTextArea.select();
-    document.execCommand('copy');
-    
-    // Remove the temporary textarea
-    document.body.removeChild(tempTextArea);
-
-    // Show the popup
-    popup.classList.add('show');
-    setTimeout(() => {
-        popup.classList.remove('show');
-    }, 2000);
-}
-
-// Add click event listener to the copy button
-if (copyButton) {
-    copyButton.addEventListener('click', copyToClipboard);
 }

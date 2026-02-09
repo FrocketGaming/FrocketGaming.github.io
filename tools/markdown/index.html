@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Previewer - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="markdown-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="header-top">
+            <div class="logo">QoL Tools</div>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+        <nav class="tool-nav">
+            <a href="../../index.html" class="tool-btn">txt formatter</a>
+            <a href="../snippets/index.html" class="tool-btn">snippets</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../markdown/index.html" class="tool-btn active">markdown preview</a>
+            <a href="../epoch-converter/index.html" class="tool-btn">epoch converter</a>
+            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+        </nav>
+    </div>
+
+    <p>Write markdown on the left and see the rendered preview on the right. All processing is done locally in your browser.</p>
+
+    <div class="markdown-container">
+        <div class="markdown-toolbar">
+            <button class="toolbar-btn" data-syntax="heading1" title="Heading 1">H1</button>
+            <button class="toolbar-btn" data-syntax="heading2" title="Heading 2">H2</button>
+            <button class="toolbar-btn" data-syntax="bold" title="Bold">B</button>
+            <button class="toolbar-btn" data-syntax="italic" title="Italic"><em>I</em></button>
+            <button class="toolbar-btn" data-syntax="link" title="Link"><i class="fa-solid fa-link"></i></button>
+            <button class="toolbar-btn" data-syntax="image" title="Image"><i class="fa-solid fa-image"></i></button>
+            <button class="toolbar-btn" data-syntax="code" title="Inline Code"><i class="fa-solid fa-code"></i></button>
+            <button class="toolbar-btn" data-syntax="codeblock" title="Code Block"><i class="fa-solid fa-file-code"></i></button>
+            <button class="toolbar-btn" data-syntax="list" title="Unordered List"><i class="fa-solid fa-list-ul"></i></button>
+            <button class="toolbar-btn" data-syntax="olist" title="Ordered List"><i class="fa-solid fa-list-ol"></i></button>
+            <button class="toolbar-btn" data-syntax="blockquote" title="Blockquote"><i class="fa-solid fa-quote-left"></i></button>
+            <button class="toolbar-btn" data-syntax="hr" title="Horizontal Rule"><i class="fa-solid fa-minus"></i></button>
+        </div>
+        <div class="markdown-panels">
+            <div class="markdown-editor">
+                <textarea id="markdownInput" placeholder="Type your markdown here..." spellcheck="false"></textarea>
+            </div>
+            <div class="markdown-preview">
+                <div id="previewContent" class="preview-content">
+                    <p class="preview-placeholder">Preview will appear here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/funcs.js"></script>
+    <script src="markdown-app.js"></script>
+</body>
+
+</html>
