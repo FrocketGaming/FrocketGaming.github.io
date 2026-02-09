@@ -410,8 +410,18 @@ class CSVViewer {
             // Drop existing table
             this.db.run('DROP TABLE IF EXISTS csv');
 
-            // Sanitize column names and infer types
-            const sanitizedHeaders = this.headers.map(h => this.sanitizeColumnName(h));
+            // Sanitize column names (deduplicate) and infer types
+            const seen = new Set();
+            const sanitizedHeaders = this.headers.map(h => {
+                let name = this.sanitizeColumnName(h);
+                let base = name;
+                let suffix = 2;
+                while (seen.has(name)) {
+                    name = base + '_' + suffix++;
+                }
+                seen.add(name);
+                return name;
+            });
             const types = this.headers.map((_, i) => this.inferColumnType(i));
 
             // Create table
@@ -426,8 +436,9 @@ class CSVViewer {
             const stmt = this.db.prepare(insertSQL);
 
             for (const row of this.data) {
-                const values = row.slice(0, sanitizedHeaders.length).map((cell, i) => {
-                    if (cell === '') return null;
+                const values = sanitizedHeaders.map((_, i) => {
+                    const cell = row[i];
+                    if (cell === undefined || cell === null || cell === '') return null;
                     if (types[i] === 'INTEGER') {
                         const num = parseInt(cell, 10);
                         return isNaN(num) ? cell : num;
@@ -451,7 +462,7 @@ class CSVViewer {
             status.textContent = `${this.data.length} rows loaded`;
             status.className = 'sql-status';
         } catch (error) {
-            this.db.run('ROLLBACK');
+            try { this.db.run('ROLLBACK'); } catch (e) { /* no active transaction */ }
             this.showSQLError('Failed to load data into SQL: ' + error.message);
         }
     }
