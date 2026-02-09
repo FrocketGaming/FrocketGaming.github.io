@@ -353,6 +353,7 @@ class SnippetsApp {
         const codeElement = document.getElementById('snippetCode');
         codeElement.textContent = snippet.content;
         codeElement.className = '';
+        codeElement.removeAttribute('data-highlighted');
 
         // Apply syntax highlighting
         const language = this.extensionToLanguage[snippet.extension] || 'plaintext';
