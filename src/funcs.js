@@ -223,6 +223,84 @@ function minifyJSON() {
     closeAllDropdowns();
 }
 
+// ========== Find & Replace ==========
+
+function findAndReplace() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+
+    const findValue = document.getElementById('findInput').value;
+    const replaceValue = document.getElementById('replaceInput').value;
+    const useRegex = document.getElementById('regexToggle').checked;
+    const caseSensitive = document.getElementById('caseSensitiveToggle').checked;
+
+    if (!findValue) return;
+
+    try {
+        let regex;
+        if (useRegex) {
+            const flags = caseSensitive ? 'g' : 'gi';
+            regex = new RegExp(findValue, flags);
+        } else {
+            const escaped = findValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const flags = caseSensitive ? 'g' : 'gi';
+            regex = new RegExp(escaped, flags);
+        }
+        output.value = text.replace(regex, replaceValue);
+    } catch (e) {
+        output.value = 'Error: Invalid regex — ' + e.message;
+    }
+    closeAllDropdowns();
+}
+
+// ========== Trim / Clean ==========
+
+function trimWhitespace() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    const lines = text.split('\n');
+    output.value = lines.map(l => l.trim()).join('\n');
+    closeAllDropdowns();
+}
+
+function removeEmptyLines() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    const lines = text.split('\n');
+    output.value = lines.filter(l => l.trim() !== '').join('\n');
+    closeAllDropdowns();
+}
+
+function removeExtraSpaces() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    output.value = text.replace(/ {2,}/g, ' ');
+    closeAllDropdowns();
+}
+
+function stripHtmlTags() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    output.value = text.replace(/<[^>]*>/g, '');
+    closeAllDropdowns();
+}
+
+function addLineNumbers() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    const lines = text.split('\n');
+    output.value = lines.map((l, i) => (i + 1) + '. ' + l).join('\n');
+    closeAllDropdowns();
+}
+
+function removeLineNumbers() {
+    const text = getSourceText();
+    if (!text.trim()) return;
+    const lines = text.split('\n');
+    output.value = lines.map(l => l.replace(/^\s*\d+[\.\)\:\-]\s*/, '')).join('\n');
+    closeAllDropdowns();
+}
+
 // ========== Live Stats ==========
 
 function updateStats() {

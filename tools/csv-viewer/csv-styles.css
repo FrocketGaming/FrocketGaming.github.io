@@ -27,7 +27,7 @@
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     font-size: 14px;
     cursor: pointer;
     transition: border-color 0.3s;
@@ -111,18 +111,18 @@
 }
 
 .csv-table th.sortable::after {
-    content: ' ⇅';
+    content: " ⇅";
     color: var(--text-secondary);
     font-size: 12px;
 }
 
 .csv-table th.sort-asc::after {
-    content: ' ▲';
+    content: " ▲";
     color: var(--accent-secondary);
 }
 
 .csv-table th.sort-desc::after {
-    content: ' ▼';
+    content: " ▼";
     color: var(--accent-secondary);
 }
 
@@ -203,7 +203,7 @@
     padding: 3px 10px;
     border-radius: 12px;
     background-color: var(--bg-tertiary);
-    color: var(--text-secondary);
+    color: var(--accent-primary);
     border: 1px solid var(--border-color);
 }
 
@@ -233,13 +233,70 @@
     cursor: pointer;
     transition: all 0.3s;
     font-size: 12px;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
 }
 
 .sql-example-btn:hover {
-    background-color: var(--accent-primary);
+    background-color: var(--bg-secondary);
     border-color: var(--accent-primary);
     box-shadow: 0 0 10px var(--accent-primary);
+}
+
+/* SQL Editor Highlight Overlay */
+.sql-editor-container {
+    position: relative;
+    background-color: var(--bg-primary);
+    border-radius: 5px;
+}
+
+.sql-highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 8px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+    line-height: normal;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+    color: var(--text-primary);
+}
+
+.sql-highlight-layer code {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    background: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Token classes */
+.sql-keyword {
+    color: var(--syntax-keyword);
+    font-weight: bold;
+}
+.sql-string {
+    color: var(--syntax-string);
+}
+.sql-number {
+    color: var(--syntax-number);
+}
+.sql-comment {
+    color: var(--syntax-comment);
+    font-style: italic;
+}
+.sql-function {
+    color: var(--syntax-function);
 }
 
 .sql-query-input {
@@ -249,16 +306,28 @@
     height: 80px;
     min-height: 80px;
     padding: 8px 10px;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: transparent;
+    color: transparent;
+    caret-color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     font-size: 13px;
     resize: vertical;
     outline: none;
     transition: border-color 0.3s;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+}
+
+.sql-query-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.sql-query-input::selection {
+    background-color: var(--accent-primary);
+    color: transparent;
 }
 
 .sql-query-input:focus {
@@ -292,7 +361,7 @@
     border-radius: 5px;
     color: var(--error-color);
     font-size: 13px;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     display: none;
 }
 
@@ -406,6 +475,10 @@
     .sql-query-input {
         font-size: 12px;
         min-height: 40px;
+    }
+
+    .sql-highlight-layer {
+        font-size: 12px;
     }
 
     .sql-header h3 {

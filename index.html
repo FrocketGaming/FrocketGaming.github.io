@@ -70,13 +70,6 @@
         </div>
         <p>Transform, format, and manipulate text with the tools below.</p>
         <div class="formatter-layout">
-            <div class="box">
-                <textarea
-                    id="input"
-                    placeholder="Enter text, items, JSON, or SQL..."
-                ></textarea>
-            </div>
-
             <div class="toolbar">
                 <div class="toolbar-group dropdown">
                     <button
@@ -239,6 +232,103 @@
                     </div>
                 </div>
 
+                <div class="toolbar-group dropdown">
+                    <button
+                        class="toolbar-btn"
+                        onclick="toggleDropdown('findReplaceDropdown')"
+                    >
+                        Find & Replace <i class="fa-solid fa-caret-down"></i>
+                    </button>
+                    <div id="findReplaceDropdown" class="toolbar-dropdown">
+                        <div class="dropdown-form">
+                            <label>Find</label>
+                            <input
+                                type="text"
+                                id="findInput"
+                                placeholder="Search text..."
+                            />
+                            <label>Replace</label>
+                            <input
+                                type="text"
+                                id="replaceInput"
+                                placeholder="Replace with..."
+                            />
+                            <div class="dropdown-toggle-row">
+                                <label for="regexToggle">Regex</label>
+                                <input type="checkbox" id="regexToggle" />
+                            </div>
+                            <div class="dropdown-toggle-row">
+                                <label for="caseSensitiveToggle"
+                                    >Case sensitive</label
+                                >
+                                <input
+                                    type="checkbox"
+                                    id="caseSensitiveToggle"
+                                />
+                            </div>
+                            <button
+                                class="dropdown-apply-btn"
+                                onclick="findAndReplace()"
+                            >
+                                Replace All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toolbar-group dropdown">
+                    <button
+                        class="toolbar-btn"
+                        onclick="toggleDropdown('trimCleanDropdown')"
+                    >
+                        Trim/Clean <i class="fa-solid fa-caret-down"></i>
+                    </button>
+                    <div id="trimCleanDropdown" class="toolbar-dropdown">
+                        <button
+                            class="dropdown-item"
+                            onclick="trimWhitespace()"
+                        >
+                            Trim Whitespace
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="removeEmptyLines()"
+                        >
+                            Remove Empty Lines
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="removeExtraSpaces()"
+                        >
+                            Remove Extra Spaces
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="removeDuplicates(false)"
+                        >
+                            Remove Duplicate Lines
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="stripHtmlTags()"
+                        >
+                            Strip HTML Tags
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="addLineNumbers()"
+                        >
+                            Add Line Numbers
+                        </button>
+                        <button
+                            class="dropdown-item"
+                            onclick="removeLineNumbers()"
+                        >
+                            Remove Line Numbers
+                        </button>
+                    </div>
+                </div>
+
                 <div class="toolbar-spacer"></div>
                 <button class="toolbar-btn" onclick="copyToClipboard()">
                     <i class="fa-solid fa-copy"></i> Copy
@@ -251,17 +341,25 @@
                 </button>
             </div>
 
+            <div class="columns-row">
+                <div class="box">
+                    <textarea
+                        id="input"
+                        placeholder="Enter text, items, JSON, or SQL..."
+                    ></textarea>
+                </div>
+                <div class="box output-box">
+                    <textarea id="output" readonly></textarea>
+                    <div class="copy-popup">Text copied</div>
+                </div>
+            </div>
+
             <div class="stats-bar" id="statsBar">
                 <span id="charCount">0 chars</span>
                 <span class="stats-sep">|</span>
                 <span id="wordCount">0 words</span>
                 <span class="stats-sep">|</span>
                 <span id="lineCount">0 lines</span>
-            </div>
-
-            <div class="box output-box">
-                <textarea id="output" readonly></textarea>
-                <div class="copy-popup">Text copied</div>
             </div>
         </div>
         <script src="./src/theme-manager.js"></script>

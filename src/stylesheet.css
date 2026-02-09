@@ -14,6 +14,16 @@
     --error-color: #ff6b6b;
     --warning-color: #ffa500;
     --info-color: #6ba3ff;
+    --syntax-keyword: #c678dd;
+    --syntax-string: #98c379;
+    --syntax-comment: #888888;
+    --syntax-function: #6ba3ff;
+    --syntax-number: #d19a66;
+    --syntax-type: #e5c07b;
+    --syntax-variable: #e06c75;
+    --syntax-tag: #e06c75;
+    --syntax-addition: #74a12e;
+    --syntax-deletion: #ff6b6b;
 }
 
 [data-theme="dracula"] {
@@ -30,6 +40,16 @@
     --error-color: #ff5555;
     --warning-color: #ffb86c;
     --info-color: #8be9fd;
+    --syntax-keyword: #ff79c6;
+    --syntax-string: #f1fa8c;
+    --syntax-comment: #6272a4;
+    --syntax-function: #50fa7b;
+    --syntax-number: #bd93f9;
+    --syntax-type: #8be9fd;
+    --syntax-variable: #f8f8f2;
+    --syntax-tag: #ff79c6;
+    --syntax-addition: #50fa7b;
+    --syntax-deletion: #ff5555;
 }
 
 [data-theme="catppuccin"] {
@@ -46,6 +66,16 @@
     --error-color: #f38ba8;
     --warning-color: #fab387;
     --info-color: #89b4fa;
+    --syntax-keyword: #cba6f7;
+    --syntax-string: #a6e3a1;
+    --syntax-comment: #6c7086;
+    --syntax-function: #89b4fa;
+    --syntax-number: #fab387;
+    --syntax-type: #f9e2af;
+    --syntax-variable: #f38ba8;
+    --syntax-tag: #cba6f7;
+    --syntax-addition: #a6e3a1;
+    --syntax-deletion: #f38ba8;
 }
 
 [data-theme="atom"] {
@@ -62,6 +92,16 @@
     --error-color: #e06c75;
     --warning-color: #d19a66;
     --info-color: #61afef;
+    --syntax-keyword: #c678dd;
+    --syntax-string: #98c379;
+    --syntax-comment: #5c6370;
+    --syntax-function: #61afef;
+    --syntax-number: #d19a66;
+    --syntax-type: #e5c07b;
+    --syntax-variable: #e06c75;
+    --syntax-tag: #e06c75;
+    --syntax-addition: #98c379;
+    --syntax-deletion: #e06c75;
 }
 
 [data-theme="nord"] {
@@ -78,6 +118,16 @@
     --error-color: #bf616a;
     --warning-color: #ebcb8b;
     --info-color: #5e81ac;
+    --syntax-keyword: #81a1c1;
+    --syntax-string: #a3be8c;
+    --syntax-comment: #616e88;
+    --syntax-function: #88c0d0;
+    --syntax-number: #b48ead;
+    --syntax-type: #8fbcbb;
+    --syntax-variable: #d8dee9;
+    --syntax-tag: #81a1c1;
+    --syntax-addition: #a3be8c;
+    --syntax-deletion: #bf616a;
 }
 
 [data-theme="solarized"] {
@@ -94,6 +144,16 @@
     --error-color: #dc322f;
     --warning-color: #cb4b16;
     --info-color: #268bd2;
+    --syntax-keyword: #859900;
+    --syntax-string: #2aa198;
+    --syntax-comment: #586e75;
+    --syntax-function: #268bd2;
+    --syntax-number: #d33682;
+    --syntax-type: #b58900;
+    --syntax-variable: #cb4b16;
+    --syntax-tag: #268bd2;
+    --syntax-addition: #859900;
+    --syntax-deletion: #dc322f;
 }
 
 body {
@@ -142,10 +202,20 @@ sub {
 /* ========== Formatter Layout ========== */
 .formatter-layout {
     width: 100%;
-    max-width: 800px;
+    max-width: 1400px;
     display: flex;
     flex-direction: column;
     gap: 0;
+}
+
+.columns-row {
+    display: flex;
+    gap: 20px;
+}
+
+.columns-row > .box {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .box {
@@ -157,7 +227,7 @@ sub {
     transition:
         border-color 0.3s,
         box-shadow 0.3s;
-    height: 30vh;
+    height: 50vh;
 }
 
 .box:focus-within {
@@ -468,6 +538,12 @@ input[type="checkbox"]:checked {
 .disabled {
     opacity: 0.5;
     pointer-events: none;
+}
+
+@media (max-width: 992px) {
+    .columns-row {
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 768px) {

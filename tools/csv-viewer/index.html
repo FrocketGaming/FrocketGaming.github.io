@@ -80,8 +80,11 @@
                     <span id="sqlStatus" class="sql-status">Ready</span>
                 </div>
                 <div id="sqlExamples" class="sql-examples"></div>
-                <textarea id="sqlQuery" class="sql-query-input" rows="2" spellcheck="false"
-                    placeholder="Write SQL queries against the 'csv' table...&#10;Example: SELECT * FROM csv LIMIT 10"></textarea>
+                <div class="sql-editor-container">
+                    <pre class="sql-highlight-layer" aria-hidden="true"><code id="sqlHighlight"></code></pre>
+                    <textarea id="sqlQuery" class="sql-query-input" rows="2" spellcheck="false"
+                        placeholder="Write SQL queries against the 'csv' table...&#10;Example: SELECT * FROM csv LIMIT 10"></textarea>
+                </div>
                 <div class="sql-controls">
                     <button id="sqlRunBtn" class="format-btn"><i class="fa-solid fa-play"></i> Run Query</button>
                     <button id="sqlExportBtn" class="format-btn">Export Results</button>

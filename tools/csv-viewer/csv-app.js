@@ -30,7 +30,8 @@ class CSVViewer {
         // SQL playground listeners
         document.getElementById('sqlRunBtn').addEventListener('click', () => this.runQuery());
         document.getElementById('sqlExportBtn').addEventListener('click', () => this.exportQueryResults());
-        document.getElementById('sqlQuery').addEventListener('keydown', (e) => {
+        const sqlTextarea = document.getElementById('sqlQuery');
+        sqlTextarea.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
                 this.runQuery();
@@ -41,8 +42,22 @@ class CSVViewer {
                 const end = textarea.selectionEnd;
                 textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
                 textarea.selectionStart = textarea.selectionEnd = start + 4;
+                this.updateHighlight();
             }
         });
+
+        // Syntax highlighting sync
+        sqlTextarea.addEventListener('input', () => this.updateHighlight());
+        sqlTextarea.addEventListener('scroll', () => this.updateHighlight());
+
+        // Sync highlight layer size when textarea is resized
+        const resizeObserver = new ResizeObserver(() => {
+            const pre = document.querySelector('.sql-highlight-layer');
+            if (pre) {
+                pre.style.height = sqlTextarea.offsetHeight + 'px';
+            }
+        });
+        resizeObserver.observe(sqlTextarea);
     }
 
     handleFileUpload(event) {
@@ -286,6 +301,67 @@ class CSVViewer {
         return div.innerHTML;
     }
 
+    // --- SQL Syntax Highlighting ---
+
+    highlightSQL(text) {
+        if (!text) return '';
+
+        const keywords = /^(SELECT|FROM|WHERE|AND|OR|NOT|IN|IS|NULL|AS|ON|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|FULL|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|UNION|ALL|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|ADD|COLUMN|INDEX|VIEW|IF|EXISTS|BETWEEN|LIKE|CASE|WHEN|THEN|ELSE|END|DISTINCT|ASC|DESC|WITH|RECURSIVE)$/i;
+        const functions = /^(COUNT|SUM|AVG|MIN|MAX|COALESCE|NULLIF|CAST|SUBSTR|LENGTH|UPPER|LOWER|TRIM|REPLACE|ROUND|ABS|GROUP_CONCAT|TOTAL|TYPEOF|INSTR|HEX|QUOTE|UNICODE|ZEROBLOB|RANDOM|DATE|TIME|DATETIME|JULIANDAY|STRFTIME)$/i;
+
+        const tokenRegex = /--[^\n]*|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s]/g;
+
+        let result = '';
+        let match;
+        let lastIndex = 0;
+
+        while ((match = tokenRegex.exec(text)) !== null) {
+            // Add any whitespace between tokens
+            if (match.index > lastIndex) {
+                result += this.escapeHtml(text.substring(lastIndex, match.index));
+            }
+
+            const token = match[0];
+            const escaped = this.escapeHtml(token);
+
+            if (token.startsWith('--')) {
+                result += `<span class="sql-comment">${escaped}</span>`;
+            } else if ((token.startsWith("'") && token.endsWith("'")) || (token.startsWith('"') && token.endsWith('"'))) {
+                result += `<span class="sql-string">${escaped}</span>`;
+            } else if (/^\d+(?:\.\d+)?$/.test(token)) {
+                result += `<span class="sql-number">${escaped}</span>`;
+            } else if (keywords.test(token)) {
+                result += `<span class="sql-keyword">${escaped}</span>`;
+            } else if (functions.test(token)) {
+                result += `<span class="sql-function">${escaped}</span>`;
+            } else {
+                result += escaped;
+            }
+
+            lastIndex = match.index + token.length;
+        }
+
+        // Add any remaining text
+        if (lastIndex < text.length) {
+            result += this.escapeHtml(text.substring(lastIndex));
+        }
+
+        return result;
+    }
+
+    updateHighlight() {
+        const textarea = document.getElementById('sqlQuery');
+        const highlight = document.getElementById('sqlHighlight');
+        if (!textarea || !highlight) return;
+
+        highlight.innerHTML = this.highlightSQL(textarea.value) + '\n';
+
+        // Sync scroll
+        const pre = highlight.parentElement;
+        pre.scrollTop = textarea.scrollTop;
+        pre.scrollLeft = textarea.scrollLeft;
+    }
+
     // --- SQL Playground Methods ---
 
     async initSQLEngine() {
@@ -454,6 +530,7 @@ class CSVViewer {
             btn.textContent = ex.label;
             btn.addEventListener('click', () => {
                 document.getElementById('sqlQuery').value = ex.query;
+                this.updateHighlight();
             });
             container.appendChild(btn);
         });
@@ -564,6 +641,7 @@ class CSVViewer {
     clearSQL() {
         document.getElementById('sqlSection').style.display = 'none';
         document.getElementById('sqlQuery').value = '';
+        this.updateHighlight();
         document.getElementById('sqlExamples').innerHTML = '';
         document.getElementById('sqlResultsContainer').innerHTML = '';
         document.getElementById('sqlResultsWrapper').classList.remove('show');
