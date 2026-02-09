@@ -87,17 +87,131 @@
         return div.innerHTML;
     }
 
+    // --- Word-Level Diff ---
+
+    function diffWords(oldLine, newLine) {
+        const oldWords = oldLine.split(/(\s+)/);
+        const newWords = newLine.split(/(\s+)/);
+
+        // LCS on word arrays
+        const n = oldWords.length;
+        const m = newWords.length;
+        const table = [];
+        for (let i = 0; i <= n; i++) {
+            table[i] = new Array(m + 1).fill(0);
+        }
+        for (let i = 1; i <= n; i++) {
+            for (let j = 1; j <= m; j++) {
+                if (oldWords[i - 1] === newWords[j - 1]) {
+                    table[i][j] = table[i - 1][j - 1] + 1;
+                } else {
+                    table[i][j] = Math.max(table[i - 1][j], table[i][j - 1]);
+                }
+            }
+        }
+
+        // Backtrack to get word-level ops
+        let i = n, j = m;
+        const oldOps = [];
+        const newOps = [];
+
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && oldWords[i - 1] === newWords[j - 1]) {
+                oldOps.push({ text: oldWords[i - 1], changed: false });
+                newOps.push({ text: newWords[j - 1], changed: false });
+                i--; j--;
+            } else if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j])) {
+                newOps.push({ text: newWords[j - 1], changed: true });
+                j--;
+            } else {
+                oldOps.push({ text: oldWords[i - 1], changed: true });
+                i--;
+            }
+        }
+
+        oldOps.reverse();
+        newOps.reverse();
+
+        return { oldWords: oldOps, newWords: newOps };
+    }
+
+    function renderWordHighlightedContent(wordOps) {
+        let html = '';
+        for (const w of wordOps) {
+            if (w.changed) {
+                html += '<span class="word-changed">' + escapeHtml(w.text) + '</span>';
+            } else {
+                html += escapeHtml(w.text);
+            }
+        }
+        return html;
+    }
+
+    // Group consecutive remove+add ops into pairs for word-level highlighting
+    function groupOpsWithPairs(ops) {
+        const grouped = [];
+        let i = 0;
+        while (i < ops.length) {
+            if (ops[i].type === 'remove') {
+                // Collect consecutive removes
+                const removes = [];
+                while (i < ops.length && ops[i].type === 'remove') {
+                    removes.push(ops[i]);
+                    i++;
+                }
+                // Collect consecutive adds
+                const adds = [];
+                while (i < ops.length && ops[i].type === 'add') {
+                    adds.push(ops[i]);
+                    i++;
+                }
+                // Pair them up
+                const pairCount = Math.min(removes.length, adds.length);
+                for (let p = 0; p < pairCount; p++) {
+                    grouped.push({ type: 'modify', remove: removes[p], add: adds[p] });
+                }
+                // Leftover removes
+                for (let p = pairCount; p < removes.length; p++) {
+                    grouped.push(removes[p]);
+                }
+                // Leftover adds
+                for (let p = pairCount; p < adds.length; p++) {
+                    grouped.push(adds[p]);
+                }
+            } else {
+                grouped.push(ops[i]);
+                i++;
+            }
+        }
+        return grouped;
+    }
+
     // --- Rendering ---
 
     function renderUnifiedDiff(ops) {
+        const grouped = groupOpsWithPairs(ops);
         let html = '<div class="diff-unified">';
-        for (const op of ops) {
+        for (const op of grouped) {
             if (op.type === 'equal') {
                 html += '<div class="diff-line">';
                 html += '<span class="diff-line-number">' + op.oldLine + '</span>';
                 html += '<span class="diff-line-number">' + op.newLine + '</span>';
                 html += '<span class="diff-line-prefix">&nbsp;</span>';
                 html += '<span class="diff-line-content">' + escapeHtml(op.text) + '</span>';
+                html += '</div>';
+            } else if (op.type === 'modify') {
+                const wordDiff = diffWords(op.remove.text, op.add.text);
+                html += '<div class="diff-line removed">';
+                html += '<span class="diff-line-number">' + op.remove.oldLine + '</span>';
+                html += '<span class="diff-line-number"></span>';
+                html += '<span class="diff-line-prefix">-</span>';
+                html += '<span class="diff-line-content">' + renderWordHighlightedContent(wordDiff.oldWords) + '</span>';
+                html += '</div>';
+                html += '<div class="diff-line added">';
+                html += '<span class="diff-line-number"></span>';
+                html += '<span class="diff-line-number">' + op.add.newLine + '</span>';
+                html += '<span class="diff-line-prefix">+</span>';
+                html += '<span class="diff-line-content">' + renderWordHighlightedContent(wordDiff.newWords) + '</span>';
                 html += '</div>';
             } else if (op.type === 'remove') {
                 html += '<div class="diff-line removed">';
@@ -120,13 +234,20 @@
     }
 
     function renderSideBySideDiff(ops) {
+        const grouped = groupOpsWithPairs(ops);
         // Build paired rows for alignment
         const rows = [];
-        for (const op of ops) {
+        for (const op of grouped) {
             if (op.type === 'equal') {
                 rows.push({
                     left: { num: op.oldLine, text: op.text, type: 'equal' },
                     right: { num: op.newLine, text: op.text, type: 'equal' }
+                });
+            } else if (op.type === 'modify') {
+                const wordDiff = diffWords(op.remove.text, op.add.text);
+                rows.push({
+                    left: { num: op.remove.oldLine, html: renderWordHighlightedContent(wordDiff.oldWords), type: 'removed' },
+                    right: { num: op.add.newLine, html: renderWordHighlightedContent(wordDiff.newWords), type: 'added' }
                 });
             } else if (op.type === 'remove') {
                 rows.push({
@@ -148,7 +269,7 @@
                 const cls = row.left.type === 'removed' ? ' removed' : '';
                 leftHtml += '<div class="diff-line' + cls + '">';
                 leftHtml += '<span class="diff-line-number">' + row.left.num + '</span>';
-                leftHtml += '<span class="diff-line-content">' + escapeHtml(row.left.text) + '</span>';
+                leftHtml += '<span class="diff-line-content">' + (row.left.html !== undefined ? row.left.html : escapeHtml(row.left.text)) + '</span>';
                 leftHtml += '</div>';
             } else {
                 leftHtml += '<div class="diff-line filler"><span class="diff-line-number"></span><span class="diff-line-content">&nbsp;</span></div>';
@@ -157,7 +278,7 @@
                 const cls = row.right.type === 'added' ? ' added' : '';
                 rightHtml += '<div class="diff-line' + cls + '">';
                 rightHtml += '<span class="diff-line-number">' + row.right.num + '</span>';
-                rightHtml += '<span class="diff-line-content">' + escapeHtml(row.right.text) + '</span>';
+                rightHtml += '<span class="diff-line-content">' + (row.right.html !== undefined ? row.right.html : escapeHtml(row.right.text)) + '</span>';
                 rightHtml += '</div>';
             } else {
                 rightHtml += '<div class="diff-line filler"><span class="diff-line-number"></span><span class="diff-line-content">&nbsp;</span></div>';

@@ -23,6 +23,7 @@
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
         />
         <link rel="stylesheet" href="./src/stylesheet.css" />
+        <link rel="stylesheet" href="./landing-styles.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -41,331 +42,77 @@
                 </div>
             </div>
             <nav class="tool-nav">
-                <a href="./index.html" class="tool-btn active">txt formatter</a>
-                <a href="./tools/snippets/index.html" class="tool-btn"
-                    >snippets</a
-                >
-                <a href="./tools/todo/index.html" class="tool-btn"
-                    >to-do list</a
-                >
-                <a href="./tools/csv-viewer/index.html" class="tool-btn"
-                    >csv viewer</a
-                >
-                <a href="./tools/regex-tester/index.html" class="tool-btn"
-                    >regex tester</a
-                >
-                <a href="./tools/markdown/index.html" class="tool-btn"
-                    >markdown preview</a
-                >
-                <a href="./tools/epoch-converter/index.html" class="tool-btn"
-                    >epoch converter</a
-                >
-                <a href="./tools/cron-builder/index.html" class="tool-btn"
-                    >cron builder</a
-                >
-                <a href="./tools/timezone/index.html" class="tool-btn"
-                    >timezone</a
-                >
-                <a href="./tools/text-diff/index.html" class="tool-btn"
-                    >text diff</a
-                >
+                <a href="./tools/txt-formatter/index.html" class="tool-btn">txt formatter</a>
+                <a href="./tools/snippets/index.html" class="tool-btn">snippets</a>
+                <a href="./tools/todo/index.html" class="tool-btn">to-do list</a>
+                <a href="./tools/csv-viewer/index.html" class="tool-btn">csv viewer</a>
+                <a href="./tools/regex-tester/index.html" class="tool-btn">regex tester</a>
+                <a href="./tools/markdown/index.html" class="tool-btn">markdown preview</a>
+                <a href="./tools/epoch-converter/index.html" class="tool-btn">epoch converter</a>
+                <a href="./tools/cron-builder/index.html" class="tool-btn">cron builder</a>
+                <a href="./tools/timezone/index.html" class="tool-btn">timezone</a>
+                <a href="./tools/text-diff/index.html" class="tool-btn">text diff</a>
             </nav>
         </div>
-        <p>Transform, format, and manipulate text with the tools below.</p>
-        <div class="formatter-layout">
-            <div class="toolbar">
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('listDropdown')"
-                    >
-                        List Format <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="listDropdown" class="toolbar-dropdown">
-                        <div class="dropdown-form">
-                            <label>Separator</label>
-                            <select id="separatorSelect">
-                                <option value=", ">Comma</option>
-                                <option value="\n">Newline</option>
-                                <option value=" | ">Pipe</option>
-                                <option value="\t">Tab</option>
-                                <option value="; ">Semicolon</option>
-                                <option value="custom">Custom...</option>
-                            </select>
-                            <input
-                                type="text"
-                                id="customSeparator"
-                                class="custom-sep-input hidden"
-                                placeholder="Enter separator"
-                            />
-                            <label>Quote Style</label>
-                            <select id="quoteStyleSelect">
-                                <option value="none">None</option>
-                                <option value="single">Single quotes</option>
-                                <option value="double">Double quotes</option>
-                                <option value="backtick">Backticks</option>
-                            </select>
-                            <div class="dropdown-toggle-row">
-                                <label for="parenToggle"
-                                    >Wrap in parentheses</label
-                                >
-                                <input type="checkbox" id="parenToggle" />
-                            </div>
-                            <button
-                                class="dropdown-apply-btn"
-                                onclick="formatList()"
-                            >
-                                Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('caseDropdown')"
-                    >
-                        Case <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="caseDropdown" class="toolbar-dropdown">
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('upper')"
-                        >
-                            UPPERCASE
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('lower')"
-                        >
-                            lowercase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('title')"
-                        >
-                            Title Case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('camel')"
-                        >
-                            camelCase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('snake')"
-                        >
-                            snake_case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('kebab')"
-                        >
-                            kebab-case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('pascal')"
-                        >
-                            PascalCase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('constant')"
-                        >
-                            CONSTANT_CASE
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('sortDropdown')"
-                    >
-                        Sort <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="sortDropdown" class="toolbar-dropdown">
-                        <button
-                            class="dropdown-item"
-                            onclick="sortLines('asc')"
-                        >
-                            Sort A-Z
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="sortLines('desc')"
-                        >
-                            Sort Z-A
-                        </button>
-                        <button class="dropdown-item" onclick="sortNumeric()">
-                            Sort Numeric
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(false)"
-                        >
-                            Remove Duplicates
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(true)"
-                        >
-                            Remove Duplicates + Sort
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('jsonDropdown')"
-                    >
-                        JSON <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="jsonDropdown" class="toolbar-dropdown">
-                        <button class="dropdown-item" onclick="prettifyJSON()">
-                            Prettify JSON
-                        </button>
-                        <button class="dropdown-item" onclick="minifyJSON()">
-                            Minify JSON
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('findReplaceDropdown')"
-                    >
-                        Find & Replace <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="findReplaceDropdown" class="toolbar-dropdown">
-                        <div class="dropdown-form">
-                            <label>Find</label>
-                            <input
-                                type="text"
-                                id="findInput"
-                                placeholder="Search text..."
-                            />
-                            <label>Replace</label>
-                            <input
-                                type="text"
-                                id="replaceInput"
-                                placeholder="Replace with..."
-                            />
-                            <div class="dropdown-toggle-row">
-                                <label for="regexToggle">Regex</label>
-                                <input type="checkbox" id="regexToggle" />
-                            </div>
-                            <div class="dropdown-toggle-row">
-                                <label for="caseSensitiveToggle"
-                                    >Case sensitive</label
-                                >
-                                <input
-                                    type="checkbox"
-                                    id="caseSensitiveToggle"
-                                />
-                            </div>
-                            <button
-                                class="dropdown-apply-btn"
-                                onclick="findAndReplace()"
-                            >
-                                Replace All
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('trimCleanDropdown')"
-                    >
-                        Trim/Clean <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="trimCleanDropdown" class="toolbar-dropdown">
-                        <button
-                            class="dropdown-item"
-                            onclick="trimWhitespace()"
-                        >
-                            Trim Whitespace
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeEmptyLines()"
-                        >
-                            Remove Empty Lines
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeExtraSpaces()"
-                        >
-                            Remove Extra Spaces
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(false)"
-                        >
-                            Remove Duplicate Lines
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="stripHtmlTags()"
-                        >
-                            Strip HTML Tags
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="addLineNumbers()"
-                        >
-                            Add Line Numbers
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeLineNumbers()"
-                        >
-                            Remove Line Numbers
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-spacer"></div>
-                <button class="toolbar-btn" onclick="copyToClipboard()">
-                    <i class="fa-solid fa-copy"></i> Copy
-                </button>
-                <button
-                    class="toolbar-btn toolbar-btn-clear"
-                    onclick="clearOutput()"
-                >
-                    Clear
-                </button>
-            </div>
-
-            <div class="columns-row">
-                <div class="box">
-                    <textarea
-                        id="input"
-                        placeholder="Enter text, items, JSON, or SQL..."
-                    ></textarea>
-                </div>
-                <div class="box output-box">
-                    <textarea id="output" readonly></textarea>
-                    <div class="copy-popup">Text copied</div>
-                </div>
-            </div>
-
-            <div class="stats-bar" id="statsBar">
-                <span id="charCount">0 chars</span>
-                <span class="stats-sep">|</span>
-                <span id="wordCount">0 words</span>
-                <span class="stats-sep">|</span>
-                <span id="lineCount">0 lines</span>
-            </div>
+        <div class="landing-hero">
+            <h1>Quality-of-Life Developer Tools</h1>
+            <p>A collection of browser-based utilities for everyday development tasks. Everything runs locally in your browser — no sign-ups required.</p>
         </div>
+
+        <div class="tool-cards">
+            <a href="./tools/txt-formatter/index.html" class="tool-card">
+                <i class="fa-solid fa-font card-icon"></i>
+                <div class="card-title">Txt Formatter</div>
+                <div class="card-desc">Transform, format, and manipulate text — lists, case conversion, JSON, find & replace, and more.</div>
+            </a>
+            <a href="./tools/snippets/index.html" class="tool-card">
+                <i class="fa-solid fa-code card-icon"></i>
+                <div class="card-title">Snippets</div>
+                <div class="card-desc">Store and organize code snippets locally. Sync across devices with Google sign-in.</div>
+            </a>
+            <a href="./tools/todo/index.html" class="tool-card">
+                <i class="fa-solid fa-list-check card-icon"></i>
+                <div class="card-title">To-Do List</div>
+                <div class="card-desc">Manage tasks with categories, priorities, and local storage persistence.</div>
+            </a>
+            <a href="./tools/csv-viewer/index.html" class="tool-card">
+                <i class="fa-solid fa-table card-icon"></i>
+                <div class="card-title">CSV Viewer</div>
+                <div class="card-desc">View, sort, and filter CSV data in an interactive table with SQL query support.</div>
+            </a>
+            <a href="./tools/regex-tester/index.html" class="tool-card">
+                <i class="fa-solid fa-asterisk card-icon"></i>
+                <div class="card-title">Regex Tester</div>
+                <div class="card-desc">Test regular expressions in real time with match highlighting and group capture details.</div>
+            </a>
+            <a href="./tools/markdown/index.html" class="tool-card">
+                <i class="fa-brands fa-markdown card-icon"></i>
+                <div class="card-title">Markdown Preview</div>
+                <div class="card-desc">Write Markdown and see a live-rendered preview side by side.</div>
+            </a>
+            <a href="./tools/epoch-converter/index.html" class="tool-card">
+                <i class="fa-solid fa-clock card-icon"></i>
+                <div class="card-title">Epoch Converter</div>
+                <div class="card-desc">Convert between Unix epoch timestamps and human-readable dates.</div>
+            </a>
+            <a href="./tools/cron-builder/index.html" class="tool-card">
+                <i class="fa-solid fa-calendar-days card-icon"></i>
+                <div class="card-title">Cron Builder</div>
+                <div class="card-desc">Build and validate cron expressions with a visual editor and next-run preview.</div>
+            </a>
+            <a href="./tools/timezone/index.html" class="tool-card">
+                <i class="fa-solid fa-globe card-icon"></i>
+                <div class="card-title">Timezone</div>
+                <div class="card-desc">Compare times across multiple timezones and convert between them.</div>
+            </a>
+            <a href="./tools/text-diff/index.html" class="tool-card">
+                <i class="fa-solid fa-code-compare card-icon"></i>
+                <div class="card-title">Text Diff</div>
+                <div class="card-desc">Compare two texts and see additions, deletions, and modifications with word-level highlighting.</div>
+            </a>
+        </div>
+
         <script src="./src/theme-manager.js"></script>
-        <script src="./src/funcs.js"></script>
     </body>
 </html>

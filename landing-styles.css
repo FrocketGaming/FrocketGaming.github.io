@@ -1,0 +1,86 @@
+/* Landing Page Styles */
+.landing-hero {
+    text-align: center;
+    padding: 30px 20px 10px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.landing-hero h1 {
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.landing-hero p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.tool-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    padding: 20px 30px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.tool-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+    box-shadow: 0 0 4px var(--shadow-color);
+    cursor: pointer;
+}
+
+.tool-card:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px var(--accent-primary);
+    transform: translateY(-3px);
+}
+
+.tool-card .card-icon {
+    font-size: 2rem;
+    color: var(--accent-primary);
+    margin-bottom: 14px;
+}
+
+.tool-card .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.tool-card .card-desc {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .tool-cards {
+        padding: 15px;
+        gap: 15px;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+
+    .landing-hero {
+        padding: 20px 15px 5px;
+    }
+
+    .landing-hero h1 {
+        font-size: 1.4rem;
+    }
+}
