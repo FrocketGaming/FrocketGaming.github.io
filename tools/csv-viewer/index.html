@@ -41,45 +41,58 @@
         </nav>
     </div>
 
-    <p>Upload a CSV file or paste your CSV data below. All processing is done locally in your browser.</p>
+    <p>Upload a CSV file to view and query it. All processing is done locally in your browser.</p>
 
     <div class="csv-container">
-        <div class="input-section">
-            <div class="controls">
-                <label for="delimiter">Delimiter:</label>
-                <select id="delimiter" class="delimiter-select">
-                    <option value="auto">Auto-detect</option>
-                    <option value=",">Comma (,)</option>
-                    <option value=";">Semicolon (;)</option>
-                    <option value="\t">Tab</option>
-                    <option value="|">Pipe (|)</option>
-                </select>
-                <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
-                <button id="uploadBtn" class="format-btn">
-                    <i class="fa-solid fa-upload"></i> Upload CSV
-                </button>
-                <button id="parseBtn" class="format-btn">Parse CSV</button>
-                <button id="clearBtn" class="clear-bnt">Clear</button>
-            </div>
-            <div class="box input-box">
-                <textarea id="csvInput" placeholder="Paste CSV data here...&#10;Example:&#10;Name,Age,City&#10;John,30,New York&#10;Jane,25,Los Angeles"></textarea>
-            </div>
+        <div class="controls">
+            <label for="delimiter">Delimiter:</label>
+            <select id="delimiter" class="delimiter-select">
+                <option value="auto">Auto-detect</option>
+                <option value=",">Comma (,)</option>
+                <option value=";">Semicolon (;)</option>
+                <option value="\t">Tab</option>
+                <option value="|">Pipe (|)</option>
+            </select>
+            <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
+            <button id="uploadBtn" class="format-btn">
+                <i class="fa-solid fa-upload"></i> Upload CSV
+            </button>
+            <button id="clearBtn" class="clear-bnt">Clear</button>
         </div>
 
-        <div class="output-section">
-            <div class="table-controls">
-                <input type="text" id="searchInput" placeholder="Search table..." class="search-input">
-                <button id="exportBtn" class="format-btn">Export CSV</button>
-            </div>
-            <div class="table-wrapper">
-                <div id="tableContainer" class="table-container">
-                    <div class="empty-state">Paste CSV data and click "Parse CSV" to view the table</div>
+        <div class="csv-main-content">
+            <div class="left-column">
+                <div class="table-wrapper">
+                    <div id="tableContainer" class="table-container">
+                        <div class="empty-state">Upload a CSV file to get started</div>
+                    </div>
                 </div>
+                <div id="tableInfo" class="table-info"></div>
             </div>
-            <div id="tableInfo" class="table-info"></div>
+
+            <div id="sqlSection" class="right-column" style="display: none;">
+                <div class="sql-header">
+                    <h3><i class="fa-solid fa-database"></i> SQL Playground</h3>
+                    <span id="sqlStatus" class="sql-status">Ready</span>
+                </div>
+                <div id="sqlExamples" class="sql-examples"></div>
+                <textarea id="sqlQuery" class="sql-query-input" rows="2" spellcheck="false"
+                    placeholder="Write SQL queries against the 'csv' table...&#10;Example: SELECT * FROM csv LIMIT 10"></textarea>
+                <div class="sql-controls">
+                    <button id="sqlRunBtn" class="format-btn"><i class="fa-solid fa-play"></i> Run Query</button>
+                    <button id="sqlExportBtn" class="format-btn">Export Results</button>
+                    <span id="sqlQueryInfo" class="sql-query-info"></span>
+                </div>
+                <div id="sqlError" class="sql-error"></div>
+                <div id="sqlResultsWrapper" class="sql-results-wrapper">
+                    <div class="table-container" id="sqlResultsContainer"></div>
+                </div>
+                <div id="sqlResultsInfo" class="table-info"></div>
+            </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="csv-app.js"></script>

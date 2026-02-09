@@ -6,6 +6,9 @@ class CSVViewer {
         this.filteredData = [];
         this.sortColumn = -1;
         this.sortAscending = true;
+        this.db = null;
+        this.sqlReady = false;
+        this.sqlResults = null;
         this.init();
     }
 
@@ -14,10 +17,7 @@ class CSVViewer {
     }
 
     setupEventListeners() {
-        document.getElementById('parseBtn').addEventListener('click', () => this.parseCSV());
         document.getElementById('clearBtn').addEventListener('click', () => this.clear());
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportCSV());
-        document.getElementById('searchInput').addEventListener('input', (e) => this.filterTable(e.target.value));
 
         // Upload button triggers hidden file input
         document.getElementById('uploadBtn').addEventListener('click', () => {
@@ -27,10 +27,20 @@ class CSVViewer {
         // Handle file upload
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
 
-        // Parse on Enter key in textarea
-        document.getElementById('csvInput').addEventListener('keydown', (e) => {
+        // SQL playground listeners
+        document.getElementById('sqlRunBtn').addEventListener('click', () => this.runQuery());
+        document.getElementById('sqlExportBtn').addEventListener('click', () => this.exportQueryResults());
+        document.getElementById('sqlQuery').addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
-                this.parseCSV();
+                e.preventDefault();
+                this.runQuery();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const textarea = e.target;
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
             }
         });
     }
@@ -59,11 +69,7 @@ class CSVViewer {
         const reader = new FileReader();
 
         reader.onload = (e) => {
-            const contents = e.target.result;
-            document.getElementById('csvInput').value = contents;
-            // Auto-parse after upload
-            this.parseCSV();
-            // Reset button
+            this.parseCSV(e.target.result);
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = originalText;
         };
@@ -107,11 +113,11 @@ class CSVViewer {
         return bestDelimiter;
     }
 
-    parseCSV() {
-        const input = document.getElementById('csvInput').value.trim();
+    parseCSV(csvText) {
+        const input = (csvText || '').trim();
 
         if (!input) {
-            this.showEmptyState('Please enter CSV data first');
+            this.showEmptyState('Upload a CSV file to get started');
             return;
         }
 
@@ -145,6 +151,7 @@ class CSVViewer {
 
             this.renderTable();
             this.updateInfo();
+            this.loadIntoSQL();
         } catch (error) {
             this.showEmptyState('Error parsing CSV: ' + error.message);
         }
@@ -182,7 +189,7 @@ class CSVViewer {
         const container = document.getElementById('tableContainer');
 
         if (this.filteredData.length === 0) {
-            this.showEmptyState('No data matches your search');
+            this.showEmptyState('No data to display');
             return;
         }
 
@@ -245,20 +252,6 @@ class CSVViewer {
         this.renderTable();
     }
 
-    filterTable(searchTerm) {
-        if (!searchTerm) {
-            this.filteredData = [...this.data];
-        } else {
-            const term = searchTerm.toLowerCase();
-            this.filteredData = this.data.filter(row =>
-                row.some(cell => cell.toLowerCase().includes(term))
-            );
-        }
-
-        this.renderTable();
-        this.updateInfo();
-    }
-
     updateInfo() {
         const info = document.getElementById('tableInfo');
         const total = this.data.length;
@@ -271,40 +264,14 @@ class CSVViewer {
         }
     }
 
-    exportCSV() {
-        if (this.data.length === 0) {
-            return;
-        }
-
-        // Build CSV from current filtered data
-        const rows = [this.headers, ...this.filteredData];
-        const csv = rows.map(row =>
-            row.map(cell => {
-                // Quote fields that contain commas, quotes, or newlines
-                if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
-                    return `"${cell.replace(/"/g, '""')}"`;
-                }
-                return cell;
-            }).join(',')
-        ).join('\n');
-
-        // Download
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'export.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-    }
-
     clear() {
-        document.getElementById('csvInput').value = '';
-        document.getElementById('searchInput').value = '';
         this.data = [];
         this.headers = [];
         this.filteredData = [];
-        this.showEmptyState('Paste CSV data and click "Parse CSV" to view the table');
+        this.sortColumn = -1;
+        this.showEmptyState('Upload a CSV file to get started');
+        this.clearSQL();
+        document.getElementById('fileInput').value = '';
     }
 
     showEmptyState(message) {
@@ -317,6 +284,301 @@ class CSVViewer {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // --- SQL Playground Methods ---
+
+    async initSQLEngine() {
+        if (this.sqlReady) return;
+
+        const status = document.getElementById('sqlStatus');
+        status.textContent = 'Loading...';
+        status.className = 'sql-status loading';
+
+        try {
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+            });
+            this.db = new SQL.Database();
+            this.sqlReady = true;
+            status.textContent = 'Ready';
+            status.className = 'sql-status';
+        } catch (error) {
+            status.textContent = 'Error';
+            status.className = 'sql-status error';
+            this.showSQLError('Failed to load SQL engine: ' + error.message);
+        }
+    }
+
+    async loadIntoSQL() {
+        document.getElementById('sqlSection').style.display = '';
+
+        await this.initSQLEngine();
+        if (!this.sqlReady) return;
+
+        try {
+            // Drop existing table
+            this.db.run('DROP TABLE IF EXISTS csv');
+
+            // Sanitize column names and infer types
+            const sanitizedHeaders = this.headers.map(h => this.sanitizeColumnName(h));
+            const types = this.headers.map((_, i) => this.inferColumnType(i));
+
+            // Create table
+            const columns = sanitizedHeaders.map((name, i) => `"${name}" ${types[i]}`).join(', ');
+            this.db.run(`CREATE TABLE csv (${columns})`);
+
+            // Bulk insert using prepared statement in a transaction
+            const placeholders = sanitizedHeaders.map(() => '?').join(', ');
+            const insertSQL = `INSERT INTO csv VALUES (${placeholders})`;
+
+            this.db.run('BEGIN TRANSACTION');
+            const stmt = this.db.prepare(insertSQL);
+
+            for (const row of this.data) {
+                const values = row.map((cell, i) => {
+                    if (cell === '') return null;
+                    if (types[i] === 'INTEGER') {
+                        const num = parseInt(cell, 10);
+                        return isNaN(num) ? cell : num;
+                    }
+                    if (types[i] === 'REAL') {
+                        const num = parseFloat(cell);
+                        return isNaN(num) ? cell : num;
+                    }
+                    return cell;
+                });
+                stmt.run(values);
+            }
+
+            stmt.free();
+            this.db.run('COMMIT');
+
+            this.generateExampleQueries(sanitizedHeaders, types);
+            this.hideSQLError();
+
+            const status = document.getElementById('sqlStatus');
+            status.textContent = `${this.data.length} rows loaded`;
+            status.className = 'sql-status';
+        } catch (error) {
+            this.db.run('ROLLBACK');
+            this.showSQLError('Failed to load data into SQL: ' + error.message);
+        }
+    }
+
+    sanitizeColumnName(name) {
+        let sanitized = name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        if (!sanitized) sanitized = 'column';
+        if (/^\d/.test(sanitized)) sanitized = '_' + sanitized;
+        return sanitized;
+    }
+
+    inferColumnType(colIndex) {
+        const sampleSize = Math.min(this.data.length, 100);
+        let intCount = 0;
+        let realCount = 0;
+        let nonEmpty = 0;
+
+        for (let i = 0; i < sampleSize; i++) {
+            const val = this.data[i][colIndex];
+            if (val === undefined || val === '') continue;
+            nonEmpty++;
+            const num = Number(val);
+            if (!isNaN(num) && val.trim() !== '') {
+                if (Number.isInteger(num)) {
+                    intCount++;
+                } else {
+                    realCount++;
+                }
+            }
+        }
+
+        if (nonEmpty === 0) return 'TEXT';
+        const numericRatio = (intCount + realCount) / nonEmpty;
+        if (numericRatio >= 0.8) {
+            return realCount > 0 ? 'REAL' : 'INTEGER';
+        }
+        return 'TEXT';
+    }
+
+    generateExampleQueries(headers, types) {
+        const container = document.getElementById('sqlExamples');
+        container.innerHTML = '';
+
+        const examples = [];
+
+        // Always include SELECT ALL and COUNT
+        examples.push({ label: 'SELECT ALL', query: 'SELECT * FROM csv LIMIT 100' });
+        examples.push({ label: 'COUNT ROWS', query: 'SELECT COUNT(*) AS total FROM csv' });
+
+        // Find first text and numeric columns
+        let textCol = null;
+        let numCol = null;
+        for (let i = 0; i < types.length; i++) {
+            if (types[i] === 'TEXT' && !textCol) textCol = headers[i];
+            if ((types[i] === 'INTEGER' || types[i] === 'REAL') && !numCol) numCol = headers[i];
+        }
+
+        if (textCol) {
+            examples.push({
+                label: 'GROUP BY',
+                query: `SELECT "${textCol}", COUNT(*) AS count\nFROM csv\nGROUP BY "${textCol}"\nORDER BY count DESC`
+            });
+            examples.push({
+                label: 'DISTINCT',
+                query: `SELECT DISTINCT "${textCol}" FROM csv ORDER BY "${textCol}"`
+            });
+        }
+
+        if (numCol) {
+            examples.push({
+                label: 'STATS',
+                query: `SELECT\n  COUNT("${numCol}") AS count,\n  MIN("${numCol}") AS min,\n  MAX("${numCol}") AS max,\n  AVG("${numCol}") AS avg,\n  SUM("${numCol}") AS total\nFROM csv`
+            });
+            examples.push({
+                label: 'TOP 10',
+                query: `SELECT * FROM csv\nORDER BY "${numCol}" DESC\nLIMIT 10`
+            });
+        }
+
+        if (textCol && numCol) {
+            examples.push({
+                label: 'FILTER',
+                query: `SELECT * FROM csv\nWHERE "${numCol}" > 0\nORDER BY "${numCol}" DESC`
+            });
+        }
+
+        examples.forEach(ex => {
+            const btn = document.createElement('button');
+            btn.className = 'sql-example-btn';
+            btn.textContent = ex.label;
+            btn.addEventListener('click', () => {
+                document.getElementById('sqlQuery').value = ex.query;
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    runQuery() {
+        const query = document.getElementById('sqlQuery').value.trim();
+        if (!query) return;
+        if (!this.sqlReady || !this.db) {
+            this.showSQLError('SQL engine is not ready. Please load CSV data first.');
+            return;
+        }
+
+        this.hideSQLError();
+        const start = performance.now();
+
+        try {
+            const results = this.db.exec(query);
+            const elapsed = (performance.now() - start).toFixed(1);
+
+            if (results.length === 0) {
+                this.sqlResults = null;
+                document.getElementById('sqlResultsWrapper').classList.remove('show');
+                document.getElementById('sqlResultsInfo').textContent = '';
+                document.getElementById('sqlQueryInfo').textContent = `Query executed in ${elapsed}ms — no results returned`;
+                return;
+            }
+
+            this.sqlResults = results[0];
+            this.renderQueryResults(results[0]);
+            document.getElementById('sqlQueryInfo').textContent =
+                `${results[0].values.length} row${results[0].values.length !== 1 ? 's' : ''} in ${elapsed}ms`;
+        } catch (error) {
+            this.showSQLError(error.message);
+            document.getElementById('sqlQueryInfo').textContent = '';
+        }
+    }
+
+    renderQueryResults(result) {
+        const wrapper = document.getElementById('sqlResultsWrapper');
+        const container = document.getElementById('sqlResultsContainer');
+
+        let tableHTML = '<table class="csv-table"><thead><tr>';
+
+        result.columns.forEach(col => {
+            tableHTML += `<th>${this.escapeHtml(col)}</th>`;
+        });
+
+        tableHTML += '</tr></thead><tbody>';
+
+        result.values.forEach(row => {
+            tableHTML += '<tr>';
+            row.forEach(cell => {
+                if (cell === null) {
+                    tableHTML += '<td class="null-value">NULL</td>';
+                } else {
+                    tableHTML += `<td>${this.escapeHtml(String(cell))}</td>`;
+                }
+            });
+            tableHTML += '</tr>';
+        });
+
+        tableHTML += '</tbody></table>';
+
+        container.innerHTML = tableHTML;
+        wrapper.classList.add('show');
+
+        document.getElementById('sqlResultsInfo').textContent =
+            `${result.values.length} row${result.values.length !== 1 ? 's' : ''} returned`;
+    }
+
+    showSQLError(message) {
+        const errorDiv = document.getElementById('sqlError');
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+    }
+
+    hideSQLError() {
+        const errorDiv = document.getElementById('sqlError');
+        errorDiv.textContent = '';
+        errorDiv.classList.remove('show');
+    }
+
+    exportQueryResults() {
+        if (!this.sqlResults) return;
+
+        const rows = [this.sqlResults.columns, ...this.sqlResults.values];
+        const csv = rows.map(row =>
+            row.map(cell => {
+                if (cell === null) return '';
+                const str = String(cell);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            }).join(',')
+        ).join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'query-results.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    clearSQL() {
+        document.getElementById('sqlSection').style.display = 'none';
+        document.getElementById('sqlQuery').value = '';
+        document.getElementById('sqlExamples').innerHTML = '';
+        document.getElementById('sqlResultsContainer').innerHTML = '';
+        document.getElementById('sqlResultsWrapper').classList.remove('show');
+        document.getElementById('sqlResultsInfo').textContent = '';
+        document.getElementById('sqlQueryInfo').textContent = '';
+        this.hideSQLError();
+        this.sqlResults = null;
+
+        if (this.db && this.sqlReady) {
+            try {
+                this.db.run('DROP TABLE IF EXISTS csv');
+            } catch (e) {
+                // Ignore errors during cleanup
+            }
+        }
     }
 }
 
