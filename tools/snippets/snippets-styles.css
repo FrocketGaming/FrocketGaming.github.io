@@ -9,7 +9,7 @@
     --syntax-type: #e5c07b;
     --syntax-variable: #e06c75;
     --syntax-tag: #e06c75;
-    --syntax-addition: #74A12E;
+    --syntax-addition: #74a12e;
     --syntax-deletion: #ff6b6b;
 }
 
@@ -211,7 +211,6 @@
     position: relative;
     min-width: 200px;
     max-width: 400px;
-    margin-left: auto;
 }
 
 .search-icon {
