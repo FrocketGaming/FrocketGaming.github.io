@@ -5,10 +5,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Snippets - QoL Tools</title>
         <script>
-            (function() {
-                var theme = localStorage.getItem('qol-tools-theme');
-                if (theme && theme !== 'default') {
-                    document.documentElement.setAttribute('data-theme', theme);
+            (function () {
+                var theme = localStorage.getItem("qol-tools-theme");
+                if (theme && theme !== "default") {
+                    document.documentElement.setAttribute("data-theme", theme);
                 }
             })();
         </script>
@@ -60,8 +60,8 @@
         <div class="header-section">
             <div class="header-content">
                 <p>
-                    Store and organize your code snippets. Your data is saved
-                    locally in your browser.
+                    Store and organize your code snippets locally in your
+                    browser. Sign in with Google to sync across devices.
                 </p>
                 <div class="header-actions">
                     <button id="exportBtn" class="format-btn">
@@ -76,22 +76,50 @@
                     <button id="importBtn" class="format-btn">
                         <i class="fa-solid fa-upload"></i> Import
                     </button>
-                    <div class="auth-divider" id="authDivider" style="display: none"></div>
+                    <div
+                        class="auth-divider"
+                        id="authDivider"
+                        style="display: none"
+                    ></div>
                     <div class="auth-section" id="authSection">
                         <!-- Signed-out state -->
-                        <button id="signInBtn" class="sign-in-btn" style="display: none">
+                        <button
+                            id="signInBtn"
+                            class="sign-in-btn"
+                            style="display: none"
+                        >
                             <i class="fa-brands fa-google"></i>
                             <span>Sign in</span>
                         </button>
                         <!-- Signed-in state -->
-                        <div id="userInfo" class="user-info" style="display: none">
-                            <img id="userAvatar" class="user-avatar" src="" alt="Avatar" />
+                        <div
+                            id="userInfo"
+                            class="user-info"
+                            style="display: none"
+                        >
+                            <img
+                                id="userAvatar"
+                                class="user-avatar"
+                                src=""
+                                alt="Avatar"
+                            />
                             <span id="userName" class="user-name"></span>
-                            <div id="syncStatus" class="sync-status" style="display: none">
-                                <span class="sync-status-dot" id="syncDot"></span>
+                            <div
+                                id="syncStatus"
+                                class="sync-status"
+                                style="display: none"
+                            >
+                                <span
+                                    class="sync-status-dot"
+                                    id="syncDot"
+                                ></span>
                                 <span id="syncLabel">Synced</span>
                             </div>
-                            <button id="signOutBtn" class="sign-out-btn" title="Sign out">
+                            <button
+                                id="signOutBtn"
+                                class="sign-out-btn"
+                                title="Sign out"
+                            >
                                 <i class="fa-solid fa-right-from-bracket"></i>
                             </button>
                         </div>
@@ -364,29 +392,38 @@
             <div class="modal-content modal-small">
                 <div class="modal-header">
                     <h3>Sync Snippets</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeMergeModal()">&times;</span>
+                    <span
+                        class="modal-close"
+                        onclick="snippetsApp.closeMergeModal()"
+                        >&times;</span
+                    >
                 </div>
                 <div class="modal-body merge-modal-body">
                     <p>Merge your local snippets with your cloud data?</p>
                     <div class="merge-stats">
                         <div class="merge-stat">
-                            <span class="merge-stat-value" id="mergeLocalCount">0</span>
+                            <span class="merge-stat-value" id="mergeLocalCount"
+                                >0</span
+                            >
                             <span class="merge-stat-label">Local</span>
                         </div>
                         <div class="merge-stat">
-                            <span class="merge-stat-value" id="mergeCloudCount">0</span>
+                            <span class="merge-stat-value" id="mergeCloudCount"
+                                >0</span
+                            >
                             <span class="merge-stat-label">Cloud</span>
                         </div>
                     </div>
-                    <p>Both local and cloud snippets will be kept. Conflicts are resolved by most recent update.</p>
+                    <p>
+                        Both local and cloud snippets will be kept. Conflicts
+                        are resolved by most recent update.
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button class="format-btn" id="mergeConfirmBtn">
                         Merge & Sync
                     </button>
-                    <button class="clear-bnt" id="mergeSkipBtn">
-                        Skip
-                    </button>
+                    <button class="clear-bnt" id="mergeSkipBtn">Skip</button>
                 </div>
             </div>
         </div>

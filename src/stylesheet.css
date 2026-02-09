@@ -5,7 +5,7 @@
     --bg-secondary: #2a2a2a;
     --bg-tertiary: #383838;
     --bg-hover: #333333;
-    --accent-primary: #74A12E;
+    --accent-primary: #74a12e;
     --accent-secondary: #c6ee86;
     --text-primary: #ffffff;
     --text-secondary: #888888;
@@ -97,7 +97,7 @@
 }
 
 body {
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     display: flex;
@@ -160,7 +160,9 @@ sub {
     border-radius: 5px;
     padding: 10px;
     box-shadow: 0 0 4px var(--shadow-color);
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition:
+        border-color 0.3s,
+        box-shadow 0.3s;
 }
 
 .box:focus-within {
@@ -177,7 +179,7 @@ textarea {
     resize: none;
     font-size: 16px;
     outline: none;
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     font-weight: 400;
 }
 
@@ -225,12 +227,14 @@ input[type="checkbox"]:focus:ring-offset-0 {
     margin-top: 10px;
     padding: 8px 16px;
     background-color: var(--accent-primary);
-    color: var(--text-primary);
+    color: var(--bg-secondary);
     border: none;
     border-radius: 3px;
     font-size: 14px;
     cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition:
+        background-color 0.3s,
+        box-shadow 0.3s;
 }
 
 .format-btn:hover {
@@ -249,7 +253,9 @@ input[type="checkbox"]:focus:ring-offset-0 {
     border-radius: 3px;
     font-size: 14px;
     cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition:
+        background-color 0.3s,
+        box-shadow 0.3s;
 }
 
 .clear-bnt:hover {
@@ -394,7 +400,7 @@ input[type="checkbox"]:focus:ring-offset-0 {
 }
 
 .logo {
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     font-size: 1.8rem;
     font-weight: bold;
     color: var(--accent-secondary);
@@ -422,10 +428,12 @@ input[type="checkbox"]:focus:ring-offset-0 {
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition:
+        border-color 0.3s,
+        box-shadow 0.3s;
     outline: none;
 }
 

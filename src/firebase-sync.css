@@ -18,7 +18,7 @@
     border-radius: 5px;
     color: var(--text-primary);
     font-size: 13px;
-    font-family: 'Raleway', sans-serif;
+    font-family: "Raleway", sans-serif;
     cursor: pointer;
     transition: all 0.3s;
     white-space: nowrap;
@@ -64,7 +64,7 @@
     align-items: center;
     gap: 5px;
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--accent-secondary);
     padding: 4px 8px;
     border-radius: 3px;
     background-color: var(--bg-tertiary);
@@ -96,8 +96,13 @@
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
 }
 
 /* Sign-out Button */
