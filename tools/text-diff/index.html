@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Diff - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="text-diff-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="header-top">
+            <div class="logo">QoL Tools</div>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+        <nav class="tool-nav">
+            <a href="../../index.html" class="tool-btn">txt formatter</a>
+            <a href="../snippets/index.html" class="tool-btn">snippets</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../markdown/index.html" class="tool-btn">markdown preview</a>
+            <a href="../epoch-converter/index.html" class="tool-btn">epoch converter</a>
+            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+            <a href="../timezone/index.html" class="tool-btn">timezone</a>
+            <a href="../text-diff/index.html" class="tool-btn active">text diff</a>
+        </nav>
+    </div>
+
+    <p>Compare two texts and see highlighted differences. All processing is done locally in your browser.</p>
+
+    <div class="diff-container">
+        <div class="diff-toolbar">
+            <button class="toolbar-btn diff-view-btn active" id="unifiedBtn" title="Unified view">
+                <i class="fa-solid fa-list"></i> Unified
+            </button>
+            <button class="toolbar-btn diff-view-btn" id="sideBySideBtn" title="Side-by-side view">
+                <i class="fa-solid fa-columns"></i> Side-by-Side
+            </button>
+            <label class="diff-checkbox-label">
+                <input type="checkbox" id="ignoreWhitespace"> Ignore whitespace
+            </label>
+            <label class="diff-checkbox-label">
+                <input type="checkbox" id="ignoreCase"> Ignore case
+            </label>
+            <button class="format-btn" id="compareBtn">
+                <i class="fa-solid fa-code-compare"></i> Compare
+            </button>
+            <button class="toolbar-btn" id="swapBtn" title="Swap texts">
+                <i class="fa-solid fa-right-left"></i> Swap
+            </button>
+            <button class="toolbar-btn toolbar-btn-clear" id="clearBtn">Clear</button>
+        </div>
+
+        <div class="diff-input-panels">
+            <div class="diff-input-panel">
+                <label for="originalText">Original</label>
+                <textarea id="originalText" placeholder="Paste original text here..." spellcheck="false"></textarea>
+            </div>
+            <div class="diff-input-panel">
+                <label for="modifiedText">Modified</label>
+                <textarea id="modifiedText" placeholder="Paste modified text here..." spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <div class="diff-stats" id="diffStats"></div>
+
+        <div class="diff-output" id="diffOutput"></div>
+    </div>
+
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/funcs.js"></script>
+    <script src="text-diff-app.js"></script>
+</body>
+
+</html>
