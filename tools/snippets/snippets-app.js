@@ -526,6 +526,7 @@ class SnippetsApp {
             this.closeDeleteModal();
             this.renderCategories();
             this.renderSnippetsList();
+            this.updateSnippetsCount();
         } catch (error) {
             console.error('Failed to delete:', error);
             alert('Failed to delete. Please try again.');
