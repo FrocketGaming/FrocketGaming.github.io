@@ -3,6 +3,7 @@ class CSVViewer {
     constructor() {
         this.data = [];
         this.headers = [];
+        this.sanitizedHeaders = [];
         this.filteredData = [];
         this.sortColumn = -1;
         this.sortAscending = true;
@@ -174,6 +175,19 @@ class CSVViewer {
             this.data = this.data.slice(1);
             this.filteredData = [...this.data];
 
+            // Compute sanitized SQL column names
+            const seen = new Set();
+            this.sanitizedHeaders = this.headers.map(h => {
+                let name = this.sanitizeColumnName(h);
+                let base = name;
+                let suffix = 2;
+                while (seen.has(name)) {
+                    name = base + '_' + suffix++;
+                }
+                seen.add(name);
+                return name;
+            });
+
             this.renderTable();
             this.updateInfo();
             this.loadIntoSQL();
@@ -295,6 +309,7 @@ class CSVViewer {
     clear() {
         this.data = [];
         this.headers = [];
+        this.sanitizedHeaders = [];
         this.filteredData = [];
         this.sortColumn = -1;
         this.showEmptyState('Upload a CSV file to get started');
@@ -410,18 +425,7 @@ class CSVViewer {
             // Drop existing table
             this.db.run('DROP TABLE IF EXISTS csv');
 
-            // Sanitize column names (deduplicate) and infer types
-            const seen = new Set();
-            const sanitizedHeaders = this.headers.map(h => {
-                let name = this.sanitizeColumnName(h);
-                let base = name;
-                let suffix = 2;
-                while (seen.has(name)) {
-                    name = base + '_' + suffix++;
-                }
-                seen.add(name);
-                return name;
-            });
+            const sanitizedHeaders = this.sanitizedHeaders;
             const types = this.headers.map((_, i) => this.inferColumnType(i));
 
             // Create table
@@ -754,7 +758,7 @@ class CSVViewer {
         const totalCols = this.headers.length;
         summary.textContent = `${totalCols.toLocaleString()} column${totalCols !== 1 ? 's' : ''}, ${totalRows.toLocaleString()} row${totalRows !== 1 ? 's' : ''}`;
 
-        const statHeaders = ['Column', 'Type', 'Count', 'Nulls', 'Unique', 'Mean', 'Std', 'Min', '25%', '50%', '75%', 'Max'];
+        const statHeaders = ['Column', 'SQL Column', 'Type', 'Count', 'Nulls', 'Unique', 'Mean', 'Std', 'Min', '25%', '50%', '75%', 'Max'];
 
         let html = '<table class="csv-table"><thead><tr>';
         statHeaders.forEach(h => {
@@ -762,9 +766,10 @@ class CSVViewer {
         });
         html += '</tr></thead><tbody>';
 
-        profile.forEach(entry => {
+        profile.forEach((entry, idx) => {
             html += '<tr>';
             html += `<td>${this.escapeHtml(entry.column)}</td>`;
+            html += `<td>${this.escapeHtml(this.sanitizedHeaders[idx] || '')}</td>`;
             html += `<td>${entry.type}</td>`;
             html += `<td>${entry.count.toLocaleString()}</td>`;
             html += `<td>${entry.nulls.toLocaleString()}</td>`;
