@@ -55,6 +55,16 @@ class RegexTester {
                 { name: 'Strong Password', pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$', flags: '', test: 'Test: Pass123! (valid), password (invalid)' },
                 { name: 'US ZIP Code', pattern: '\\b\\d{5}(-\\d{4})?\\b', flags: 'g', test: 'ZIP: 12345 or 12345-6789' },
                 { name: 'Domain', pattern: '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$', flags: 'i', test: 'Test: example.com (valid), test.co.uk (valid)' }
+            ],
+            security: [
+                { name: 'JWT Token', pattern: 'eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+', flags: 'g', test: 'Token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' },
+                { name: 'API Key', pattern: '(?:api[_-]?key|apikey|api[_-]?secret)[\\s]*[=:\\s]+[\\s]*["\']?[A-Za-z0-9_\\-]{16,}["\']?', flags: 'gi', test: 'api_key = "abc123def456ghi789jkl012mno"' },
+                { name: 'AWS Key', pattern: '(?:AKIA|ABIA|ACCA|ASIA)[A-Z0-9]{16}', flags: 'g', test: 'Found key: AKIAIOSFODNN7EXAMPLE in config' },
+                { name: 'Private Key', pattern: '-----BEGIN (?:RSA |EC |DSA )?PRIVATE KEY-----', flags: 'g', test: '-----BEGIN RSA PRIVATE KEY-----\nMIIBogIBAAJ...' },
+                { name: 'IPv6 Address', pattern: '([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}', flags: 'g', test: 'Address: 2001:0db8:85a3:0000:0000:8a2e:0370:7334' },
+                { name: 'MAC Address', pattern: '([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}', flags: 'g', test: 'Device MAC: 00:1A:2B:3C:4D:5E and 00-1A-2B-3C-4D-5F' },
+                { name: 'SQL Injection', pattern: '(?:[\'"]\\s*(?:OR|AND|UNION)\\s|--\\s|;\\s*DROP|/\\*.*\\*/)', flags: 'gi', test: 'Input: admin\' OR 1=1 -- and normal text' },
+                { name: 'XSS Pattern', pattern: '<script[^>]*>[\\s\\S]*?<\\/script>|on\\w+\\s*=\\s*["\'][^"\']*["\']', flags: 'gi', test: 'Attack: <script>alert("xss")</script> and onerror="alert(1)"' }
             ]
         };
     }
