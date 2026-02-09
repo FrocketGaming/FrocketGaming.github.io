@@ -13,7 +13,7 @@ class RegexTester {
     initializePatterns() {
         return {
             web: [
-                { name: 'Email', pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$', flags: 'g', test: 'Contact: john@example.com or jane.doe@company.co.uk' },
+                { name: 'Email', pattern: '[\\w.-]+@([\\w-]+\\.)+[\\w-]{2,4}', flags: 'g', test: 'Contact: john@example.com or jane.doe@company.co.uk' },
                 { name: 'URL', pattern: 'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)', flags: 'g', test: 'Visit https://www.example.com or http://google.com' },
                 { name: 'Phone (US)', pattern: '\\d{3}-\\d{3}-\\d{4}', flags: 'g', test: 'Call 555-123-4567 or 800-555-0199' },
                 { name: 'Hex Color', pattern: '#[0-9a-fA-F]{6}\\b', flags: 'g', test: 'Colors: #FF5733 #00FF00 #0000FF' },
@@ -46,15 +46,15 @@ class RegexTester {
                 { name: 'Duplicate Words', pattern: '\\b(\\w+)\\s+\\1\\b', flags: 'gi', test: 'The the quick quick brown fox' }
             ],
             files: [
-                { name: 'File Extension', pattern: '\\.[a-zA-Z0-9]+$', flags: 'g', test: 'Files: document.pdf, image.jpg, script.js' },
+                { name: 'File Extension', pattern: '\\.[a-zA-Z0-9]+\\b', flags: 'g', test: 'Files: document.pdf, image.jpg, script.js' },
                 { name: 'Unix Path', pattern: '\\/([\\w.-]+\\/)*[\\w.-]+', flags: 'g', test: 'Paths: /usr/local/bin/node or /home/user/file.txt' },
                 { name: 'Windows Path', pattern: '[A-Z]:\\\\(?:[^\\\\/:*?"<>|\\r\\n]+\\\\)*[^\\\\/:*?"<>|\\r\\n]*', flags: 'g', test: 'Paths: C:\\\\Users\\\\Name\\\\file.txt' }
             ],
             validation: [
-                { name: 'Username', pattern: '^[a-zA-Z0-9_]{3,16}$', flags: '', test: 'Test: user123 (valid), ab (invalid), user_name_123 (valid)' },
-                { name: 'Strong Password', pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$', flags: '', test: 'Test: Pass123! (valid), password (invalid)' },
+                { name: 'Username', pattern: '^[a-zA-Z0-9_]{3,16}$', flags: '', test: 'user_name123' },
+                { name: 'Strong Password', pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$', flags: '', test: 'Pass123!' },
                 { name: 'US ZIP Code', pattern: '\\b\\d{5}(-\\d{4})?\\b', flags: 'g', test: 'ZIP: 12345 or 12345-6789' },
-                { name: 'Domain', pattern: '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$', flags: 'i', test: 'Test: example.com (valid), test.co.uk (valid)' }
+                { name: 'Domain', pattern: '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$', flags: 'i', test: 'example.com' }
             ],
             security: [
                 { name: 'JWT Token', pattern: 'eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+', flags: 'g', test: 'Token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' },
