@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Editor - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="image-editor-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="header-top">
+            <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+        <nav class="tool-nav">
+            <a href="../txt-formatter/index.html" class="tool-btn">txt formatter</a>
+            <a href="../snippets/index.html" class="tool-btn">snippets</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../image-editor/index.html" class="tool-btn active">image editor</a>
+            <a href="../chart-builder/index.html" class="tool-btn">chart builder</a>
+            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+            <a href="../timezone/index.html" class="tool-btn">timezone</a>
+            <a href="../text-diff/index.html" class="tool-btn">text diff</a>
+        </nav>
+    </div>
+
+    <p>Annotate, crop, resize, and export images. Paste from clipboard or drag & drop — all processing runs locally.</p>
+
+    <div class="image-editor-container">
+        <!-- Upload Section -->
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-zone" id="uploadZone">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <p>Drag & drop an image here</p>
+                <p class="upload-hint">or click to browse &middot; Ctrl+V to paste from clipboard</p>
+            </div>
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp">
+        </div>
+
+        <!-- Editor Section -->
+        <div class="editor-section" id="editorSection" style="display:none;">
+
+            <!-- Toolbar -->
+            <div class="editor-toolbar" id="editorToolbar">
+                <div class="toolbar-group">
+                    <button class="tool-btn-editor active" data-tool="select" title="Select (V)"><i class="fa-solid fa-arrow-pointer"></i></button>
+                    <button class="tool-btn-editor" data-tool="arrow" title="Arrow (A)"><i class="fa-solid fa-arrow-right"></i></button>
+                    <button class="tool-btn-editor" data-tool="rect" title="Rectangle (R)"><i class="fa-regular fa-square"></i></button>
+                    <button class="tool-btn-editor" data-tool="ellipse" title="Ellipse (E)"><i class="fa-regular fa-circle"></i></button>
+                    <button class="tool-btn-editor" data-tool="line" title="Line (L)"><i class="fa-solid fa-minus"></i></button>
+                    <button class="tool-btn-editor" data-tool="text" title="Text (T)"><i class="fa-solid fa-t"></i></button>
+                    <button class="tool-btn-editor" data-tool="freehand" title="Pen (P)"><i class="fa-solid fa-pen"></i></button>
+                    <button class="tool-btn-editor" data-tool="blur" title="Blur/Redact (B)"><i class="fa-solid fa-eye-slash"></i></button>
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-group">
+                    <button class="tool-btn-editor" data-tool="crop" title="Crop (C)"><i class="fa-solid fa-crop-simple"></i></button>
+                    <button class="tool-btn-editor" id="resizeBtn" title="Resize"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-group">
+                    <button class="tool-btn-editor" id="undoBtn" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button class="tool-btn-editor" id="redoBtn" title="Redo (Ctrl+Shift+Z)"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-group">
+                    <button class="tool-btn-editor" id="deleteBtn" title="Delete Selected"><i class="fa-solid fa-trash"></i></button>
+                    <button class="tool-btn-editor" id="clearAnnotationsBtn" title="Clear All Annotations"><i class="fa-solid fa-eraser"></i></button>
+                    <button class="tool-btn-editor" id="loadNewBtn" title="Load New Image"><i class="fa-solid fa-folder-open"></i></button>
+                </div>
+            </div>
+
+            <!-- Options Row -->
+            <div class="editor-options" id="editorOptions">
+                <div class="option-group color-option-group">
+                    <label for="strokeColor">Color</label>
+                    <input type="color" id="strokeColor" value="#ff0000">
+                    <div class="color-swatches" id="colorSwatches"></div>
+                </div>
+                <div class="option-group">
+                    <label for="strokeWidth">Width <span id="strokeWidthVal">3</span>px</label>
+                    <input type="range" id="strokeWidth" min="1" max="10" value="3">
+                </div>
+                <div class="option-group" id="fillOption" style="display:none;">
+                    <label for="fillToggle">Fill</label>
+                    <input type="checkbox" id="fillToggle">
+                </div>
+                <div class="option-group" id="fontSizeOption" style="display:none;">
+                    <label for="fontSize">Size</label>
+                    <select id="fontSize">
+                        <option value="12">12px</option>
+                        <option value="16">16px</option>
+                        <option value="20" selected>20px</option>
+                        <option value="24">24px</option>
+                        <option value="32">32px</option>
+                        <option value="48">48px</option>
+                    </select>
+                </div>
+                <div class="option-group" id="cropRatioOption" style="display:none;">
+                    <label for="cropRatio">Ratio</label>
+                    <select id="cropRatio">
+                        <option value="free">Free</option>
+                        <option value="1:1">1:1</option>
+                        <option value="16:9">16:9</option>
+                        <option value="4:3">4:3</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Resize Panel -->
+            <div class="resize-panel" id="resizePanel" style="display:none;">
+                <div class="resize-inputs">
+                    <div class="option-group">
+                        <label for="resizeW">Width</label>
+                        <input type="number" id="resizeW" min="1">
+                    </div>
+                    <div class="option-group">
+                        <label for="resizeH">Height</label>
+                        <input type="number" id="resizeH" min="1">
+                    </div>
+                    <div class="option-group">
+                        <label for="aspectLock">Lock Aspect</label>
+                        <input type="checkbox" id="aspectLock" checked>
+                    </div>
+                    <div class="option-group">
+                        <label for="resizeScale">Scale %</label>
+                        <input type="number" id="resizeScale" min="1" max="500" value="100">
+                    </div>
+                </div>
+                <div class="resize-actions">
+                    <button class="action-btn primary" id="applyResizeBtn"><i class="fa-solid fa-check"></i> Apply</button>
+                    <button class="action-btn" id="cancelResizeBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                </div>
+            </div>
+
+            <!-- Crop Confirm Bar -->
+            <div class="crop-confirm-bar" id="cropConfirmBar" style="display:none;">
+                <span>Drag to select crop region</span>
+                <div class="crop-actions">
+                    <button class="action-btn primary" id="applyCropBtn"><i class="fa-solid fa-check"></i> Apply Crop</button>
+                    <button class="action-btn" id="cancelCropBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="bgCanvas"></canvas>
+                <canvas id="overlayCanvas"></canvas>
+                <input type="text" id="textOverlayInput" class="text-overlay-input" style="display:none;">
+            </div>
+
+            <!-- Image Info Bar -->
+            <div class="info-bar" id="infoBar">
+                <span id="imageDimensions"></span>
+                <span id="originalSize"></span>
+                <span id="annotationCount">0 annotations</span>
+            </div>
+
+            <!-- Export Bar -->
+            <div class="export-bar" id="exportBar">
+                <div class="export-options">
+                    <div class="option-group">
+                        <label for="exportFormat">Format</label>
+                        <select id="exportFormat">
+                            <option value="image/png">PNG</option>
+                            <option value="image/jpeg">JPG</option>
+                            <option value="image/webp">WebP</option>
+                        </select>
+                    </div>
+                    <div class="option-group" id="qualityGroup">
+                        <label for="exportQuality">Quality <span id="qualityVal">92</span>%</label>
+                        <input type="range" id="exportQuality" min="1" max="100" value="92">
+                    </div>
+                    <span class="file-size-estimate" id="fileSizeEstimate"></span>
+                </div>
+                <div class="export-actions">
+                    <button class="action-btn primary" id="downloadBtn"><i class="fa-solid fa-download"></i> Download</button>
+                    <button class="action-btn" id="copyClipboardBtn"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/funcs.js"></script>
+    <script src="image-editor-app.js"></script>
+</body>
+
+</html>

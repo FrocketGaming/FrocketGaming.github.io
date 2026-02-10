@@ -1,0 +1,419 @@
+/* Image Editor Styles */
+.image-editor-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ========== Upload Section ========== */
+.upload-section {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.upload-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: 5px;
+    padding: 60px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: var(--text-primary);
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: var(--accent-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.upload-zone i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    display: block;
+    color: var(--accent-primary);
+}
+
+.upload-zone p {
+    margin: 5px 0;
+    font-size: 0.95rem;
+}
+
+.upload-zone .upload-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+#fileInput {
+    display: none;
+}
+
+/* ========== Editor Toolbar ========== */
+.editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 8px 12px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 2px;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background-color: var(--border-color);
+    margin: 0 6px;
+}
+
+.tool-btn-editor {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.tool-btn-editor:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--accent-primary);
+}
+
+.tool-btn-editor.active {
+    background-color: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
+
+/* ========== Options Row ========== */
+.editor-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 8px 14px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.option-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.option-group label {
+    white-space: nowrap;
+}
+
+.option-group input[type="color"] {
+    width: 30px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+    padding: 1px;
+}
+
+.color-swatches {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    box-sizing: border-box;
+}
+
+.color-swatch:hover {
+    border-color: var(--text-primary);
+    transform: scale(1.15);
+}
+
+.color-swatch.active {
+    border-color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--bg-secondary);
+}
+
+.option-group input[type="range"] {
+    width: 80px;
+    accent-color: var(--accent-primary);
+}
+
+.option-group input[type="number"] {
+    width: 70px;
+    padding: 4px 6px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.8rem;
+}
+
+.option-group select {
+    padding: 4px 6px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.8rem;
+}
+
+.option-group input[type="checkbox"] {
+    accent-color: var(--accent-primary);
+}
+
+/* ========== Resize Panel ========== */
+.resize-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 5px;
+    padding: 10px 14px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.resize-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+}
+
+.resize-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* ========== Crop Confirm Bar ========== */
+.crop-confirm-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 5px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.crop-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* ========== Action Buttons ========== */
+.action-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.action-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--accent-primary);
+}
+
+.action-btn.primary {
+    background-color: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
+
+.action-btn.primary:hover {
+    opacity: 0.9;
+}
+
+/* ========== Canvas Area ========== */
+.canvas-wrapper {
+    position: relative;
+    overflow: auto;
+    min-height: 400px;
+    max-height: 70vh;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-image:
+        linear-gradient(45deg, var(--bg-secondary) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--bg-secondary) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--bg-secondary) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--bg-secondary) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.canvas-wrapper canvas {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#bgCanvas {
+    z-index: 1;
+}
+
+#overlayCanvas {
+    z-index: 2;
+    cursor: crosshair;
+}
+
+.text-overlay-input {
+    position: absolute;
+    z-index: 3;
+    background: transparent;
+    border: 2px dashed var(--accent-primary);
+    color: var(--text-primary);
+    font-family: 'Raleway', sans-serif;
+    outline: none;
+    padding: 2px 4px;
+    min-width: 60px;
+}
+
+/* ========== Info Bar ========== */
+.info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    padding: 4px 2px;
+}
+
+/* ========== Export Bar ========== */
+.export-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px 14px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.export-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+}
+
+.export-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.file-size-estimate {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .image-editor-container {
+        max-width: 100%;
+    }
+
+    .editor-toolbar {
+        gap: 2px;
+        padding: 6px 8px;
+    }
+
+    .tool-btn-editor {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .toolbar-divider {
+        height: 24px;
+        margin: 0 4px;
+    }
+
+    .export-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .canvas-wrapper {
+        min-height: 300px;
+        max-height: 60vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .editor-options {
+        gap: 10px;
+        padding: 6px 10px;
+    }
+
+    .resize-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .crop-confirm-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .canvas-wrapper {
+        min-height: 250px;
+        max-height: 50vh;
+    }
+}
