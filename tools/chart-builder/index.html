@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Builder - QoL Tools</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('qol-tools-theme');
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/fav.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="chart-builder-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt">
+    <div class="header">
+        <div class="header-top">
+            <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+        <nav class="tool-nav">
+            <a href="../txt-formatter/index.html" class="tool-btn">txt formatter</a>
+            <a href="../snippets/index.html" class="tool-btn">snippets</a>
+            <a href="../todo/index.html" class="tool-btn">to-do list</a>
+            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+            <a href="../markdown/index.html" class="tool-btn">markdown preview</a>
+            <a href="../chart-builder/index.html" class="tool-btn active">chart builder</a>
+            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+            <a href="../timezone/index.html" class="tool-btn">timezone</a>
+            <a href="../text-diff/index.html" class="tool-btn">text diff</a>
+        </nav>
+    </div>
+
+    <p>Build interactive charts from CSV or JSON data. All processing is done locally in your browser.</p>
+
+    <div class="chart-container">
+        <!-- Data Input Section -->
+        <div class="data-input-section">
+            <div class="input-tabs">
+                <button class="input-tab active" data-tab="upload"><i class="fa-solid fa-upload"></i> Upload File</button>
+                <button class="input-tab" data-tab="paste"><i class="fa-solid fa-paste"></i> Paste Data</button>
+                <button class="input-tab" data-tab="sample"><i class="fa-solid fa-flask"></i> Sample Data</button>
+            </div>
+
+            <div class="tab-content active" id="tab-upload">
+                <div class="upload-zone" id="uploadZone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drag & drop a CSV or JSON file here</p>
+                    <p class="upload-hint">or click to browse</p>
+                </div>
+                <input type="file" id="fileInput" accept=".csv,.json,.tsv">
+            </div>
+
+            <div class="tab-content" id="tab-paste">
+                <div class="paste-area">
+                    <textarea id="pasteData" placeholder="Paste CSV or JSON data here..."></textarea>
+                    <div class="paste-actions">
+                        <button class="export-btn" id="parseDataBtn"><i class="fa-solid fa-play"></i> Parse Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-sample">
+                <div class="sample-buttons">
+                    <button class="sample-btn" data-sample="sales"><i class="fa-solid fa-chart-line"></i> Sales Data</button>
+                    <button class="sample-btn" data-sample="temperature"><i class="fa-solid fa-temperature-half"></i> Temperature</button>
+                    <button class="sample-btn" data-sample="population"><i class="fa-solid fa-users"></i> Population</button>
+                    <button class="sample-btn" data-sample="stocks"><i class="fa-solid fa-arrow-trend-up"></i> Stock Prices</button>
+                </div>
+            </div>
+
+            <div class="data-status" id="dataStatus"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="chart-main">
+            <!-- Sidebar -->
+            <div class="chart-sidebar">
+                <!-- Chart Type -->
+                <div class="config-card">
+                    <h3><i class="fa-solid fa-chart-bar"></i> Chart Type</h3>
+                    <div class="chart-type-grid">
+                        <button class="chart-type-btn active" data-type="bar"><i class="fa-solid fa-chart-column"></i> Bar</button>
+                        <button class="chart-type-btn" data-type="line"><i class="fa-solid fa-chart-line"></i> Line</button>
+                        <button class="chart-type-btn" data-type="scatter"><i class="fa-solid fa-braille"></i> Scatter</button>
+                        <button class="chart-type-btn" data-type="pie"><i class="fa-solid fa-chart-pie"></i> Pie</button>
+                        <button class="chart-type-btn" data-type="doughnut"><i class="fa-solid fa-circle-notch"></i> Doughnut</button>
+                        <button class="chart-type-btn" data-type="area"><i class="fa-solid fa-mountain"></i> Area</button>
+                        <button class="chart-type-btn" data-type="radar"><i class="fa-solid fa-diagram-project"></i> Radar</button>
+                        <button class="chart-type-btn" data-type="horizontalBar"><i class="fa-solid fa-bars"></i> H-Bar</button>
+                        <button class="chart-type-btn" data-type="bubble"><i class="fa-solid fa-circle"></i> Bubble</button>
+                        <button class="chart-type-btn" data-type="polarArea"><i class="fa-solid fa-compass"></i> Polar</button>
+                    </div>
+                </div>
+
+                <!-- Aggregation -->
+                <div class="config-card" id="aggregationCard" style="display:none;">
+                    <h3><i class="fa-solid fa-calculator"></i> Aggregation</h3>
+                    <div class="mapping-group">
+                        <label for="groupByCol">Group By</label>
+                        <select id="groupByCol"><option value="">None</option></select>
+                        <label for="aggFunction">Function</label>
+                        <select id="aggFunction">
+                            <option value="sum">Sum</option>
+                            <option value="avg">Average</option>
+                            <option value="min">Min</option>
+                            <option value="max">Max</option>
+                            <option value="count">Count</option>
+                        </select>
+                        <button class="export-btn" id="applyAggBtn"><i class="fa-solid fa-play"></i> Apply</button>
+                        <button class="select-action-btn" id="clearAggBtn">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Bubble Mapping -->
+                <div class="config-card" id="bubbleMappingCard" style="display:none;">
+                    <h3><i class="fa-solid fa-circle"></i> Bubble Mapping</h3>
+                    <div class="mapping-group">
+                        <label for="bubbleXCol">X Axis Column</label>
+                        <select id="bubbleXCol"></select>
+                        <label for="bubbleYCol">Y Axis Column</label>
+                        <select id="bubbleYCol"></select>
+                        <label for="bubbleRCol">Radius Column</label>
+                        <select id="bubbleRCol"></select>
+                    </div>
+                </div>
+
+                <!-- Data Mapping -->
+                <div class="config-card" id="dataMappingCard">
+                    <h3><i class="fa-solid fa-database"></i> Data Mapping</h3>
+                    <div class="mapping-group">
+                        <label for="labelColumn">Label Column</label>
+                        <select id="labelColumn"><option value="">-- Load data first --</option></select>
+                        <label>Datasets (numeric columns)</label>
+                        <div class="dataset-checkboxes" id="datasetCheckboxes">
+                            <span style="color: var(--text-secondary); font-size: 0.8rem;">Load data to see columns</span>
+                        </div>
+                        <div class="select-actions">
+                            <button class="select-action-btn" id="selectAllBtn">Select All</button>
+                            <button class="select-action-btn" id="clearAllBtn">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Options -->
+                <div class="config-card">
+                    <h3><i class="fa-solid fa-sliders"></i> Chart Options</h3>
+                    <div class="options-group">
+                        <div class="option-row">
+                            <label for="chartTitle">Chart Title</label>
+                            <input type="text" id="chartTitle" placeholder="Enter chart title...">
+                        </div>
+                        <div class="option-row" id="xAxisRow">
+                            <label for="xAxisLabel">X Axis Label</label>
+                            <input type="text" id="xAxisLabel" placeholder="X axis label...">
+                        </div>
+                        <div class="option-row" id="yAxisRow">
+                            <label for="yAxisLabel">Y Axis Label</label>
+                            <input type="text" id="yAxisLabel" placeholder="Y axis label...">
+                        </div>
+                        <div class="option-row" id="legendPositionRow">
+                            <label for="legendPosition">Legend Position</label>
+                            <select id="legendPosition">
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                                <option value="none">Hidden</option>
+                            </select>
+                        </div>
+                        <div class="toggle-row" id="gridToggleRow">
+                            <label for="showGrid">Grid Lines</label>
+                            <input type="checkbox" id="showGrid" checked>
+                        </div>
+                        <div class="toggle-row" id="zeroToggleRow">
+                            <label for="beginAtZero">Begin at Zero</label>
+                            <input type="checkbox" id="beginAtZero" checked>
+                        </div>
+                        <div class="toggle-row" id="stackedToggleRow">
+                            <label for="stacked">Stacked</label>
+                            <input type="checkbox" id="stacked">
+                        </div>
+                        <div class="toggle-row" id="sortXToggleRow">
+                            <label for="sortXAxis">Sort X Axis</label>
+                            <input type="checkbox" id="sortXAxis">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Annotations -->
+                <div class="config-card" id="annotationsCard">
+                    <h3><i class="fa-solid fa-ruler"></i> Annotations</h3>
+                    <div id="annotationsList"></div>
+                    <button class="export-btn" id="addAnnotationBtn"><i class="fa-solid fa-plus"></i> Add Line</button>
+                </div>
+
+                <!-- Colors -->
+                <div class="config-card">
+                    <h3><i class="fa-solid fa-palette"></i> Colors</h3>
+                    <select class="color-scheme-select" id="colorScheme">
+                        <option value="theme">Theme</option>
+                        <option value="pastel">Pastel</option>
+                        <option value="vivid">Vivid</option>
+                        <option value="monochrome">Monochrome</option>
+                    </select>
+                    <div class="color-swatches" id="colorSwatches"></div>
+                </div>
+            </div>
+
+            <!-- Chart Preview -->
+            <div class="chart-preview">
+                <div class="dashboard-toolbar">
+                    <div class="panel-tabs" id="panelTabs">
+                        <button class="panel-tab active" data-panel="0">Chart 1</button>
+                    </div>
+                    <button class="export-btn" id="addPanelBtn"><i class="fa-solid fa-plus"></i> Add Chart</button>
+                </div>
+
+                <div class="chart-panels-grid" id="chartPanelsGrid">
+                    <div class="chart-panel active" data-panel="0">
+                        <div class="chart-canvas-wrapper">
+                            <div class="chart-placeholder">
+                                <i class="fa-solid fa-chart-bar"></i>
+                                <p>Load data and select columns to build a chart</p>
+                            </div>
+                            <canvas class="panel-canvas" style="display:none;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="export-toolbar">
+                    <button class="export-btn" id="exportPng"><i class="fa-solid fa-download"></i> Export PNG</button>
+                    <button class="export-btn" id="exportPng2x"><i class="fa-solid fa-download"></i> Export PNG @2x</button>
+                    <button class="export-btn" id="exportAllPng"><i class="fa-solid fa-images"></i> Export All</button>
+                    <button class="export-btn" id="copyClipboard"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+                    <button class="export-btn clear-btn" id="clearAll"><i class="fa-solid fa-trash"></i> Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Preview -->
+        <div class="data-preview-section" id="dataPreview" style="display:none;">
+            <div class="preview-header" id="previewToggle">
+                <h3><i class="fa-solid fa-table"></i> Data Preview</h3>
+                <span class="preview-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+            </div>
+            <div class="preview-body" id="previewBody">
+                <div class="preview-table-wrapper">
+                    <table class="preview-table" id="previewTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/funcs.js"></script>
+    <script src="chart-builder-app.js"></script>
+</body>
+
+</html>
