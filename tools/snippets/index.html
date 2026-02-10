@@ -12,12 +12,9 @@
                 }
             })();
         </script>
-        <link
-            rel="icon"
-            type="image/png"
-            sizes="16x16"
-            href="/images/fav.png"
-        />
+        <link rel="icon" href="/images/fav.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16.png" />
         <link
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
@@ -200,6 +197,13 @@
                                     title="Copy to clipboard"
                                 >
                                     <i class="fa-solid fa-copy"></i>
+                                </button>
+                                <button
+                                    class="action-btn"
+                                    id="shareSnippetBtn"
+                                    title="Share snippet"
+                                >
+                                    <i class="fa-solid fa-share-nodes"></i>
                                 </button>
                                 <button
                                     class="action-btn"
@@ -423,6 +427,88 @@
                         Merge & Sync
                     </button>
                     <button class="clear-bnt" id="mergeSkipBtn">Skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Modal -->
+        <div id="shareModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h3>Share Snippet</h3>
+                    <span class="modal-close" onclick="snippetsApp.closeShareModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="shareExpirySelect">Link expires after:</label>
+                        <select id="shareExpirySelect" class="edit-select">
+                            <option value="1">1 hour</option>
+                            <option value="6">6 hours</option>
+                            <option value="24">24 hours</option>
+                            <option value="48" selected>48 hours</option>
+                        </select>
+                    </div>
+                    <div id="shareResult" style="display: none">
+                        <div class="form-group">
+                            <label>Share link:</label>
+                            <div class="share-link-row">
+                                <input type="text" id="shareLinkInput" class="edit-input" readonly />
+                                <button class="action-btn" id="copyShareLinkBtn" title="Copy link">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="share-expiry-info" id="shareExpiryInfo"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="format-btn" id="generateShareBtn">
+                        <i class="fa-solid fa-link"></i> Generate Link
+                    </button>
+                    <button class="clear-bnt" onclick="snippetsApp.closeShareModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shared Snippet Viewer Modal -->
+        <div id="sharedSnippetModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3 id="sharedSnippetTitle">Shared Snippet</h3>
+                    <span class="modal-close" onclick="snippetsApp.closeSharedSnippetModal()">&times;</span>
+                </div>
+                <div class="modal-body" id="sharedSnippetBody">
+                    <div id="sharedSnippetContent">
+                        <div class="shared-snippet-meta">
+                            <span class="snippet-type-badge" id="sharedSnippetBadge"></span>
+                            <span class="shared-snippet-expiry" id="sharedSnippetExpiry"></span>
+                        </div>
+                        <p class="snippet-description" id="sharedSnippetDesc"></p>
+                        <div class="code-container">
+                            <pre><code id="sharedSnippetCode"></code></pre>
+                        </div>
+                    </div>
+                    <div id="sharedSnippetExpired" style="display: none">
+                        <div class="shared-expired-state">
+                            <i class="fa-solid fa-clock"></i>
+                            <p>This shared snippet has expired.</p>
+                        </div>
+                    </div>
+                    <div id="sharedSnippetNotFound" style="display: none">
+                        <div class="shared-expired-state">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <p>Shared snippet not found.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="sharedSnippetFooter">
+                    <button class="format-btn" id="copySharedCodeBtn">
+                        <i class="fa-solid fa-copy"></i> Copy Code
+                    </button>
+                    <button class="format-btn" id="importSharedBtn">
+                        <i class="fa-solid fa-download"></i> Import to My Snippets
+                    </button>
+                    <button class="clear-bnt" onclick="snippetsApp.closeSharedSnippetModal()">Close</button>
                 </div>
             </div>
         </div>

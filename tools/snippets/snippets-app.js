@@ -107,6 +107,9 @@ class SnippetsApp {
                     onRemoteSnippets: (snippets) => this.handleRemoteSnippets(snippets),
                     onRemoteTypes: (types) => this.handleRemoteTypes(types)
                 });
+
+                // Check for shared snippet in URL
+                this.checkShareParam();
             }
         } catch (error) {
             console.error('Failed to initialize Snippets App:', error);
@@ -136,6 +139,11 @@ class SnippetsApp {
         document.getElementById('copyBtn').addEventListener('click', () => this.copyToClipboard());
         document.getElementById('editBtn').addEventListener('click', () => this.openEditSnippetModal());
         document.getElementById('deleteBtn').addEventListener('click', () => this.openDeleteModal('snippet', this.currentSnippet));
+        document.getElementById('shareSnippetBtn').addEventListener('click', () => this.openShareModal());
+        document.getElementById('generateShareBtn').addEventListener('click', () => this.generateShareLink());
+        document.getElementById('copyShareLinkBtn').addEventListener('click', () => this.copyShareLink());
+        document.getElementById('copySharedCodeBtn').addEventListener('click', () => this.copySharedCode());
+        document.getElementById('importSharedBtn').addEventListener('click', () => this.importSharedSnippet());
 
         // Export/Import
         document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
@@ -161,6 +169,8 @@ class SnippetsApp {
                 this.closeCategoryModal();
                 this.closeDeleteModal();
                 this.closeMergeModal();
+                this.closeShareModal();
+                this.closeSharedSnippetModal();
             }
         });
 
@@ -171,6 +181,8 @@ class SnippetsApp {
                 this.closeCategoryModal();
                 this.closeDeleteModal();
                 this.closeMergeModal();
+                this.closeShareModal();
+                this.closeSharedSnippetModal();
             }
         });
 
@@ -589,8 +601,13 @@ class SnippetsApp {
         });
     }
 
-    showNotification() {
+    showNotification(message) {
         const notification = document.getElementById('copyNotification');
+        if (message) {
+            notification.innerHTML = `<i class="fa-solid fa-check"></i> ${message}`;
+        } else {
+            notification.innerHTML = '<i class="fa-solid fa-check"></i> Copied to clipboard';
+        }
         notification.classList.add('show');
         setTimeout(() => {
             notification.classList.remove('show');
@@ -913,6 +930,178 @@ class SnippetsApp {
         if (typeof FirebaseSync !== 'undefined') {
             FirebaseSync.markMergeComplete();
         }
+    }
+
+    // ─── Share Handlers ──────────────────────────────────────────
+
+    async checkShareParam() {
+        const params = new URLSearchParams(window.location.search);
+        const shareId = params.get('share');
+        if (!shareId) return;
+
+        // Clear the param from URL
+        history.replaceState(null, '', window.location.pathname);
+
+        try {
+            const result = await FirebaseSync.fetchSharedSnippet(shareId);
+
+            const contentEl = document.getElementById('sharedSnippetContent');
+            const expiredEl = document.getElementById('sharedSnippetExpired');
+            const notFoundEl = document.getElementById('sharedSnippetNotFound');
+            const footerEl = document.getElementById('sharedSnippetFooter');
+
+            contentEl.style.display = 'none';
+            expiredEl.style.display = 'none';
+            notFoundEl.style.display = 'none';
+            footerEl.style.display = 'flex';
+
+            if (!result) {
+                notFoundEl.style.display = '';
+                footerEl.style.display = 'none';
+            } else if (result.expired) {
+                expiredEl.style.display = '';
+                footerEl.style.display = 'none';
+            } else {
+                contentEl.style.display = '';
+                this._sharedSnippetData = result.snippet;
+
+                document.getElementById('sharedSnippetTitle').textContent = result.snippet.name;
+                document.getElementById('sharedSnippetBadge').textContent =
+                    `${result.snippet.type} (.${result.snippet.extension})`;
+                document.getElementById('sharedSnippetDesc').textContent = result.snippet.description || '';
+                document.getElementById('sharedSnippetExpiry').textContent =
+                    `Expires: ${this.formatDate(result.expiresAt)}`;
+
+                const codeEl = document.getElementById('sharedSnippetCode');
+                codeEl.textContent = result.snippet.content;
+                codeEl.className = '';
+                codeEl.removeAttribute('data-highlighted');
+                const language = this.extensionToLanguage[result.snippet.extension] || 'plaintext';
+                codeEl.classList.add(`language-${language}`);
+                hljs.highlightElement(codeEl);
+            }
+
+            document.getElementById('sharedSnippetModal').style.display = 'flex';
+        } catch (error) {
+            console.error('Failed to load shared snippet:', error);
+        }
+    }
+
+    openShareModal() {
+        if (!this.currentSnippet) return;
+
+        if (typeof FirebaseSync === 'undefined' || !FirebaseSync.isSignedIn()) {
+            this.showNotification('Sign in to share snippets');
+            return;
+        }
+
+        document.getElementById('shareResult').style.display = 'none';
+        document.getElementById('generateShareBtn').disabled = false;
+        document.getElementById('shareExpirySelect').value = '48';
+        document.getElementById('shareModal').style.display = 'flex';
+    }
+
+    closeShareModal() {
+        document.getElementById('shareModal').style.display = 'none';
+    }
+
+    async generateShareLink() {
+        if (!this.currentSnippet) return;
+
+        const btn = document.getElementById('generateShareBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+        try {
+            const expiryHours = parseInt(document.getElementById('shareExpirySelect').value, 10);
+            const shareId = await FirebaseSync.shareSnippet(this.currentSnippet, expiryHours);
+            const shareUrl = `${location.origin}${location.pathname}?share=${shareId}`;
+
+            document.getElementById('shareLinkInput').value = shareUrl;
+            const expiresAt = new Date(Date.now() + expiryHours * 3600000);
+            document.getElementById('shareExpiryInfo').textContent =
+                `Expires: ${this.formatDate(expiresAt.toISOString())}`;
+            document.getElementById('shareResult').style.display = '';
+
+            // Auto-copy
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                this.showNotification('Link copied to clipboard');
+            } catch {
+                // clipboard may fail in some contexts, link is still visible
+            }
+        } catch (error) {
+            console.error('Failed to generate share link:', error);
+            this.showNotification('Failed to generate link');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-link"></i> Generate Link';
+        }
+    }
+
+    copyShareLink() {
+        const input = document.getElementById('shareLinkInput');
+        navigator.clipboard.writeText(input.value).then(() => {
+            this.showNotification('Link copied to clipboard');
+        }).catch(() => {
+            input.select();
+            document.execCommand('copy');
+            this.showNotification('Link copied to clipboard');
+        });
+    }
+
+    closeSharedSnippetModal() {
+        document.getElementById('sharedSnippetModal').style.display = 'none';
+        this._sharedSnippetData = null;
+    }
+
+    copySharedCode() {
+        if (!this._sharedSnippetData) return;
+        navigator.clipboard.writeText(this._sharedSnippetData.content).then(() => {
+            this.showNotification('Code copied to clipboard');
+        }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = this._sharedSnippetData.content;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            this.showNotification('Code copied to clipboard');
+        });
+    }
+
+    async importSharedSnippet() {
+        if (!this._sharedSnippetData) return;
+
+        const now = new Date().toISOString();
+        const newSnippet = {
+            id: Date.now(),
+            name: this._sharedSnippetData.name,
+            type: this._sharedSnippetData.type,
+            extension: this._sharedSnippetData.extension,
+            description: this._sharedSnippetData.description || '',
+            content: this._sharedSnippetData.content,
+            createdAt: now,
+            updatedAt: now
+        };
+
+        // Ensure the type exists locally
+        if (!this.types.find(t => t.name === newSnippet.type)) {
+            const newType = { id: Date.now() + 1, name: newSnippet.type };
+            this.types.push(newType);
+            await StorageManager.put('snippetTypes', newType);
+            this._syncSnippetType(newType);
+        }
+
+        this.snippets.push(newSnippet);
+        await StorageManager.put('snippets', newSnippet);
+        this._syncSnippet(newSnippet);
+
+        this.renderCategories();
+        this.renderSnippetsList();
+        this.closeSharedSnippetModal();
+        this.showNotification('Snippet imported');
+        this.viewSnippet(newSnippet.id);
     }
 
     // Utilities

@@ -310,6 +310,65 @@ class FirebaseSync {
         }
     }
 
+    // ─── Sharing ──────────────────────────────────────────────
+
+    /**
+     * Share a snippet by writing it to the public /shared collection
+     * @param {Object} snippet - The snippet to share
+     * @param {number} expiryHours - Hours until the link expires
+     * @returns {Promise<string>} The generated share ID
+     */
+    static async shareSnippet(snippet, expiryHours) {
+        if (!this.db || !this.user) {
+            throw new Error('Must be signed in to share');
+        }
+
+        const shareId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const doc = {
+            snippet: {
+                name: snippet.name,
+                type: snippet.type,
+                extension: snippet.extension,
+                description: snippet.description || '',
+                content: snippet.content
+            },
+            sharedBy: this.user.uid,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + expiryHours * 3600000).toISOString()
+        };
+
+        await this.db.collection('shared').doc(shareId).set(doc);
+        return shareId;
+    }
+
+    /**
+     * Fetch a shared snippet (no auth required — public read)
+     * @param {string} shareId
+     * @returns {Promise<{snippet, createdAt, expiresAt}|{expired: true}|null>}
+     */
+    static async fetchSharedSnippet(shareId) {
+        if (!this.db) {
+            throw new Error('Firebase not initialized');
+        }
+
+        const docSnap = await this.db.collection('shared').doc(shareId).get();
+        if (!docSnap.exists) return null;
+
+        const data = docSnap.data();
+        if (new Date(data.expiresAt) < new Date()) {
+            return { expired: true };
+        }
+
+        return {
+            snippet: data.snippet,
+            createdAt: data.createdAt,
+            expiresAt: data.expiresAt
+        };
+    }
+
     // ─── First-Login Merge ─────────────────────────────────────
 
     /**

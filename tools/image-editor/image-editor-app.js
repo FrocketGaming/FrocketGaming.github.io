@@ -37,7 +37,7 @@ class ImageEditorApp {
         this.cropRect = null;
 
         // Tool options
-        this.strokeColor = '#ff0000';
+        this.strokeColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary').trim();
         this.strokeWidth = 3;
         this.filled = false;
         this.fontSize = 20;
@@ -60,6 +60,7 @@ class ImageEditorApp {
         this.bindCrop();
         this.bindExport();
         this.bindKeyboard();
+        this.buildColorSwatches();
         this.observeTheme();
     }
 
@@ -228,12 +229,8 @@ class ImageEditorApp {
     bindOptions() {
         const colorInput = document.getElementById('strokeColor');
         colorInput.addEventListener('input', (e) => {
-            this.strokeColor = e.target.value;
-            if (this.selectedAnnotation >= 0) {
-                this.pushUndo();
-                this.annotations[this.selectedAnnotation].color = this.strokeColor;
-                this.renderOverlay();
-            }
+            this._userPickedColor = true;
+            this.setStrokeColor(e.target.value);
         });
 
         const widthInput = document.getElementById('strokeWidth');
@@ -833,6 +830,9 @@ class ImageEditorApp {
             document.getElementById('strokeColor').value = ann.color;
             document.getElementById('strokeWidth').value = ann.strokeWidth;
             document.getElementById('strokeWidthVal').textContent = ann.strokeWidth;
+            document.querySelectorAll('.color-swatch').forEach(s => {
+                s.classList.toggle('active', s.title === ann.color);
+            });
             if (ann.type === 'rect' || ann.type === 'ellipse') {
                 document.getElementById('fillToggle').checked = ann.filled;
             }
@@ -1357,9 +1357,73 @@ class ImageEditorApp {
         });
     }
 
+    /* ========== Color Swatches ========== */
+    buildColorSwatches() {
+        const container = document.getElementById('colorSwatches');
+        container.innerHTML = '';
+
+        const styles = getComputedStyle(document.documentElement);
+        const themeVars = [
+            '--accent-primary',
+            '--accent-secondary',
+            '--error-color',
+            '--warning-color',
+            '--info-color',
+            '--text-primary',
+        ];
+        const staticColors = ['#000000'];
+
+        const colors = [];
+        for (const v of themeVars) {
+            const val = styles.getPropertyValue(v).trim();
+            if (val && !colors.includes(val)) colors.push(val);
+        }
+        for (const c of staticColors) {
+            if (!colors.includes(c)) colors.push(c);
+        }
+
+        // Set default to accent-secondary and sync input
+        const accentSecondary = styles.getPropertyValue('--accent-secondary').trim();
+        if (!this._userPickedColor) {
+            this.strokeColor = accentSecondary || this.strokeColor;
+            document.getElementById('strokeColor').value = this.strokeColor;
+        }
+
+        for (const color of colors) {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch' + (color === this.strokeColor ? ' active' : '');
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
+            swatch.addEventListener('click', () => {
+                this._userPickedColor = true;
+                this.setStrokeColor(color);
+            });
+            container.appendChild(swatch);
+        }
+    }
+
+    setStrokeColor(color) {
+        this.strokeColor = color;
+        document.getElementById('strokeColor').value = color;
+
+        // Update active swatch
+        document.querySelectorAll('.color-swatch').forEach(s => {
+            s.classList.toggle('active', s.style.backgroundColor === color ||
+                s.title === color);
+        });
+
+        // Update selected annotation
+        if (this.selectedAnnotation >= 0) {
+            this.pushUndo();
+            this.annotations[this.selectedAnnotation].color = color;
+            this.renderOverlay();
+        }
+    }
+
     /* ========== Theme Observer ========== */
     observeTheme() {
         const observer = new MutationObserver(() => {
+            this.buildColorSwatches();
             this.renderOverlay();
         });
         observer.observe(document.documentElement, {

@@ -1105,6 +1105,17 @@ class ChartBuilderApp {
         } else if (this.panels.length >= 3) {
             grid.classList.add('cols-2x2');
         }
+        this.resizeAllCharts();
+    }
+
+    resizeAllCharts() {
+        // Wait for CSS layout to settle, then tell Plotly to resize
+        requestAnimationFrame(() => {
+            for (const panel of this.panels) {
+                if (!panel.chartDiv) continue;
+                try { Plotly.Plots.resize(panel.chartDiv); } catch (e) { /* ignore */ }
+            }
+        });
     }
 
     // ==================== Rendering (Plotly) ====================

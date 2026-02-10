@@ -16,6 +16,11 @@
  *       match /users/{userId}/{document=**} {
  *         allow read, write: if request.auth != null && request.auth.uid == userId;
  *       }
+ *       match /shared/{shareId} {
+ *         allow read: if true;
+ *         allow create: if request.auth != null;
+ *         allow update, delete: if false;
+ *       }
  *       match /{document=**} {
  *         allow read, write: if false;
  *       }
