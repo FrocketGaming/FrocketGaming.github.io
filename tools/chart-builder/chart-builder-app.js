@@ -9,7 +9,7 @@ class ChartBuilderApp {
         // Multi-panel dashboard
         this.panels = [{
             id: 0,
-            chart: null,
+            chartDiv: null,
             chartType: 'bar',
             selectedDatasets: [],
             annotations: [],
@@ -25,7 +25,8 @@ class ChartBuilderApp {
                 colorScheme: 'theme',
                 labelColumn: 0
             },
-            bubbleMapping: { x: 0, y: 1, r: 2 }
+            bubbleMapping: { x: 0, y: 1, r: 2 },
+            heatmapMapping: { valueCol: 0 }
         }];
         this.activePanel = 0;
         this.nextPanelId = 1;
@@ -130,6 +131,7 @@ class ChartBuilderApp {
         this.bindAggregation();
         this.bindDashboard();
         this.bindBubbleMapping();
+        this.bindHeatmapMapping();
         this.updateColorSwatches();
         this.setupThemeObserver();
         this.toggleOptionVisibility();
@@ -498,6 +500,7 @@ class ChartBuilderApp {
 
         // Populate bubble mapping dropdowns
         this.populateBubbleSelectors();
+        this.populateHeatmapSelectors();
     }
 
     populateBubbleSelectors() {
@@ -514,12 +517,29 @@ class ChartBuilderApp {
                 const opt = document.createElement('option');
                 opt.value = col.index;
                 opt.textContent = col.name;
-                // Default: first 3 numeric columns
                 if (j === selectIdx && selectIdx < numericCols.length) {
                     opt.selected = true;
                 }
                 sel.appendChild(opt);
             });
+        });
+    }
+
+    populateHeatmapSelectors() {
+        const data = this.getActiveData();
+        if (!data) return;
+        const { headers, columnTypes } = data;
+        const numericCols = headers.map((h, i) => ({ name: h, index: i }))
+            .filter((_, i) => columnTypes[i] === 'numeric');
+
+        const sel = document.getElementById('heatmapValueCol');
+        sel.innerHTML = '';
+        numericCols.forEach((col, j) => {
+            const opt = document.createElement('option');
+            opt.value = col.index;
+            opt.textContent = col.name;
+            if (j === 0) opt.selected = true;
+            sel.appendChild(opt);
         });
     }
 
@@ -549,6 +569,10 @@ class ChartBuilderApp {
         });
     }
 
+    bindHeatmapMapping() {
+        document.getElementById('heatmapValueCol').addEventListener('change', () => this.renderActiveChart());
+    }
+
     // ==================== Chart Type ====================
     bindChartType() {
         document.querySelectorAll('.chart-type-btn').forEach(btn => {
@@ -565,26 +589,36 @@ class ChartBuilderApp {
     }
 
     toggleOptionVisibility() {
-        const isPolar = this.chartType === 'pie' || this.chartType === 'doughnut' || this.chartType === 'polarArea';
-        const isRadar = this.chartType === 'radar';
-        const isBubble = this.chartType === 'bubble';
+        const t = this.chartType;
+        const isPie = t === 'pie' || t === 'doughnut';
+        const isRadar = t === 'radar';
+        const isBubble = t === 'bubble';
+        const isHeatmap = t === 'heatmap';
 
-        document.getElementById('xAxisRow').style.display = isPolar ? 'none' : '';
-        document.getElementById('yAxisRow').style.display = isPolar ? 'none' : '';
-        document.getElementById('gridToggleRow').style.display = isPolar ? 'none' : '';
-        document.getElementById('zeroToggleRow').style.display = isPolar || isRadar ? 'none' : '';
-        document.getElementById('stackedToggleRow').style.display = isPolar || isRadar || isBubble ? 'none' : '';
-        document.getElementById('sortXToggleRow').style.display = isPolar || isRadar ? 'none' : '';
+        const hideAxis = isPie || isRadar;
+        const hideGrid = isPie;
+        const hideZero = isPie || isRadar;
+        const hideStacked = isPie || isRadar || isBubble || isHeatmap ||
+            t === 'box' || t === 'histogram';
+        const hideSortX = isPie || isRadar || isHeatmap;
+        const hideAnnotations = isPie || isRadar;
+
+        document.getElementById('xAxisRow').style.display = hideAxis ? 'none' : '';
+        document.getElementById('yAxisRow').style.display = hideAxis ? 'none' : '';
+        document.getElementById('gridToggleRow').style.display = hideGrid ? 'none' : '';
+        document.getElementById('zeroToggleRow').style.display = hideZero ? 'none' : '';
+        document.getElementById('stackedToggleRow').style.display = hideStacked ? 'none' : '';
+        document.getElementById('sortXToggleRow').style.display = hideSortX ? 'none' : '';
+        document.getElementById('annotationsCard').style.display = hideAnnotations ? 'none' : '';
 
         // Bubble mapping card
         document.getElementById('bubbleMappingCard').style.display = isBubble ? '' : 'none';
 
-        // Data mapping card: hide for bubble
-        document.getElementById('dataMappingCard').style.display = isBubble ? 'none' : '';
+        // Heatmap mapping card
+        document.getElementById('heatmapMappingCard').style.display = isHeatmap ? '' : 'none';
 
-        // Annotations: hide for pie/doughnut/polarArea/radar
-        document.getElementById('annotationsCard').style.display =
-            (isPolar || isRadar) ? 'none' : '';
+        // Data mapping card: hide for bubble, heatmap
+        document.getElementById('dataMappingCard').style.display = (isBubble || isHeatmap) ? 'none' : '';
     }
 
     // ==================== Options ====================
@@ -664,28 +698,57 @@ class ChartBuilderApp {
         });
     }
 
-    buildAnnotationsConfig() {
-        if (this.annotations.length === 0) return {};
-        const annotations = {};
-        this.annotations.forEach((ann, i) => {
-            annotations[`line${i}`] = {
-                type: 'line',
-                scaleID: ann.axis,
-                value: ann.value,
-                borderColor: ann.color,
-                borderWidth: 2,
-                borderDash: [6, 4],
-                label: {
-                    display: !!ann.label,
-                    content: ann.label,
-                    position: 'start',
-                    backgroundColor: ann.color,
-                    color: '#fff',
-                    font: { size: 11, family: 'Raleway' }
+    buildAnnotationShapes() {
+        if (this.annotations.length === 0) return { shapes: [], annotations: [] };
+
+        const shapes = [];
+        const labels = [];
+
+        this.annotations.forEach(ann => {
+            if (ann.axis === 'y') {
+                // Horizontal line
+                shapes.push({
+                    type: 'line',
+                    x0: 0, x1: 1,
+                    y0: ann.value, y1: ann.value,
+                    xref: 'paper', yref: 'y',
+                    line: { color: ann.color, width: 2, dash: 'dash' }
+                });
+                if (ann.label) {
+                    labels.push({
+                        x: 0.02, y: ann.value,
+                        xref: 'paper', yref: 'y',
+                        text: ann.label,
+                        showarrow: false,
+                        font: { size: 11, family: 'Raleway', color: '#fff' },
+                        bgcolor: ann.color,
+                        borderpad: 3
+                    });
                 }
-            };
+            } else {
+                // Vertical line
+                shapes.push({
+                    type: 'line',
+                    x0: ann.value, x1: ann.value,
+                    y0: 0, y1: 1,
+                    xref: 'x', yref: 'paper',
+                    line: { color: ann.color, width: 2, dash: 'dash' }
+                });
+                if (ann.label) {
+                    labels.push({
+                        x: ann.value, y: 0.98,
+                        xref: 'x', yref: 'paper',
+                        text: ann.label,
+                        showarrow: false,
+                        font: { size: 11, family: 'Raleway', color: '#fff' },
+                        bgcolor: ann.color,
+                        borderpad: 3
+                    });
+                }
+            }
         });
-        return { annotation: { annotations } };
+
+        return { shapes, annotations: labels };
     }
 
     // ==================== Aggregation ====================
@@ -794,7 +857,6 @@ class ChartBuilderApp {
             const tab = e.target.closest('.panel-tab');
             if (!tab) return;
 
-            // Check if X button was clicked
             const removeBtn = e.target.closest('.remove-tab');
             if (removeBtn) {
                 const panelId = Number(tab.dataset.panel);
@@ -825,7 +887,7 @@ class ChartBuilderApp {
         const newId = this.nextPanelId++;
         const panel = {
             id: newId,
-            chart: null,
+            chartDiv: null,
             chartType: 'bar',
             selectedDatasets: [...this.selectedDatasets],
             annotations: [],
@@ -841,7 +903,8 @@ class ChartBuilderApp {
                 colorScheme: 'theme',
                 labelColumn: Number(document.getElementById('labelColumn').value) || 0
             },
-            bubbleMapping: { x: 0, y: 1, r: 2 }
+            bubbleMapping: { x: 0, y: 1, r: 2 },
+            heatmapMapping: { valueCol: 0 }
         };
         this.panels.push(panel);
 
@@ -862,7 +925,7 @@ class ChartBuilderApp {
                     <i class="fa-solid fa-chart-bar"></i>
                     <p>Select chart type and data</p>
                 </div>
-                <canvas class="panel-canvas" style="display:none;"></canvas>
+                <div class="panel-chart" style="display:none;"></div>
             </div>
         `;
         document.getElementById('chartPanelsGrid').appendChild(panelDiv);
@@ -879,9 +942,13 @@ class ChartBuilderApp {
         const idx = this.panels.findIndex(p => p.id === id);
         if (idx === -1) return;
 
-        // Destroy chart
-        if (this.panels[idx].chart) {
-            this.panels[idx].chart.destroy();
+        // Purge Plotly chart
+        const panelDiv = document.querySelector(`.chart-panel[data-panel="${id}"]`);
+        if (panelDiv) {
+            const chartDiv = panelDiv.querySelector('.panel-chart');
+            if (chartDiv) {
+                try { Plotly.purge(chartDiv); } catch (e) { /* ignore */ }
+            }
         }
 
         this.panels.splice(idx, 1);
@@ -889,7 +956,6 @@ class ChartBuilderApp {
         // Remove tab and panel div
         const tab = document.querySelector(`.panel-tab[data-panel="${id}"]`);
         if (tab) tab.remove();
-        const panelDiv = document.querySelector(`.chart-panel[data-panel="${id}"]`);
         if (panelDiv) panelDiv.remove();
 
         // Rename tabs
@@ -950,6 +1016,9 @@ class ChartBuilderApp {
             y: Number(document.getElementById('bubbleYCol').value) || 0,
             r: Number(document.getElementById('bubbleRCol').value) || 0
         };
+        panel.heatmapMapping = {
+            valueCol: Number(document.getElementById('heatmapValueCol').value) || 0
+        };
     }
 
     loadPanelConfig(id) {
@@ -999,6 +1068,14 @@ class ChartBuilderApp {
             if (br.querySelector(`option[value="${panel.bubbleMapping.r}"]`)) br.value = panel.bubbleMapping.r;
         }
 
+        // Set heatmap mapping
+        if (panel.heatmapMapping) {
+            const hv = document.getElementById('heatmapValueCol');
+            if (hv.querySelector(`option[value="${panel.heatmapMapping.valueCol}"]`)) {
+                hv.value = panel.heatmapMapping.valueCol;
+            }
+        }
+
         this.updateColorSwatches();
         this.toggleOptionVisibility();
     }
@@ -1030,7 +1107,7 @@ class ChartBuilderApp {
         }
     }
 
-    // ==================== Rendering ====================
+    // ==================== Rendering (Plotly) ====================
     renderActiveChart() {
         const panel = this.panels.find(p => p.id === this.activePanel);
         if (!panel) return;
@@ -1039,33 +1116,30 @@ class ChartBuilderApp {
         const panelDiv = document.querySelector(`.chart-panel[data-panel="${this.activePanel}"]`);
         if (!panelDiv) return;
 
-        const canvas = panelDiv.querySelector('.panel-canvas');
+        const chartDiv = panelDiv.querySelector('.panel-chart');
         const placeholder = panelDiv.querySelector('.chart-placeholder');
 
         const isBubble = this.chartType === 'bubble';
-        const hasData = data && (isBubble || this.selectedDatasets.length > 0);
+        const isHeatmap = this.chartType === 'heatmap';
+        const hasData = data && (isBubble || isHeatmap || this.selectedDatasets.length > 0);
 
         if (!hasData) {
-            if (panel.chart) {
-                panel.chart.destroy();
-                panel.chart = null;
+            if (chartDiv) {
+                try { Plotly.purge(chartDiv); } catch (e) { /* ignore */ }
+                chartDiv.style.display = 'none';
             }
-            if (canvas) canvas.style.display = 'none';
             if (placeholder) placeholder.style.display = '';
+            panel.chartDiv = null;
             return;
         }
 
-        const config = this.buildChartConfig();
-
-        if (panel.chart) {
-            panel.chart.destroy();
-            panel.chart = null;
-        }
+        const { traces, layout, config } = this.buildPlotlyConfig();
 
         if (placeholder) placeholder.style.display = 'none';
-        if (canvas) canvas.style.display = 'block';
+        if (chartDiv) chartDiv.style.display = 'block';
 
-        panel.chart = new Chart(canvas.getContext('2d'), config);
+        Plotly.newPlot(chartDiv, traces, layout, config);
+        panel.chartDiv = chartDiv;
     }
 
     renderAllCharts() {
@@ -1073,7 +1147,6 @@ class ChartBuilderApp {
         this.saveActivePanelConfig();
 
         for (const panel of this.panels) {
-            // Temporarily switch context to render each panel
             const savedActive = this.activePanel;
             this.activePanel = panel.id;
             this.loadPanelConfig(panel.id);
@@ -1085,49 +1158,12 @@ class ChartBuilderApp {
         this.loadPanelConfig(this.activePanel);
     }
 
-    buildChartConfig() {
+    buildPlotlyConfig() {
         const data = this.getActiveData();
-        if (!data) return { type: 'bar', data: { labels: [], datasets: [] } };
+        if (!data) return { traces: [], layout: {}, config: {} };
 
-        const isBubble = this.chartType === 'bubble';
-        const isPie = this.chartType === 'pie' || this.chartType === 'doughnut';
-        const isPolar = this.chartType === 'polarArea';
-        const isArea = this.chartType === 'area';
-        const isRadar = this.chartType === 'radar';
-        const isHBar = this.chartType === 'horizontalBar';
-
-        let type;
-        if (isArea) type = 'line';
-        else if (isHBar) type = 'bar';
-        else if (isPolar) type = 'polarArea';
-        else type = this.chartType;
-
-        const labels = isBubble ? undefined : this.getLabels();
-        const datasets = isBubble
-            ? this.buildBubbleDatasets()
-            : this.buildDatasets(isPie || isPolar, isArea);
+        const t = this.chartType;
         const palette = this.getColorPalette();
-
-        // Apply colors
-        datasets.forEach((ds, i) => {
-            if (isPie || isPolar) {
-                const colorLabels = labels || data.rows.map((_, j) => j);
-                ds.backgroundColor = colorLabels.map((_, j) => palette[j % palette.length]);
-                ds.borderColor = this.getCSSVar('--bg-secondary');
-                ds.borderWidth = 2;
-            } else if (isBubble) {
-                ds.backgroundColor = palette.map(c => c);
-                ds.borderColor = palette.map(c => c.replace(/[\d.]+\)$/, '1)'));
-                ds.borderWidth = 1;
-            } else {
-                const color = palette[i % palette.length];
-                ds.backgroundColor = color;
-                ds.borderColor = color.replace(/[\d.]+\)$/, '1)');
-                ds.borderWidth = 2;
-                if (isArea) ds.fill = true;
-            }
-        });
-
         const title = document.getElementById('chartTitle').value;
         const legendPos = document.getElementById('legendPosition').value;
         const showGrid = document.getElementById('showGrid').checked;
@@ -1138,87 +1174,409 @@ class ChartBuilderApp {
 
         const textColor = this.getCSSVar('--text-primary');
         const gridColor = this.getCSSVar('--border-color');
+        const bgColor = this.getCSSVar('--bg-secondary');
 
-        const config = {
-            type,
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: !!title,
-                        text: title,
-                        color: textColor,
-                        font: { size: 16, family: 'Raleway' }
-                    },
-                    legend: {
-                        display: legendPos !== 'none',
-                        position: legendPos === 'none' ? 'top' : legendPos,
-                        labels: { color: textColor, font: { family: 'Raleway' } }
-                    }
-                }
-            }
+        let traces = [];
+
+        // Build traces based on chart type
+        switch (t) {
+            case 'bar':
+                traces = this.buildBarTraces(palette, false);
+                break;
+            case 'line':
+                traces = this.buildLineTraces(palette);
+                break;
+            case 'scatter':
+                traces = this.buildScatterTraces(palette);
+                break;
+            case 'area':
+                traces = this.buildAreaTraces(palette, stacked);
+                break;
+            case 'pie':
+                traces = this.buildPieTraces(palette, false);
+                break;
+            case 'doughnut':
+                traces = this.buildPieTraces(palette, true);
+                break;
+            case 'radar':
+                traces = this.buildRadarTraces(palette);
+                break;
+            case 'horizontalBar':
+                traces = this.buildBarTraces(palette, true);
+                break;
+            case 'bubble':
+                traces = this.buildBubbleTraces(palette);
+                break;
+            case 'heatmap':
+                traces = this.buildHeatmapTraces();
+                break;
+            case 'box':
+                traces = this.buildBoxTraces(palette);
+                break;
+            case 'histogram':
+                traces = this.buildHistogramTraces(palette);
+                break;
+            default:
+                traces = this.buildBarTraces(palette, false);
+        }
+
+        // Build layout
+        const annData = this.buildAnnotationShapes();
+
+        const legendOrientationMap = {
+            top: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12 },
+            bottom: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.2 },
+            left: { orientation: 'v', x: -0.15, y: 0.5 },
+            right: { orientation: 'v', x: 1.05, y: 0.5 }
+        };
+        const legendConfig = legendOrientationMap[legendPos] || legendOrientationMap.top;
+
+        const isPieType = t === 'pie' || t === 'doughnut';
+        const isRadarType = t === 'radar';
+
+        const layout = {
+            title: title ? { text: title, font: { family: 'Raleway', size: 16, color: textColor } } : undefined,
+            paper_bgcolor: bgColor,
+            plot_bgcolor: bgColor,
+            font: { color: textColor, family: 'Raleway' },
+            showlegend: legendPos !== 'none',
+            margin: { t: title ? 60 : 30, r: 30, b: 50, l: 60 },
+            shapes: annData.shapes,
+            annotations: annData.annotations
         };
 
-        if (!isBubble && labels) {
-            config.data.labels = labels;
+        if (legendPos !== 'none') {
+            layout.legend = {
+                orientation: legendConfig.orientation,
+                x: legendConfig.x,
+                xanchor: legendConfig.xanchor,
+                y: legendConfig.y,
+                font: { family: 'Raleway', color: textColor }
+            };
         }
 
-        // Annotation plugin config
-        const annConfig = this.buildAnnotationsConfig();
-        if (annConfig.annotation) {
-            config.options.plugins.annotation = annConfig.annotation;
-        }
+        // Axes for cartesian charts
+        if (!isPieType && !isRadarType && t !== 'heatmap') {
+            layout.xaxis = {
+                title: xLabel ? { text: xLabel, font: { family: 'Raleway', color: textColor } } : undefined,
+                showgrid: showGrid,
+                gridcolor: gridColor,
+                tickfont: { family: 'Raleway', color: textColor },
+                linecolor: gridColor,
+                zerolinecolor: gridColor
+            };
+            layout.yaxis = {
+                title: yLabel ? { text: yLabel, font: { family: 'Raleway', color: textColor } } : undefined,
+                showgrid: showGrid,
+                gridcolor: gridColor,
+                tickfont: { family: 'Raleway', color: textColor },
+                rangemode: beginAtZero ? 'tozero' : 'normal',
+                linecolor: gridColor,
+                zerolinecolor: gridColor
+            };
 
-        // Horizontal bar
-        if (isHBar) {
-            config.options.indexAxis = 'y';
-        }
+            if (stacked && (t === 'bar' || t === 'horizontalBar')) {
+                layout.barmode = 'stack';
+            } else if (t === 'bar' || t === 'horizontalBar') {
+                layout.barmode = 'group';
+            }
 
-        // Scales
-        if (!isPie && !isPolar) {
-            config.options.scales = {};
-            if (!isRadar) {
-                // Detect if label column is date type
-                const labelIdx = Number(document.getElementById('labelColumn').value);
-                const isDateAxis = !isBubble && data.columnTypes[labelIdx] === 'date';
-
-                const xScale = {
-                    display: true,
-                    grid: { display: showGrid, color: gridColor },
-                    ticks: { color: textColor, font: { family: 'Raleway' } },
-                    title: { display: !!xLabel, text: xLabel, color: textColor, font: { family: 'Raleway' } },
-                    stacked: stacked
-                };
-
-                if (isDateAxis && !isBubble) {
-                    xScale.type = 'time';
-                    xScale.time = { unit: this.detectTimeUnit(labels) };
-                }
-
-                config.options.scales.x = xScale;
-                config.options.scales.y = {
-                    display: true,
-                    grid: { display: showGrid, color: gridColor },
-                    ticks: { color: textColor, font: { family: 'Raleway' } },
-                    title: { display: !!yLabel, text: yLabel, color: textColor, font: { family: 'Raleway' } },
-                    beginAtZero,
-                    stacked: stacked
-                };
-            } else {
-                config.options.scales.r = {
-                    grid: { color: gridColor },
-                    angleLines: { color: gridColor },
-                    pointLabels: { color: textColor, font: { family: 'Raleway' } },
-                    ticks: { color: textColor, backdropColor: 'transparent', font: { family: 'Raleway' } }
-                };
+            if (t === 'histogram') {
+                layout.barmode = 'overlay';
             }
         }
 
-        return config;
+        if (t === 'heatmap') {
+            layout.xaxis = {
+                showgrid: false,
+                tickfont: { family: 'Raleway', color: textColor },
+                linecolor: gridColor
+            };
+            layout.yaxis = {
+                showgrid: false,
+                tickfont: { family: 'Raleway', color: textColor },
+                linecolor: gridColor,
+                autorange: 'reversed'
+            };
+        }
+
+        // Polar layout for radar
+        if (t === 'radar') {
+            layout.polar = {
+                bgcolor: bgColor,
+                radialaxis: {
+                    visible: true,
+                    gridcolor: gridColor,
+                    tickfont: { family: 'Raleway', color: textColor },
+                    linecolor: gridColor
+                },
+                angularaxis: {
+                    gridcolor: gridColor,
+                    tickfont: { family: 'Raleway', color: textColor },
+                    linecolor: gridColor
+                }
+            };
+        }
+
+        const plotlyConfig = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['sendDataToCloud', 'lasso2d', 'select2d'],
+            displaylogo: false
+        };
+
+        return { traces, layout, config: plotlyConfig };
     }
 
+    // ==================== Trace Builders ====================
+    buildBarTraces(palette, horizontal) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            const trace = {
+                type: 'bar',
+                name: headers[colIdx],
+                marker: { color: color, line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 1 } }
+            };
+            if (horizontal) {
+                trace.y = labels;
+                trace.x = values;
+                trace.orientation = 'h';
+            } else {
+                trace.x = labels;
+                trace.y = values;
+            }
+            return trace;
+        });
+    }
+
+    buildLineTraces(palette) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            return {
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: headers[colIdx],
+                x: labels,
+                y: values,
+                line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 2, shape: 'spline' },
+                marker: { color: color.replace(/[\d.]+\)$/, '1)'), size: 5 }
+            };
+        });
+    }
+
+    buildScatterTraces(palette) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            return {
+                type: 'scatter',
+                mode: 'markers',
+                name: headers[colIdx],
+                x: labels,
+                y: values,
+                marker: { color: color, size: 8, line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 1 } }
+            };
+        });
+    }
+
+    buildAreaTraces(palette, stacked) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            const trace = {
+                type: 'scatter',
+                mode: 'lines',
+                name: headers[colIdx],
+                x: labels,
+                y: values,
+                fill: i === 0 ? 'tozeroy' : 'tonexty',
+                fillcolor: color,
+                line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 2, shape: 'spline' }
+            };
+            if (stacked) {
+                trace.stackgroup = 'one';
+                trace.fill = undefined;
+            }
+            return trace;
+        });
+    }
+
+    buildPieTraces(palette, isDoughnut) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+        const colIdx = this.selectedDatasets[0];
+        if (colIdx === undefined) return [];
+
+        const values = rows.map(row => Number(row[colIdx]) || 0);
+        const colors = labels.map((_, j) => palette[j % palette.length]);
+
+        const trace = {
+            type: 'pie',
+            labels: labels,
+            values: values,
+            name: headers[colIdx],
+            marker: {
+                colors: colors,
+                line: { color: this.getCSSVar('--bg-secondary'), width: 2 }
+            },
+            textinfo: 'label+percent',
+            textfont: { family: 'Raleway' }
+        };
+        if (isDoughnut) {
+            trace.hole = 0.4;
+        }
+        return [trace];
+    }
+
+    buildRadarTraces(palette) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const labels = this.getLabels();
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            // Close the polygon by repeating the first point
+            return {
+                type: 'scatterpolar',
+                r: [...values, values[0]],
+                theta: [...labels.map(String), String(labels[0])],
+                fill: 'toself',
+                fillcolor: color,
+                name: headers[colIdx],
+                line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 2 }
+            };
+        });
+    }
+
+    buildBubbleTraces(palette) {
+        const data = this.getActiveData();
+        if (!data) return [];
+        const rows = this.getSortedRows();
+
+        const xIdx = Number(document.getElementById('bubbleXCol').value);
+        const yIdx = Number(document.getElementById('bubbleYCol').value);
+        const rIdx = Number(document.getElementById('bubbleRCol').value);
+
+        const rValues = rows.map(row => Math.abs(Number(row[rIdx]) || 0));
+        const maxR = Math.max(...rValues, 1);
+
+        const xValues = rows.map(row => Number(row[xIdx]) || 0);
+        const yValues = rows.map(row => Number(row[yIdx]) || 0);
+        const sizes = rValues.map(v => (v / maxR) * 50 + 5);
+        const colors = rows.map((_, j) => palette[j % palette.length]);
+
+        const xHeader = data.headers[xIdx] || 'X';
+        const yHeader = data.headers[yIdx] || 'Y';
+        const rHeader = data.headers[rIdx] || 'R';
+
+        return [{
+            type: 'scatter',
+            mode: 'markers',
+            name: `${xHeader} / ${yHeader} (size: ${rHeader})`,
+            x: xValues,
+            y: yValues,
+            marker: {
+                size: sizes,
+                color: colors,
+                line: { color: colors.map(c => c.replace(/[\d.]+\)$/, '1)')), width: 1 },
+                sizemode: 'diameter'
+            },
+            text: rows.map((row, j) => `${rHeader}: ${row[rIdx]}`),
+            hoverinfo: 'x+y+text'
+        }];
+    }
+
+    buildHeatmapTraces() {
+        const data = this.getActiveData();
+        if (!data) return [];
+        const { headers, columnTypes } = data;
+        const rows = this.getSortedRows();
+        const labelIdx = Number(document.getElementById('labelColumn').value);
+
+        // Get all numeric column indices
+        const numericCols = headers.map((h, i) => i)
+            .filter(i => columnTypes[i] === 'numeric');
+
+        if (numericCols.length === 0) return [];
+
+        const rowLabels = rows.map(row => String(row[labelIdx]));
+        const colHeaders = numericCols.map(i => headers[i]);
+        const matrix = rows.map(row => numericCols.map(colIdx => Number(row[colIdx]) || 0));
+
+        return [{
+            type: 'heatmap',
+            z: matrix,
+            x: colHeaders,
+            y: rowLabels,
+            colorscale: 'Viridis',
+            hoverinfo: 'x+y+z'
+        }];
+    }
+
+    buildBoxTraces(palette) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            return {
+                type: 'box',
+                y: values,
+                name: headers[colIdx],
+                marker: { color: color },
+                line: { color: color.replace(/[\d.]+\)$/, '1)') },
+                fillcolor: color
+            };
+        });
+    }
+
+    buildHistogramTraces(palette) {
+        const data = this.getActiveData();
+        const { headers } = data;
+        const rows = this.getSortedRows();
+
+        return this.selectedDatasets.map((colIdx, i) => {
+            const values = rows.map(row => Number(row[colIdx]) || 0);
+            const color = palette[i % palette.length];
+            return {
+                type: 'histogram',
+                x: values,
+                name: headers[colIdx],
+                opacity: 0.7,
+                marker: { color: color, line: { color: color.replace(/[\d.]+\)$/, '1)'), width: 1 } }
+            };
+        });
+    }
+
+    // ==================== Data Helpers ====================
     getSortedRows() {
         const data = this.getActiveData();
         if (!data) return [];
@@ -1249,81 +1607,15 @@ class ChartBuilderApp {
         const labelIdx = Number(document.getElementById('labelColumn').value);
         const rows = this.getSortedRows();
 
-        // Check if date column
+        // For date columns, pass ISO strings so Plotly auto-detects
         if (data.columnTypes[labelIdx] === 'date') {
             return rows.map(row => {
                 const parsed = this.parseDateValue(String(row[labelIdx]));
-                return parsed || row[labelIdx];
+                return parsed ? parsed.toISOString() : row[labelIdx];
             });
         }
 
         return rows.map(row => row[labelIdx]);
-    }
-
-    detectTimeUnit(labels) {
-        if (!labels || labels.length < 2) return 'day';
-        const dates = labels.filter(l => l instanceof Date);
-        if (dates.length < 2) return 'day';
-
-        const range = dates[dates.length - 1].getTime() - dates[0].getTime();
-        const days = range / (1000 * 60 * 60 * 24);
-
-        if (days < 7) return 'day';
-        if (days < 90) return 'week';
-        if (days < 730) return 'month';
-        return 'year';
-    }
-
-    buildDatasets(isSingleDataset, isArea) {
-        const data = this.getActiveData();
-        if (!data) return [];
-        const { headers } = data;
-        const rows = this.getSortedRows();
-
-        if (isSingleDataset) {
-            const colIdx = this.selectedDatasets[0];
-            if (colIdx === undefined) return [];
-            return [{
-                label: headers[colIdx],
-                data: rows.map(row => Number(row[colIdx]) || 0)
-            }];
-        }
-
-        return this.selectedDatasets.map(colIdx => ({
-            label: headers[colIdx],
-            data: rows.map(row => Number(row[colIdx]) || 0),
-            tension: this.chartType === 'line' || isArea ? 0.3 : 0,
-            pointRadius: this.chartType === 'scatter' ? 5 : 3
-        }));
-    }
-
-    buildBubbleDatasets() {
-        const data = this.getActiveData();
-        if (!data) return [];
-        const rows = this.getSortedRows();
-
-        const xIdx = Number(document.getElementById('bubbleXCol').value);
-        const yIdx = Number(document.getElementById('bubbleYCol').value);
-        const rIdx = Number(document.getElementById('bubbleRCol').value);
-
-        // Get radius values for scaling
-        const rValues = rows.map(row => Math.abs(Number(row[rIdx]) || 0));
-        const maxR = Math.max(...rValues, 1);
-
-        const points = rows.map(row => ({
-            x: Number(row[xIdx]) || 0,
-            y: Number(row[yIdx]) || 0,
-            r: (Math.abs(Number(row[rIdx]) || 0) / maxR) * 30 + 3
-        }));
-
-        const xHeader = data.headers[xIdx] || 'X';
-        const yHeader = data.headers[yIdx] || 'Y';
-        const rHeader = data.headers[rIdx] || 'R';
-
-        return [{
-            label: `${xHeader} / ${yHeader} (size: ${rHeader})`,
-            data: points
-        }];
     }
 
     // ==================== Colors ====================
@@ -1344,7 +1636,6 @@ class ChartBuilderApp {
         const syntaxString = this.getCSSVar('--syntax-string');
         const syntaxNumber = this.getCSSVar('--syntax-number');
 
-        // Lead with brightest colors (secondary first), use higher alpha
         return [secondary, info, warning, error, syntaxKeyword, syntaxString, syntaxNumber, accent]
             .map(c => this.toRGBA(c, 0.85));
     }
@@ -1395,7 +1686,7 @@ class ChartBuilderApp {
         });
     }
 
-    // ==================== Export ====================
+    // ==================== Export (Plotly) ====================
     bindExport() {
         document.getElementById('exportPng').addEventListener('click', () => this.exportPNG(1));
         document.getElementById('exportPng2x').addEventListener('click', () => this.exportPNG(2));
@@ -1404,88 +1695,102 @@ class ChartBuilderApp {
         document.getElementById('clearAll').addEventListener('click', () => this.clearAll());
     }
 
-    exportPNG(scale) {
+    async exportPNG(scale) {
         const panel = this.panels.find(p => p.id === this.activePanel);
-        if (!panel || !panel.chart) return;
+        if (!panel || !panel.chartDiv) return;
 
-        const panelDiv = document.querySelector(`.chart-panel[data-panel="${this.activePanel}"]`);
-        const canvas = panelDiv.querySelector('.panel-canvas');
+        const chartDiv = panel.chartDiv;
+        try {
+            const dataUrl = await Plotly.toImage(chartDiv, {
+                format: 'png',
+                scale: scale,
+                width: chartDiv.offsetWidth,
+                height: chartDiv.offsetHeight
+            });
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width * scale;
-        tempCanvas.height = canvas.height * scale;
-        const ctx = tempCanvas.getContext('2d');
-
-        ctx.fillStyle = this.getCSSVar('--bg-secondary');
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        ctx.scale(scale, scale);
-        ctx.drawImage(canvas, 0, 0);
-
-        const link = document.createElement('a');
-        link.download = `chart-${this.activePanel + 1}${scale > 1 ? '@' + scale + 'x' : ''}.png`;
-        link.href = tempCanvas.toDataURL('image/png');
-        link.click();
+            const link = document.createElement('a');
+            link.download = `chart-${this.activePanel + 1}${scale > 1 ? '@' + scale + 'x' : ''}.png`;
+            link.href = dataUrl;
+            link.click();
+        } catch (e) {
+            this.showStatus('Failed to export PNG', false);
+        }
     }
 
-    exportAllPNG(scale) {
-        const chartsWithData = this.panels.filter(p => p.chart);
+    async exportAllPNG(scale) {
+        const chartsWithData = this.panels.filter(p => p.chartDiv);
         if (chartsWithData.length === 0) return;
 
         if (chartsWithData.length === 1) {
-            this.exportPNG(scale);
+            const saved = this.activePanel;
+            this.activePanel = chartsWithData[0].id;
+            await this.exportPNG(scale);
+            this.activePanel = saved;
             return;
         }
 
-        // Composite all panels into one image
-        const canvases = chartsWithData.map(p => {
-            const panelDiv = document.querySelector(`.chart-panel[data-panel="${p.id}"]`);
-            return panelDiv ? panelDiv.querySelector('.panel-canvas') : null;
-        }).filter(Boolean);
+        try {
+            // Get images from all panels
+            const images = [];
+            for (const p of chartsWithData) {
+                const dataUrl = await Plotly.toImage(p.chartDiv, {
+                    format: 'png',
+                    scale: scale,
+                    width: p.chartDiv.offsetWidth,
+                    height: p.chartDiv.offsetHeight
+                });
+                const img = new Image();
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = dataUrl;
+                });
+                images.push(img);
+            }
 
-        if (canvases.length === 0) return;
+            const cols = images.length <= 2 ? images.length : 2;
+            const rowCount = Math.ceil(images.length / cols);
+            const padding = 20;
 
-        const cols = canvases.length <= 2 ? canvases.length : 2;
-        const rowCount = Math.ceil(canvases.length / cols);
-        const padding = 20;
+            const maxW = Math.max(...images.map(img => img.width));
+            const maxH = Math.max(...images.map(img => img.height));
 
-        const maxW = Math.max(...canvases.map(c => c.width));
-        const maxH = Math.max(...canvases.map(c => c.height));
+            const totalW = maxW * cols + padding * (cols + 1);
+            const totalH = maxH * rowCount + padding * (rowCount + 1);
 
-        const totalW = (maxW * cols + padding * (cols + 1)) * scale;
-        const totalH = (maxH * rowCount + padding * (rowCount + 1)) * scale;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = totalW;
+            tempCanvas.height = totalH;
+            const ctx = tempCanvas.getContext('2d');
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = totalW;
-        tempCanvas.height = totalH;
-        const ctx = tempCanvas.getContext('2d');
+            ctx.fillStyle = this.getCSSVar('--bg-secondary');
+            ctx.fillRect(0, 0, totalW, totalH);
 
-        ctx.fillStyle = this.getCSSVar('--bg-secondary');
-        ctx.fillRect(0, 0, totalW, totalH);
-        ctx.scale(scale, scale);
+            images.forEach((img, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = padding + col * (maxW + padding);
+                const y = padding + row * (maxH + padding);
+                ctx.drawImage(img, x, y);
+            });
 
-        canvases.forEach((c, i) => {
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            const x = padding + col * (maxW + padding);
-            const y = padding + row * (maxH + padding);
-            ctx.drawImage(c, x, y);
-        });
-
-        const link = document.createElement('a');
-        link.download = `dashboard@${scale}x.png`;
-        link.href = tempCanvas.toDataURL('image/png');
-        link.click();
+            const link = document.createElement('a');
+            link.download = `dashboard@${scale}x.png`;
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            this.showStatus('Failed to export all charts', false);
+        }
     }
 
     async copyToClipboard() {
         const panel = this.panels.find(p => p.id === this.activePanel);
-        if (!panel || !panel.chart) return;
-
-        const panelDiv = document.querySelector(`.chart-panel[data-panel="${this.activePanel}"]`);
-        const canvas = panelDiv.querySelector('.panel-canvas');
+        if (!panel || !panel.chartDiv) return;
 
         try {
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const dataUrl = await Plotly.toImage(panel.chartDiv, { format: 'png' });
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
             await navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ]);
@@ -1496,18 +1801,18 @@ class ChartBuilderApp {
     }
 
     clearAll() {
-        // Destroy all charts
+        // Purge all Plotly charts
         this.panels.forEach(p => {
-            if (p.chart) {
-                p.chart.destroy();
-                p.chart = null;
+            if (p.chartDiv) {
+                try { Plotly.purge(p.chartDiv); } catch (e) { /* ignore */ }
+                p.chartDiv = null;
             }
         });
 
         // Reset to single panel
         this.panels = [{
             id: 0,
-            chart: null,
+            chartDiv: null,
             chartType: 'bar',
             selectedDatasets: [],
             annotations: [],
@@ -1516,7 +1821,8 @@ class ChartBuilderApp {
                 legendPosition: 'top', showGrid: true, beginAtZero: true,
                 stacked: false, sortXAxis: false, colorScheme: 'theme', labelColumn: 0
             },
-            bubbleMapping: { x: 0, y: 1, r: 2 }
+            bubbleMapping: { x: 0, y: 1, r: 2 },
+            heatmapMapping: { valueCol: 0 }
         }];
         this.activePanel = 0;
         this.nextPanelId = 1;
@@ -1537,7 +1843,7 @@ class ChartBuilderApp {
                         <i class="fa-solid fa-chart-bar"></i>
                         <p>Load data and select columns to build a chart</p>
                     </div>
-                    <canvas class="panel-canvas" style="display:none;"></canvas>
+                    <div class="panel-chart" style="display:none;"></div>
                 </div>
             </div>
         `;
@@ -1608,12 +1914,55 @@ class ChartBuilderApp {
             for (const m of mutations) {
                 if (m.attributeName === 'data-theme') {
                     this.updateColorSwatches();
-                    this.renderAllCharts();
+                    // Use Plotly.relayout for theme color changes where possible
+                    this.relayoutAllCharts();
                     break;
                 }
             }
         });
         observer.observe(document.documentElement, { attributes: true });
+    }
+
+    relayoutAllCharts() {
+        const textColor = this.getCSSVar('--text-primary');
+        const gridColor = this.getCSSVar('--border-color');
+        const bgColor = this.getCSSVar('--bg-secondary');
+
+        for (const panel of this.panels) {
+            if (!panel.chartDiv) continue;
+
+            const update = {
+                paper_bgcolor: bgColor,
+                plot_bgcolor: bgColor,
+                'font.color': textColor,
+                'xaxis.gridcolor': gridColor,
+                'xaxis.tickfont.color': textColor,
+                'xaxis.linecolor': gridColor,
+                'xaxis.zerolinecolor': gridColor,
+                'yaxis.gridcolor': gridColor,
+                'yaxis.tickfont.color': textColor,
+                'yaxis.linecolor': gridColor,
+                'yaxis.zerolinecolor': gridColor,
+                'legend.font.color': textColor
+            };
+
+            if (panel.chartType === 'radar') {
+                update['polar.bgcolor'] = bgColor;
+                update['polar.radialaxis.gridcolor'] = gridColor;
+                update['polar.radialaxis.tickfont.color'] = textColor;
+                update['polar.angularaxis.gridcolor'] = gridColor;
+                update['polar.angularaxis.tickfont.color'] = textColor;
+            }
+
+            try {
+                Plotly.relayout(panel.chartDiv, update);
+            } catch (e) {
+                // Fall back to full re-render
+            }
+        }
+
+        // Full re-render to update trace colors from theme palette
+        this.renderAllCharts();
     }
 }
 

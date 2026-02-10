@@ -213,7 +213,7 @@
 /* Chart type grid */
 .chart-type-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
 }
 
@@ -524,9 +524,10 @@
     padding: 0;
 }
 
-.chart-panel .panel-canvas {
-    max-width: 100%;
-    max-height: 500px;
+.chart-panel .panel-chart {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
 }
 
 /* Single panel gets full height */
@@ -794,7 +795,7 @@
 
 @media (max-width: 768px) {
     .chart-type-grid {
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(4, 1fr);
     }
 
     .chart-panel {
@@ -844,4 +845,27 @@
     .chart-type-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+}
+
+/* ========== Plotly Modebar ========== */
+.chart-panel .modebar {
+    top: 4px !important;
+    right: 4px !important;
+}
+
+.chart-panel .modebar-btn path {
+    fill: var(--text-secondary) !important;
+}
+
+.chart-panel .modebar-btn:hover path {
+    fill: var(--accent-primary) !important;
+}
+
+.chart-panel .modebar-btn.active path {
+    fill: var(--accent-secondary) !important;
+}
+
+/* ========== Heatmap Mapping ========== */
+#heatmapMappingCard .mapping-group select {
+    margin-bottom: 2px;
 }

@@ -104,7 +104,9 @@
                         <button class="chart-type-btn" data-type="radar"><i class="fa-solid fa-diagram-project"></i> Radar</button>
                         <button class="chart-type-btn" data-type="horizontalBar"><i class="fa-solid fa-bars"></i> H-Bar</button>
                         <button class="chart-type-btn" data-type="bubble"><i class="fa-solid fa-circle"></i> Bubble</button>
-                        <button class="chart-type-btn" data-type="polarArea"><i class="fa-solid fa-compass"></i> Polar</button>
+                        <button class="chart-type-btn" data-type="heatmap"><i class="fa-solid fa-grip"></i> Heatmap</button>
+                        <button class="chart-type-btn" data-type="box"><i class="fa-solid fa-box"></i> Box Plot</button>
+                        <button class="chart-type-btn" data-type="histogram"><i class="fa-solid fa-chart-bar"></i> Histogram</button>
                     </div>
                 </div>
 
@@ -137,6 +139,15 @@
                         <select id="bubbleYCol"></select>
                         <label for="bubbleRCol">Radius Column</label>
                         <select id="bubbleRCol"></select>
+                    </div>
+                </div>
+
+                <!-- Heatmap Mapping -->
+                <div class="config-card" id="heatmapMappingCard" style="display:none;">
+                    <h3><i class="fa-solid fa-grip"></i> Heatmap Mapping</h3>
+                    <div class="mapping-group">
+                        <label for="heatmapValueCol">Value Column</label>
+                        <select id="heatmapValueCol"></select>
                     </div>
                 </div>
 
@@ -238,7 +249,7 @@
                                 <i class="fa-solid fa-chart-bar"></i>
                                 <p>Load data and select columns to build a chart</p>
                             </div>
-                            <canvas class="panel-canvas" style="display:none;"></canvas>
+                            <div class="panel-chart" style="display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -267,9 +278,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="chart-builder-app.js"></script>
