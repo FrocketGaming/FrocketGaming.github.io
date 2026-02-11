@@ -15,10 +15,12 @@ class FirebaseSync {
     static user = null;
     static unsubSnippets = null;
     static unsubTypes = null;
+    static unsubVersions = null;
     static onAuthChange = null;
     static onSyncStatus = null;
     static onRemoteSnippets = null;
     static onRemoteTypes = null;
+    static onRemoteVersions = null;
     static initialized = false;
     static mergeInProgress = false;
 
@@ -63,6 +65,7 @@ class FirebaseSync {
             this.onSyncStatus = callbacks.onSyncStatus || null;
             this.onRemoteSnippets = callbacks.onRemoteSnippets || null;
             this.onRemoteTypes = callbacks.onRemoteTypes || null;
+            this.onRemoteVersions = callbacks.onRemoteVersions || null;
 
             // Listen for auth state changes
             this.auth.onAuthStateChanged(user => {
@@ -187,6 +190,26 @@ class FirebaseSync {
                 }
             );
 
+        // Listen to snippetVersions collection
+        this.unsubVersions = this.db
+            .collection('users').doc(userId)
+            .collection('snippetVersions')
+            .onSnapshot(
+                snapshot => {
+                    if (this.mergeInProgress) return;
+                    const versions = [];
+                    snapshot.forEach(doc => {
+                        versions.push({ ...doc.data(), _firestoreId: doc.id });
+                    });
+                    if (this.onRemoteVersions) {
+                        this.onRemoteVersions(versions);
+                    }
+                },
+                error => {
+                    console.error('FirebaseSync: SnippetVersions listener error:', error);
+                }
+            );
+
         // Listen to snippetTypes collection
         this.unsubTypes = this.db
             .collection('users').doc(userId)
@@ -221,6 +244,10 @@ class FirebaseSync {
         if (this.unsubTypes) {
             this.unsubTypes();
             this.unsubTypes = null;
+        }
+        if (this.unsubVersions) {
+            this.unsubVersions();
+            this.unsubVersions = null;
         }
     }
 
@@ -310,6 +337,56 @@ class FirebaseSync {
         }
     }
 
+    /**
+     * Push a snippet version to Firestore
+     * @param {Object} version - The version object (must have id)
+     */
+    static async pushSnippetVersion(version) {
+        const col = this._userCollection('snippetVersions');
+        if (!col) return;
+
+        try {
+            const docId = String(version.id);
+            const data = { ...version, _syncedAt: new Date().toISOString() };
+            await col.doc(docId).set(data);
+        } catch (error) {
+            console.error('FirebaseSync: Failed to push snippet version:', error);
+        }
+    }
+
+    /**
+     * Delete a snippet version from Firestore
+     * @param {number|string} versionId
+     */
+    static async deleteSnippetVersion(versionId) {
+        const col = this._userCollection('snippetVersions');
+        if (!col) return;
+
+        try {
+            await col.doc(String(versionId)).delete();
+        } catch (error) {
+            console.error('FirebaseSync: Failed to delete snippet version:', error);
+        }
+    }
+
+    /**
+     * Delete all versions for a snippet from Firestore
+     * @param {number|string} snippetId
+     */
+    static async deleteSnippetVersionsBySnippetId(snippetId) {
+        const col = this._userCollection('snippetVersions');
+        if (!col) return;
+
+        try {
+            const snap = await col.where('snippetId', '==', snippetId).get();
+            const batch = this.db.batch();
+            snap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        } catch (error) {
+            console.error('FirebaseSync: Failed to delete snippet versions:', error);
+        }
+    }
+
     // ─── Sharing ──────────────────────────────────────────────
 
     /**
@@ -395,9 +472,9 @@ class FirebaseSync {
      * @param {Array} localTypes - Current local snippet types
      * @returns {Promise<{snippets: Array, types: Array}>} Merged data
      */
-    static async mergeOnFirstLogin(localSnippets, localTypes) {
+    static async mergeOnFirstLogin(localSnippets, localTypes, localVersions = []) {
         if (!this.db || !this.user) {
-            return { snippets: localSnippets, types: localTypes };
+            return { snippets: localSnippets, types: localTypes, versions: localVersions };
         }
 
         this.mergeInProgress = true;
@@ -452,13 +529,32 @@ class FirebaseSync {
                 mergedTypesMap.set(t.id, t);
             }
 
+            // Merge versions: union by id
+            const cloudVersionsSnap = await this.db
+                .collection('users').doc(userId)
+                .collection('snippetVersions').get();
+            const cloudVersions = [];
+            cloudVersionsSnap.forEach(doc => cloudVersions.push(doc.data()));
+
+            const mergedVersionsMap = new Map();
+            for (const v of cloudVersions) {
+                mergedVersionsMap.set(v.id, v);
+            }
+            for (const v of localVersions) {
+                if (!mergedVersionsMap.has(v.id)) {
+                    mergedVersionsMap.set(v.id, v);
+                }
+            }
+
             const mergedSnippets = Array.from(mergedSnippetsMap.values());
             const mergedTypes = Array.from(mergedTypesMap.values());
+            const mergedVersions = Array.from(mergedVersionsMap.values());
 
             // Push all merged data to Firestore
             const batch = this.db.batch();
             const snippetsCol = this.db.collection('users').doc(userId).collection('snippets');
             const typesCol = this.db.collection('users').doc(userId).collection('snippetTypes');
+            const versionsCol = this.db.collection('users').doc(userId).collection('snippetVersions');
 
             for (const s of mergedSnippets) {
                 const docRef = snippetsCol.doc(String(s.id));
@@ -468,6 +564,11 @@ class FirebaseSync {
             for (const t of mergedTypes) {
                 const docRef = typesCol.doc(String(t.id));
                 batch.set(docRef, { ...t, _syncedAt: new Date().toISOString() });
+            }
+
+            for (const v of mergedVersions) {
+                const docRef = versionsCol.doc(String(v.id));
+                batch.set(docRef, { ...v, _syncedAt: new Date().toISOString() });
             }
 
             await batch.commit();
@@ -486,12 +587,17 @@ class FirebaseSync {
                 return rest;
             });
 
-            return { snippets: cleanSnippets, types: cleanTypes };
+            const cleanVersions = mergedVersions.map(v => {
+                const { _syncedAt, _firestoreId, ...rest } = v;
+                return rest;
+            });
+
+            return { snippets: cleanSnippets, types: cleanTypes, versions: cleanVersions };
         } catch (error) {
             console.error('FirebaseSync: Merge failed:', error);
             this.setSyncStatus('error');
             this.mergeInProgress = false;
-            return { snippets: localSnippets, types: localTypes };
+            return { snippets: localSnippets, types: localTypes, versions: localVersions };
         }
     }
 }

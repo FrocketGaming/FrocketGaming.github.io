@@ -4,7 +4,7 @@
  */
 class StorageManager {
     static DB_NAME = 'QoLToolsDB';
-    static DB_VERSION = 1;
+    static DB_VERSION = 2;
     static db = null;
     static initPromise = null;
 
@@ -50,6 +50,13 @@ class StorageManager {
                 // Create snippetTypes store
                 if (!db.objectStoreNames.contains('snippetTypes')) {
                     db.createObjectStore('snippetTypes', { keyPath: 'id' });
+                }
+
+                // Create snippetVersions store
+                if (!db.objectStoreNames.contains('snippetVersions')) {
+                    const versionsStore = db.createObjectStore('snippetVersions', { keyPath: 'id' });
+                    versionsStore.createIndex('snippetId', 'snippetId', { unique: false });
+                    versionsStore.createIndex('savedAt', 'savedAt', { unique: false });
                 }
 
                 // Create todos store
@@ -139,6 +146,26 @@ class StorageManager {
             dataArray.forEach(data => {
                 store.put(data);
             });
+        });
+    }
+
+    /**
+     * Get all records matching a value on an index
+     * @param {string} storeName - Name of the object store
+     * @param {string} indexName - Name of the index
+     * @param {*} value - Value to match
+     * @returns {Promise<Array>}
+     */
+    static async getAllByIndex(storeName, indexName, value) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            const index = store.index(indexName);
+            const request = index.getAll(value);
+
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
         });
     }
 

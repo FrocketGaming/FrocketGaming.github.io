@@ -138,6 +138,28 @@
                         placeholder="Search snippets..."
                     />
                 </div>
+                <select id="sortSelect" class="sort-select" title="Sort snippets">
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                    <option value="created-desc">Created (Newest)</option>
+                    <option value="modified-desc">Modified (Newest)</option>
+                    <option value="most-used">Most Used</option>
+                    <option value="recent-copy">Most Recent Copy</option>
+                </select>
+                <div class="shortcuts-info">
+                    <button class="action-btn shortcuts-btn" id="shortcutsBtn" title="Keyboard shortcuts">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
+                    <div class="shortcuts-tooltip" id="shortcutsTooltip">
+                        <div class="shortcuts-tooltip-title">Keyboard Shortcuts</div>
+                        <div class="shortcut-row"><kbd>Ctrl+N</kbd> New snippet</div>
+                        <div class="shortcut-row"><kbd>/</kbd> or <kbd>Ctrl+K</kbd> Search</div>
+                        <div class="shortcut-row"><kbd>Ctrl+E</kbd> Edit snippet</div>
+                        <div class="shortcut-row"><kbd>Ctrl+D</kbd> Duplicate snippet</div>
+                        <div class="shortcut-row"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> Navigate list</div>
+                        <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Main Layout - Three Panel -->
@@ -192,6 +214,13 @@
                             </div>
                             <div class="snippet-actions">
                                 <button
+                                    class="action-btn favorite-btn"
+                                    id="favoriteBtn"
+                                    title="Toggle favorite"
+                                >
+                                    <i class="fa-regular fa-star"></i>
+                                </button>
+                                <button
                                     class="action-btn"
                                     id="copyBtn"
                                     title="Copy to clipboard"
@@ -204,6 +233,13 @@
                                     title="Share snippet"
                                 >
                                     <i class="fa-solid fa-share-nodes"></i>
+                                </button>
+                                <button
+                                    class="action-btn"
+                                    id="historyBtn"
+                                    title="Version history"
+                                >
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
                                 </button>
                                 <button
                                     class="action-btn"
@@ -225,12 +261,15 @@
                             class="snippet-description"
                             id="snippetDescription"
                         ></p>
+                        <div class="snippet-tags" id="snippetTags"></div>
+                        <div class="snippet-notes" id="snippetNotes"></div>
                         <div class="code-container">
                             <pre><code id="snippetCode"></code></pre>
                         </div>
                         <div class="snippet-meta">
                             <span id="snippetCreated"></span>
                             <span id="snippetUpdated"></span>
+                            <span id="snippetCopyCount"></span>
                         </div>
                     </div>
                 </div>
@@ -241,7 +280,17 @@
         <div id="snippetModal" class="modal">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3 id="modalTitle">New Snippet</h3>
+                    <div class="modal-header-actions">
+                        <button class="format-btn" id="saveSnippetBtn">
+                            Save Snippet
+                        </button>
+                        <button
+                            class="clear-bnt"
+                            onclick="snippetsApp.closeModal()"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                     <span class="modal-close" onclick="snippetsApp.closeModal()"
                         >&times;</span
                     >
@@ -302,6 +351,18 @@
                         />
                     </div>
                     <div class="form-group">
+                        <label>Tags:</label>
+                        <div class="tag-input-wrapper" id="tagInputWrapper">
+                            <div class="tag-chips" id="tagChips"></div>
+                            <input
+                                type="text"
+                                id="tagInput"
+                                class="tag-input"
+                                placeholder="Type a tag and press Enter..."
+                            />
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="snippetContentInput">Content:</label>
                         <textarea
                             id="snippetContentInput"
@@ -309,17 +370,15 @@
                             placeholder="Paste your code here..."
                         ></textarea>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="format-btn" id="saveSnippetBtn">
-                        Save Snippet
-                    </button>
-                    <button
-                        class="clear-bnt"
-                        onclick="snippetsApp.closeModal()"
-                    >
-                        Cancel
-                    </button>
+                    <div class="form-group">
+                        <label for="snippetNotesInput">Notes (optional):</label>
+                        <textarea
+                            id="snippetNotesInput"
+                            class="edit-textarea"
+                            placeholder="Add any notes about this snippet..."
+                            rows="3"
+                        ></textarea>
+                    </div>
                 </div>
             </div>
         </div>
@@ -509,6 +568,44 @@
                         <i class="fa-solid fa-download"></i> Import to My Snippets
                     </button>
                     <button class="clear-bnt" onclick="snippetsApp.closeSharedSnippetModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Version History Modal -->
+        <div id="historyModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3>Version History</h3>
+                    <span class="modal-close" onclick="snippetsApp.closeHistoryModal()">&times;</span>
+                </div>
+                <div class="modal-body history-modal-body">
+                    <div class="history-layout">
+                        <div class="history-list-panel">
+                            <ul id="historyList" class="history-list"></ul>
+                        </div>
+                        <div class="history-preview-panel">
+                            <div class="history-preview-empty" id="historyPreviewEmpty">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                <p>Select a version to preview</p>
+                            </div>
+                            <div id="historyPreview" style="display: none">
+                                <div class="history-preview-header">
+                                    <span id="historyPreviewName"></span>
+                                    <span id="historyPreviewDate"></span>
+                                </div>
+                                <div class="code-container history-code">
+                                    <pre><code id="historyPreviewCode"></code></pre>
+                                </div>
+                                <button class="format-btn" id="restoreVersionBtn">
+                                    <i class="fa-solid fa-rotate-left"></i> Restore This Version
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="clear-bnt" onclick="snippetsApp.closeHistoryModal()">Close</button>
                 </div>
             </div>
         </div>
