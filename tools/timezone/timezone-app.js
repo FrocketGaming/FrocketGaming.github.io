@@ -555,11 +555,13 @@ class TimezoneApp {
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        // Body rows — one per hour
+        // Body rows — show 5 hours before and 5 hours after selected hour
         const tbody = document.createElement('tbody');
         const today = new Date();
 
-        for (let h = 0; h < 24; h++) {
+        const startH = ((selectedHour - 5) % 24 + 24) % 24;
+        for (let i = 0; i < 11; i++) {
+            const h = (startH + i) % 24;
             const row = document.createElement('tr');
 
             // Source hour cell
