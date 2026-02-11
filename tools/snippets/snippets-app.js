@@ -52,6 +52,7 @@ class SnippetsApp {
       php: "fa-brands fa-php",
       rust: "fa-brands fa-rust",
       go: "fa-brands fa-golang",
+      git: "fa-brands fa-git",
       golang: "fa-brands fa-golang",
       markdown: "fa-brands fa-markdown",
       docker: "fa-brands fa-docker",
