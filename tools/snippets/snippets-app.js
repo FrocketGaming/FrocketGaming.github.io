@@ -94,179 +94,56 @@ class SnippetsApp {
           extension: "js",
           category: "JavaScript",
           description: "GET request with async/await and error handling",
-          content: `async function fetchData(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(\`HTTP error! status: \${response.status}\`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Fetch failed:', error);
-    throw error;
-  }
-}`,
+          content: "async function fetchData(url) {\n  try {\n    const response = await fetch(url);\n    if (!response.ok) {\n      throw new Error(`HTTP error! status: ${response.status}`);\n    }\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Fetch failed:', error);\n    throw error;\n  }\n}",
         },
         {
           name: "POST Request",
           extension: "js",
           category: "JavaScript",
           description: "POST request with JSON body",
-          content: `async function postData(url, body) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(\`HTTP error! status: \${response.status}\`);
-  }
-  return response.json();
-}`,
+          content: "async function postData(url, body) {\n  const response = await fetch(url, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(body),\n  });\n  if (!response.ok) {\n    throw new Error(`HTTP error! status: ${response.status}`);\n  }\n  return response.json();\n}",
         },
         {
           name: "Event Listener",
           extension: "js",
           category: "JavaScript",
           description: "DOM event listener with delegation",
-          content: `document.getElementById('container').addEventListener('click', (e) => {
-  const target = e.target.closest('[data-action]');
-  if (!target) return;
-
-  const action = target.dataset.action;
-  switch (action) {
-    case 'edit':
-      handleEdit(target);
-      break;
-    case 'delete':
-      handleDelete(target);
-      break;
-  }
-});`,
+          content: "document.getElementById('container').addEventListener('click', (e) => {\n  const target = e.target.closest('[data-action]');\n  if (!target) return;\n\n  const action = target.dataset.action;\n  switch (action) {\n    case 'edit':\n      handleEdit(target);\n      break;\n    case 'delete':\n      handleDelete(target);\n      break;\n  }\n});",
         },
         {
           name: "Class Skeleton",
           extension: "js",
           category: "JavaScript",
           description: "ES6 class with constructor and methods",
-          content: `class MyClass {
-  constructor(options = {}) {
-    this.name = options.name || 'default';
-    this.items = [];
-  }
-
-  add(item) {
-    this.items.push(item);
-    return this;
-  }
-
-  remove(id) {
-    this.items = this.items.filter(item => item.id !== id);
-    return this;
-  }
-
-  find(id) {
-    return this.items.find(item => item.id === id);
-  }
-
-  toJSON() {
-    return { name: this.name, items: this.items };
-  }
-}`,
+          content: "class MyClass {\n  constructor(options = {}) {\n    this.name = options.name || 'default';\n    this.items = [];\n  }\n\n  add(item) {\n    this.items.push(item);\n    return this;\n  }\n\n  remove(id) {\n    this.items = this.items.filter(item => item.id !== id);\n    return this;\n  }\n\n  find(id) {\n    return this.items.find(item => item.id === id);\n  }\n\n  toJSON() {\n    return { name: this.name, items: this.items };\n  }\n}",
         },
         {
           name: "Debounce",
           extension: "js",
           category: "Utilities",
           description: "Debounce function to limit execution rate",
-          content: `function debounce(fn, delay = 300) {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), delay);
-  };
-}
-
-// Usage:
-// const debouncedSearch = debounce((query) => search(query), 300);
-// input.addEventListener('input', (e) => debouncedSearch(e.target.value));`,
+          content: "function debounce(fn, delay = 300) {\n  let timer;\n  return function (...args) {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn.apply(this, args), delay);\n  };\n}\n\n// Usage:\n// const debouncedSearch = debounce((query) => search(query), 300);\n// input.addEventListener('input', (e) => debouncedSearch(e.target.value));",
         },
         {
           name: "Array Helpers",
           extension: "js",
           category: "Utilities",
           description: "Common array operations: group, unique, chunk",
-          content: `// Group array of objects by a key
-const groupBy = (arr, key) =>
-  arr.reduce((groups, item) => {
-    const val = item[key];
-    (groups[val] = groups[val] || []).push(item);
-    return groups;
-  }, {});
-
-// Get unique values
-const unique = (arr) => [...new Set(arr)];
-
-// Chunk array into smaller arrays
-const chunk = (arr, size) =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );`,
+          content: "// Group array of objects by a key\nconst groupBy = (arr, key) =>\n  arr.reduce((groups, item) => {\n    const val = item[key];\n    (groups[val] = groups[val] || []).push(item);\n    return groups;\n  }, {});\n\n// Get unique values\nconst unique = (arr) => [...new Set(arr)];\n\n// Chunk array into smaller arrays\nconst chunk = (arr, size) =>\n  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>\n    arr.slice(i * size, i * size + size)\n  );",
         },
         {
           name: "Local Storage Wrapper",
           extension: "js",
           category: "Utilities",
           description: "Safe localStorage get/set with JSON parsing",
-          content: `const storage = {
-  get(key, defaultValue = null) {
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  },
-
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch {
-      return false;
-    }
-  },
-
-  remove(key) {
-    localStorage.removeItem(key);
-  },
-};`,
+          content: "const storage = {\n  get(key, defaultValue = null) {\n    try {\n      const item = localStorage.getItem(key);\n      return item ? JSON.parse(item) : defaultValue;\n    } catch {\n      return defaultValue;\n    }\n  },\n\n  set(key, value) {\n    try {\n      localStorage.setItem(key, JSON.stringify(value));\n      return true;\n    } catch {\n      return false;\n    }\n  },\n\n  remove(key) {\n    localStorage.removeItem(key);\n  },\n};",
         },
         {
           name: "Promise.all with Limit",
           extension: "js",
           category: "JavaScript",
           description: "Run promises concurrently with a concurrency limit",
-          content: `async function promiseAllLimit(tasks, limit = 5) {
-  const results = [];
-  const executing = new Set();
-
-  for (const [index, task] of tasks.entries()) {
-    const promise = Promise.resolve().then(() => task());
-    results[index] = promise;
-    executing.add(promise);
-
-    const cleanup = () => executing.delete(promise);
-    promise.then(cleanup, cleanup);
-
-    if (executing.size >= limit) {
-      await Promise.race(executing);
-    }
-  }
-
-  return Promise.all(results);
-}`,
+          content: "async function promiseAllLimit(tasks, limit = 5) {\n  const results = [];\n  const executing = new Set();\n\n  for (const [index, task] of tasks.entries()) {\n    const promise = Promise.resolve().then(() => task());\n    results[index] = promise;\n    executing.add(promise);\n\n    const cleanup = () => executing.delete(promise);\n    promise.then(cleanup, cleanup);\n\n    if (executing.size >= limit) {\n      await Promise.race(executing);\n    }\n  }\n\n  return Promise.all(results);\n}",
         },
       ],
       Python: [
@@ -275,187 +152,49 @@ const chunk = (arr, size) =>
           extension: "py",
           category: "Python",
           description: "Python dataclass with default values and methods",
-          content: `from dataclasses import dataclass, field
-from typing import List, Optional
-
-@dataclass
-class User:
-    name: str
-    email: str
-    age: int = 0
-    tags: List[str] = field(default_factory=list)
-    bio: Optional[str] = None
-
-    def display_name(self) -> str:
-        return f"{self.name} <{self.email}>"
-
-    def to_dict(self) -> dict:
-        return {
-            "name": self.name,
-            "email": self.email,
-            "age": self.age,
-            "tags": self.tags,
-            "bio": self.bio,
-        }`,
+          content: "from dataclasses import dataclass, field\nfrom typing import List, Optional\n\n@dataclass\nclass User:\n    name: str\n    email: str\n    age: int = 0\n    tags: List[str] = field(default_factory=list)\n    bio: Optional[str] = None\n\n    def display_name(self) -> str:\n        return f\"{self.name} <{self.email}>\"\n\n    def to_dict(self) -> dict:\n        return {\n            \"name\": self.name,\n            \"email\": self.email,\n            \"age\": self.age,\n            \"tags\": self.tags,\n            \"bio\": self.bio,\n        }",
         },
         {
           name: "File Read/Write",
           extension: "py",
           category: "Python",
           description: "Read and write files with context managers",
-          content: `from pathlib import Path
-import json
-
-def read_text(filepath: str) -> str:
-    return Path(filepath).read_text(encoding="utf-8")
-
-def write_text(filepath: str, content: str) -> None:
-    Path(filepath).write_text(content, encoding="utf-8")
-
-def read_json(filepath: str) -> dict:
-    with open(filepath, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def write_json(filepath: str, data: dict, indent: int = 2) -> None:
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=indent, ensure_ascii=False)`,
+          content: "from pathlib import Path\nimport json\n\ndef read_text(filepath: str) -> str:\n    return Path(filepath).read_text(encoding=\"utf-8\")\n\ndef write_text(filepath: str, content: str) -> None:\n    Path(filepath).write_text(content, encoding=\"utf-8\")\n\ndef read_json(filepath: str) -> dict:\n    with open(filepath, \"r\", encoding=\"utf-8\") as f:\n        return json.load(f)\n\ndef write_json(filepath: str, data: dict, indent: int = 2) -> None:\n    with open(filepath, \"w\", encoding=\"utf-8\") as f:\n        json.dump(data, f, indent=indent, ensure_ascii=False)",
         },
         {
           name: "HTTP Request",
           extension: "py",
           category: "Python",
           description: "GET/POST requests with error handling",
-          content: `import requests
-
-def get_json(url: str, params: dict = None, timeout: int = 30) -> dict:
-    response = requests.get(url, params=params, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-def post_json(url: str, data: dict, timeout: int = 30) -> dict:
-    response = requests.post(url, json=data, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-# Usage:
-# data = get_json("https://api.example.com/items", params={"page": 1})
-# result = post_json("https://api.example.com/items", data={"name": "New"})`,
+          content: "import requests\n\ndef get_json(url: str, params: dict = None, timeout: int = 30) -> dict:\n    response = requests.get(url, params=params, timeout=timeout)\n    response.raise_for_status()\n    return response.json()\n\ndef post_json(url: str, data: dict, timeout: int = 30) -> dict:\n    response = requests.post(url, json=data, timeout=timeout)\n    response.raise_for_status()\n    return response.json()\n\n# Usage:\n# data = get_json(\"https://api.example.com/items\", params={\"page\": 1})\n# result = post_json(\"https://api.example.com/items\", data={\"name\": \"New\"})",
         },
         {
           name: "CLI with argparse",
           extension: "py",
           category: "Python",
           description: "Command-line script template with argparse",
-          content: `import argparse
-import sys
-
-def main():
-    parser = argparse.ArgumentParser(description="My CLI tool")
-    parser.add_argument("input", help="Input file path")
-    parser.add_argument("-o", "--output", default="output.txt", help="Output file")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
-    parser.add_argument("--limit", type=int, default=100, help="Max items")
-
-    args = parser.parse_args()
-
-    if args.verbose:
-        print(f"Processing {args.input} -> {args.output}")
-
-    # Your logic here
-    print(f"Done. Limit: {args.limit}")
-
-if __name__ == "__main__":
-    main()`,
+          content: "import argparse\nimport sys\n\ndef main():\n    parser = argparse.ArgumentParser(description=\"My CLI tool\")\n    parser.add_argument(\"input\", help=\"Input file path\")\n    parser.add_argument(\"-o\", \"--output\", default=\"output.txt\", help=\"Output file\")\n    parser.add_argument(\"-v\", \"--verbose\", action=\"store_true\", help=\"Verbose output\")\n    parser.add_argument(\"--limit\", type=int, default=100, help=\"Max items\")\n\n    args = parser.parse_args()\n\n    if args.verbose:\n        print(f\"Processing {args.input} -> {args.output}\")\n\n    # Your logic here\n    print(f\"Done. Limit: {args.limit}\")\n\nif __name__ == \"__main__\":\n    main()",
         },
         {
           name: "Decorator",
           extension: "py",
           category: "Python",
           description: "Function decorator with timing and logging",
-          content: `import functools
-import time
-
-def timer(func):
-    """Log the execution time of a function."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        elapsed = time.perf_counter() - start
-        print(f"{func.__name__} took {elapsed:.4f}s")
-        return result
-    return wrapper
-
-def retry(max_attempts=3, delay=1):
-    """Retry a function on exception."""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt == max_attempts:
-                        raise
-                    print(f"Attempt {attempt} failed: {e}. Retrying...")
-                    time.sleep(delay)
-        return wrapper
-    return decorator`,
+          content: "import functools\nimport time\n\ndef timer(func):\n    \"\"\"Log the execution time of a function.\"\"\"\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        elapsed = time.perf_counter() - start\n        print(f\"{func.__name__} took {elapsed:.4f}s\")\n        return result\n    return wrapper\n\ndef retry(max_attempts=3, delay=1):\n    \"\"\"Retry a function on exception.\"\"\"\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, max_attempts + 1):\n                try:\n                    return func(*args, **kwargs)\n                except Exception as e:\n                    if attempt == max_attempts:\n                        raise\n                    print(f\"Attempt {attempt} failed: {e}. Retrying...\")\n                    time.sleep(delay)\n        return wrapper\n    return decorator",
         },
         {
           name: "List/Dict Comprehensions",
           extension: "py",
           category: "Python",
           description: "Common comprehension patterns",
-          content: `# Filter and transform
-evens = [x for x in range(20) if x % 2 == 0]
-squared = {x: x**2 for x in range(10)}
-
-# Flatten nested lists
-nested = [[1, 2], [3, 4], [5, 6]]
-flat = [item for sublist in nested for item in sublist]
-
-# Dictionary from two lists
-keys = ["name", "age", "city"]
-values = ["Alice", 30, "NYC"]
-mapping = dict(zip(keys, values))
-
-# Group items by condition
-items = [("apple", 1.2), ("banana", 0.5), ("cherry", 2.0), ("date", 0.8)]
-cheap = {name: price for name, price in items if price < 1.0}
-expensive = {name: price for name, price in items if price >= 1.0}`,
+          content: "# Filter and transform\nevens = [x for x in range(20) if x % 2 == 0]\nsquared = {x: x**2 for x in range(10)}\n\n# Flatten nested lists\nnested = [[1, 2], [3, 4], [5, 6]]\nflat = [item for sublist in nested for item in sublist]\n\n# Dictionary from two lists\nkeys = [\"name\", \"age\", \"city\"]\nvalues = [\"Alice\", 30, \"NYC\"]\nmapping = dict(zip(keys, values))\n\n# Group items by condition\nitems = [(\"apple\", 1.2), (\"banana\", 0.5), (\"cherry\", 2.0), (\"date\", 0.8)]\ncheap = {name: price for name, price in items if price < 1.0}\nexpensive = {name: price for name, price in items if price >= 1.0}",
         },
         {
           name: "Context Manager",
           extension: "py",
           category: "Python",
           description: "Custom context manager with __enter__/__exit__",
-          content: `from contextlib import contextmanager
-import time
-
-@contextmanager
-def timer(label="Block"):
-    """Time a block of code."""
-    start = time.perf_counter()
-    try:
-        yield
-    finally:
-        elapsed = time.perf_counter() - start
-        print(f"{label}: {elapsed:.4f}s")
-
-# Usage:
-# with timer("Data processing"):
-#     process_data()
-
-@contextmanager
-def temp_directory():
-    """Create and clean up a temporary directory."""
-    import tempfile, shutil
-    tmpdir = tempfile.mkdtemp()
-    try:
-        yield tmpdir
-    finally:
-        shutil.rmtree(tmpdir)`,
+          content: "from contextlib import contextmanager\nimport time\n\n@contextmanager\ndef timer(label=\"Block\"):\n    \"\"\"Time a block of code.\"\"\"\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        print(f\"{label}: {elapsed:.4f}s\")\n\n# Usage:\n# with timer(\"Data processing\"):\n#     process_data()\n\n@contextmanager\ndef temp_directory():\n    \"\"\"Create and clean up a temporary directory.\"\"\"\n    import tempfile, shutil\n    tmpdir = tempfile.mkdtemp()\n    try:\n        yield tmpdir\n    finally:\n        shutil.rmtree(tmpdir)",
         },
       ],
       SQL: [
@@ -464,154 +203,49 @@ def temp_directory():
           extension: "sql",
           category: "SQL",
           description: "Multi-table query with INNER and LEFT JOIN",
-          content: `SELECT
-    u.id,
-    u.name,
-    u.email,
-    o.order_id,
-    o.total,
-    o.created_at
-FROM users u
-INNER JOIN orders o ON o.user_id = u.id
-LEFT JOIN addresses a ON a.user_id = u.id
-WHERE u.active = 1
-  AND o.created_at >= '2024-01-01'
-ORDER BY o.created_at DESC
-LIMIT 100;`,
+          content: "SELECT\n    u.id,\n    u.name,\n    u.email,\n    o.order_id,\n    o.total,\n    o.created_at\nFROM users u\nINNER JOIN orders o ON o.user_id = u.id\nLEFT JOIN addresses a ON a.user_id = u.id\nWHERE u.active = 1\n  AND o.created_at >= '2024-01-01'\nORDER BY o.created_at DESC\nLIMIT 100;",
         },
         {
           name: "CREATE TABLE",
           extension: "sql",
           category: "SQL",
           description: "Table creation with common column types and constraints",
-          content: `CREATE TABLE IF NOT EXISTS users (
-    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name        VARCHAR(255) NOT NULL,
-    email       VARCHAR(255) NOT NULL UNIQUE,
-    role        ENUM('admin', 'user', 'viewer') DEFAULT 'user',
-    is_active   BOOLEAN DEFAULT TRUE,
-    metadata    JSON,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    INDEX idx_email (email),
-    INDEX idx_role_active (role, is_active)
-);`,
+          content: "CREATE TABLE IF NOT EXISTS users (\n    id          BIGINT PRIMARY KEY AUTO_INCREMENT,\n    name        VARCHAR(255) NOT NULL,\n    email       VARCHAR(255) NOT NULL UNIQUE,\n    role        ENUM('admin', 'user', 'viewer') DEFAULT 'user',\n    is_active   BOOLEAN DEFAULT TRUE,\n    metadata    JSON,\n    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n\n    INDEX idx_email (email),\n    INDEX idx_role_active (role, is_active)\n);",
         },
         {
           name: "CTE (Common Table Expression)",
           extension: "sql",
           category: "SQL",
           description: "Recursive and non-recursive CTEs",
-          content: `-- Non-recursive CTE: monthly revenue summary
-WITH monthly_revenue AS (
-    SELECT
-        DATE_TRUNC('month', order_date) AS month,
-        SUM(total) AS revenue,
-        COUNT(*) AS order_count
-    FROM orders
-    WHERE order_date >= '2024-01-01'
-    GROUP BY DATE_TRUNC('month', order_date)
-)
-SELECT
-    month,
-    revenue,
-    order_count,
-    revenue / order_count AS avg_order_value,
-    LAG(revenue) OVER (ORDER BY month) AS prev_month_revenue
-FROM monthly_revenue
-ORDER BY month;`,
+          content: "-- Non-recursive CTE: monthly revenue summary\nWITH monthly_revenue AS (\n    SELECT\n        DATE_TRUNC('month', order_date) AS month,\n        SUM(total) AS revenue,\n        COUNT(*) AS order_count\n    FROM orders\n    WHERE order_date >= '2024-01-01'\n    GROUP BY DATE_TRUNC('month', order_date)\n)\nSELECT\n    month,\n    revenue,\n    order_count,\n    revenue / order_count AS avg_order_value,\n    LAG(revenue) OVER (ORDER BY month) AS prev_month_revenue\nFROM monthly_revenue\nORDER BY month;",
         },
         {
           name: "Window Functions",
           extension: "sql",
           category: "SQL",
           description: "ROW_NUMBER, RANK, running totals, and moving averages",
-          content: `SELECT
-    id,
-    name,
-    department,
-    salary,
-    -- Rank within department
-    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_rank,
-    RANK() OVER (ORDER BY salary DESC) AS overall_rank,
-    -- Running total
-    SUM(salary) OVER (ORDER BY hire_date ROWS UNBOUNDED PRECEDING) AS running_total,
-    -- Moving average (last 3)
-    AVG(salary) OVER (ORDER BY hire_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg,
-    -- Percent of department total
-    ROUND(salary * 100.0 / SUM(salary) OVER (PARTITION BY department), 2) AS pct_of_dept
-FROM employees
-ORDER BY department, salary DESC;`,
+          content: "SELECT\n    id,\n    name,\n    department,\n    salary,\n    -- Rank within department\n    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_rank,\n    RANK() OVER (ORDER BY salary DESC) AS overall_rank,\n    -- Running total\n    SUM(salary) OVER (ORDER BY hire_date ROWS UNBOUNDED PRECEDING) AS running_total,\n    -- Moving average (last 3)\n    AVG(salary) OVER (ORDER BY hire_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg,\n    -- Percent of department total\n    ROUND(salary * 100.0 / SUM(salary) OVER (PARTITION BY department), 2) AS pct_of_dept\nFROM employees\nORDER BY department, salary DESC;",
         },
         {
           name: "UPSERT / MERGE",
           extension: "sql",
           category: "SQL",
           description: "Insert or update on conflict",
-          content: `-- MySQL: INSERT ... ON DUPLICATE KEY UPDATE
-INSERT INTO users (id, name, email, updated_at)
-VALUES (1, 'Alice', 'alice@example.com', NOW())
-ON DUPLICATE KEY UPDATE
-    name = VALUES(name),
-    email = VALUES(email),
-    updated_at = NOW();
-
--- PostgreSQL: INSERT ... ON CONFLICT
-INSERT INTO users (id, name, email, updated_at)
-VALUES (1, 'Alice', 'alice@example.com', NOW())
-ON CONFLICT (id) DO UPDATE SET
-    name = EXCLUDED.name,
-    email = EXCLUDED.email,
-    updated_at = NOW();`,
+          content: "-- MySQL: INSERT ... ON DUPLICATE KEY UPDATE\nINSERT INTO users (id, name, email, updated_at)\nVALUES (1, 'Alice', 'alice@example.com', NOW())\nON DUPLICATE KEY UPDATE\n    name = VALUES(name),\n    email = VALUES(email),\n    updated_at = NOW();\n\n-- PostgreSQL: INSERT ... ON CONFLICT\nINSERT INTO users (id, name, email, updated_at)\nVALUES (1, 'Alice', 'alice@example.com', NOW())\nON CONFLICT (id) DO UPDATE SET\n    name = EXCLUDED.name,\n    email = EXCLUDED.email,\n    updated_at = NOW();",
         },
         {
           name: "GROUP BY with HAVING",
           extension: "sql",
           category: "SQL",
           description: "Aggregation with filtering on grouped results",
-          content: `SELECT
-    department,
-    COUNT(*) AS employee_count,
-    ROUND(AVG(salary), 2) AS avg_salary,
-    MIN(salary) AS min_salary,
-    MAX(salary) AS max_salary,
-    SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count
-FROM employees
-WHERE hire_date >= '2020-01-01'
-GROUP BY department
-HAVING COUNT(*) >= 5
-   AND AVG(salary) > 50000
-ORDER BY avg_salary DESC;`,
+          content: "SELECT\n    department,\n    COUNT(*) AS employee_count,\n    ROUND(AVG(salary), 2) AS avg_salary,\n    MIN(salary) AS min_salary,\n    MAX(salary) AS max_salary,\n    SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count\nFROM employees\nWHERE hire_date >= '2020-01-01'\nGROUP BY department\nHAVING COUNT(*) >= 5\n   AND AVG(salary) > 50000\nORDER BY avg_salary DESC;",
         },
         {
           name: "Subquery Patterns",
           extension: "sql",
           category: "SQL",
           description: "Correlated subquery, EXISTS, IN",
-          content: `-- Find users with orders above their average
-SELECT u.name, o.total
-FROM users u
-JOIN orders o ON o.user_id = u.id
-WHERE o.total > (
-    SELECT AVG(o2.total)
-    FROM orders o2
-    WHERE o2.user_id = u.id
-);
-
--- EXISTS: users who have placed at least one order
-SELECT u.name
-FROM users u
-WHERE EXISTS (
-    SELECT 1 FROM orders o WHERE o.user_id = u.id
-);
-
--- NOT IN: users with no orders
-SELECT u.name
-FROM users u
-WHERE u.id NOT IN (
-    SELECT DISTINCT user_id FROM orders
-);`,
+          content: "-- Find users with orders above their average\nSELECT u.name, o.total\nFROM users u\nJOIN orders o ON o.user_id = u.id\nWHERE o.total > (\n    SELECT AVG(o2.total)\n    FROM orders o2\n    WHERE o2.user_id = u.id\n);\n\n-- EXISTS: users who have placed at least one order\nSELECT u.name\nFROM users u\nWHERE EXISTS (\n    SELECT 1 FROM orders o WHERE o.user_id = u.id\n);\n\n-- NOT IN: users with no orders\nSELECT u.name\nFROM users u\nWHERE u.id NOT IN (\n    SELECT DISTINCT user_id FROM orders\n);",
         },
       ],
     };
