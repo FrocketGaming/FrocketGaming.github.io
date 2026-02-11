@@ -12,7 +12,6 @@
                 }
             })();
         </script>
-        <link rel="icon" href="/images/fav.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16.png" />
         <link
@@ -160,6 +159,10 @@
                         <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect</div>
                     </div>
                 </div>
+                <div class="toolbar-spacer"></div>
+                <button id="templatesBtn" class="format-btn" title="Code templates">
+                    <i class="fa-solid fa-file-code"></i> Templates
+                </button>
             </div>
 
             <!-- Main Layout - Three Panel -->
@@ -606,6 +609,20 @@
                 </div>
                 <div class="modal-footer">
                     <button class="clear-bnt" onclick="snippetsApp.closeHistoryModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Modal -->
+        <div id="templatesModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-file-code"></i> Code Templates</h3>
+                    <span class="modal-close" onclick="snippetsApp.closeTemplatesModal()">&times;</span>
+                </div>
+                <div class="modal-body templates-modal-body">
+                    <div class="templates-tabs" id="templatesTabs"></div>
+                    <div class="templates-grid" id="templatesGrid"></div>
                 </div>
             </div>
         </div>

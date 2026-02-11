@@ -84,6 +84,537 @@ class SnippetsApp {
       { id: 5, name: "Utilities" },
       { id: 6, name: "Other" },
     ];
+
+    this.activeTemplateTab = "JavaScript";
+
+    this.templates = {
+      JavaScript: [
+        {
+          name: "Fetch API Call",
+          extension: "js",
+          category: "JavaScript",
+          description: "GET request with async/await and error handling",
+          content: `async function fetchData(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(\`HTTP error! status: \${response.status}\`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    throw error;
+  }
+}`,
+        },
+        {
+          name: "POST Request",
+          extension: "js",
+          category: "JavaScript",
+          description: "POST request with JSON body",
+          content: `async function postData(url, body) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(\`HTTP error! status: \${response.status}\`);
+  }
+  return response.json();
+}`,
+        },
+        {
+          name: "Event Listener",
+          extension: "js",
+          category: "JavaScript",
+          description: "DOM event listener with delegation",
+          content: `document.getElementById('container').addEventListener('click', (e) => {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+
+  const action = target.dataset.action;
+  switch (action) {
+    case 'edit':
+      handleEdit(target);
+      break;
+    case 'delete':
+      handleDelete(target);
+      break;
+  }
+});`,
+        },
+        {
+          name: "Class Skeleton",
+          extension: "js",
+          category: "JavaScript",
+          description: "ES6 class with constructor and methods",
+          content: `class MyClass {
+  constructor(options = {}) {
+    this.name = options.name || 'default';
+    this.items = [];
+  }
+
+  add(item) {
+    this.items.push(item);
+    return this;
+  }
+
+  remove(id) {
+    this.items = this.items.filter(item => item.id !== id);
+    return this;
+  }
+
+  find(id) {
+    return this.items.find(item => item.id === id);
+  }
+
+  toJSON() {
+    return { name: this.name, items: this.items };
+  }
+}`,
+        },
+        {
+          name: "Debounce",
+          extension: "js",
+          category: "Utilities",
+          description: "Debounce function to limit execution rate",
+          content: `function debounce(fn, delay = 300) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// Usage:
+// const debouncedSearch = debounce((query) => search(query), 300);
+// input.addEventListener('input', (e) => debouncedSearch(e.target.value));`,
+        },
+        {
+          name: "Array Helpers",
+          extension: "js",
+          category: "Utilities",
+          description: "Common array operations: group, unique, chunk",
+          content: `// Group array of objects by a key
+const groupBy = (arr, key) =>
+  arr.reduce((groups, item) => {
+    const val = item[key];
+    (groups[val] = groups[val] || []).push(item);
+    return groups;
+  }, {});
+
+// Get unique values
+const unique = (arr) => [...new Set(arr)];
+
+// Chunk array into smaller arrays
+const chunk = (arr, size) =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );`,
+        },
+        {
+          name: "Local Storage Wrapper",
+          extension: "js",
+          category: "Utilities",
+          description: "Safe localStorage get/set with JSON parsing",
+          content: `const storage = {
+  get(key, defaultValue = null) {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  },
+
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  remove(key) {
+    localStorage.removeItem(key);
+  },
+};`,
+        },
+        {
+          name: "Promise.all with Limit",
+          extension: "js",
+          category: "JavaScript",
+          description: "Run promises concurrently with a concurrency limit",
+          content: `async function promiseAllLimit(tasks, limit = 5) {
+  const results = [];
+  const executing = new Set();
+
+  for (const [index, task] of tasks.entries()) {
+    const promise = Promise.resolve().then(() => task());
+    results[index] = promise;
+    executing.add(promise);
+
+    const cleanup = () => executing.delete(promise);
+    promise.then(cleanup, cleanup);
+
+    if (executing.size >= limit) {
+      await Promise.race(executing);
+    }
+  }
+
+  return Promise.all(results);
+}`,
+        },
+      ],
+      Python: [
+        {
+          name: "Class with Dataclass",
+          extension: "py",
+          category: "Python",
+          description: "Python dataclass with default values and methods",
+          content: `from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class User:
+    name: str
+    email: str
+    age: int = 0
+    tags: List[str] = field(default_factory=list)
+    bio: Optional[str] = None
+
+    def display_name(self) -> str:
+        return f"{self.name} <{self.email}>"
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "email": self.email,
+            "age": self.age,
+            "tags": self.tags,
+            "bio": self.bio,
+        }`,
+        },
+        {
+          name: "File Read/Write",
+          extension: "py",
+          category: "Python",
+          description: "Read and write files with context managers",
+          content: `from pathlib import Path
+import json
+
+def read_text(filepath: str) -> str:
+    return Path(filepath).read_text(encoding="utf-8")
+
+def write_text(filepath: str, content: str) -> None:
+    Path(filepath).write_text(content, encoding="utf-8")
+
+def read_json(filepath: str) -> dict:
+    with open(filepath, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def write_json(filepath: str, data: dict, indent: int = 2) -> None:
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=indent, ensure_ascii=False)`,
+        },
+        {
+          name: "HTTP Request",
+          extension: "py",
+          category: "Python",
+          description: "GET/POST requests with error handling",
+          content: `import requests
+
+def get_json(url: str, params: dict = None, timeout: int = 30) -> dict:
+    response = requests.get(url, params=params, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
+
+def post_json(url: str, data: dict, timeout: int = 30) -> dict:
+    response = requests.post(url, json=data, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
+
+# Usage:
+# data = get_json("https://api.example.com/items", params={"page": 1})
+# result = post_json("https://api.example.com/items", data={"name": "New"})`,
+        },
+        {
+          name: "CLI with argparse",
+          extension: "py",
+          category: "Python",
+          description: "Command-line script template with argparse",
+          content: `import argparse
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(description="My CLI tool")
+    parser.add_argument("input", help="Input file path")
+    parser.add_argument("-o", "--output", default="output.txt", help="Output file")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    parser.add_argument("--limit", type=int, default=100, help="Max items")
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        print(f"Processing {args.input} -> {args.output}")
+
+    # Your logic here
+    print(f"Done. Limit: {args.limit}")
+
+if __name__ == "__main__":
+    main()`,
+        },
+        {
+          name: "Decorator",
+          extension: "py",
+          category: "Python",
+          description: "Function decorator with timing and logging",
+          content: `import functools
+import time
+
+def timer(func):
+    """Log the execution time of a function."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} took {elapsed:.4f}s")
+        return result
+    return wrapper
+
+def retry(max_attempts=3, delay=1):
+    """Retry a function on exception."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts:
+                        raise
+                    print(f"Attempt {attempt} failed: {e}. Retrying...")
+                    time.sleep(delay)
+        return wrapper
+    return decorator`,
+        },
+        {
+          name: "List/Dict Comprehensions",
+          extension: "py",
+          category: "Python",
+          description: "Common comprehension patterns",
+          content: `# Filter and transform
+evens = [x for x in range(20) if x % 2 == 0]
+squared = {x: x**2 for x in range(10)}
+
+# Flatten nested lists
+nested = [[1, 2], [3, 4], [5, 6]]
+flat = [item for sublist in nested for item in sublist]
+
+# Dictionary from two lists
+keys = ["name", "age", "city"]
+values = ["Alice", 30, "NYC"]
+mapping = dict(zip(keys, values))
+
+# Group items by condition
+items = [("apple", 1.2), ("banana", 0.5), ("cherry", 2.0), ("date", 0.8)]
+cheap = {name: price for name, price in items if price < 1.0}
+expensive = {name: price for name, price in items if price >= 1.0}`,
+        },
+        {
+          name: "Context Manager",
+          extension: "py",
+          category: "Python",
+          description: "Custom context manager with __enter__/__exit__",
+          content: `from contextlib import contextmanager
+import time
+
+@contextmanager
+def timer(label="Block"):
+    """Time a block of code."""
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"{label}: {elapsed:.4f}s")
+
+# Usage:
+# with timer("Data processing"):
+#     process_data()
+
+@contextmanager
+def temp_directory():
+    """Create and clean up a temporary directory."""
+    import tempfile, shutil
+    tmpdir = tempfile.mkdtemp()
+    try:
+        yield tmpdir
+    finally:
+        shutil.rmtree(tmpdir)`,
+        },
+      ],
+      SQL: [
+        {
+          name: "SELECT with JOIN",
+          extension: "sql",
+          category: "SQL",
+          description: "Multi-table query with INNER and LEFT JOIN",
+          content: `SELECT
+    u.id,
+    u.name,
+    u.email,
+    o.order_id,
+    o.total,
+    o.created_at
+FROM users u
+INNER JOIN orders o ON o.user_id = u.id
+LEFT JOIN addresses a ON a.user_id = u.id
+WHERE u.active = 1
+  AND o.created_at >= '2024-01-01'
+ORDER BY o.created_at DESC
+LIMIT 100;`,
+        },
+        {
+          name: "CREATE TABLE",
+          extension: "sql",
+          category: "SQL",
+          description: "Table creation with common column types and constraints",
+          content: `CREATE TABLE IF NOT EXISTS users (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name        VARCHAR(255) NOT NULL,
+    email       VARCHAR(255) NOT NULL UNIQUE,
+    role        ENUM('admin', 'user', 'viewer') DEFAULT 'user',
+    is_active   BOOLEAN DEFAULT TRUE,
+    metadata    JSON,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_role_active (role, is_active)
+);`,
+        },
+        {
+          name: "CTE (Common Table Expression)",
+          extension: "sql",
+          category: "SQL",
+          description: "Recursive and non-recursive CTEs",
+          content: `-- Non-recursive CTE: monthly revenue summary
+WITH monthly_revenue AS (
+    SELECT
+        DATE_TRUNC('month', order_date) AS month,
+        SUM(total) AS revenue,
+        COUNT(*) AS order_count
+    FROM orders
+    WHERE order_date >= '2024-01-01'
+    GROUP BY DATE_TRUNC('month', order_date)
+)
+SELECT
+    month,
+    revenue,
+    order_count,
+    revenue / order_count AS avg_order_value,
+    LAG(revenue) OVER (ORDER BY month) AS prev_month_revenue
+FROM monthly_revenue
+ORDER BY month;`,
+        },
+        {
+          name: "Window Functions",
+          extension: "sql",
+          category: "SQL",
+          description: "ROW_NUMBER, RANK, running totals, and moving averages",
+          content: `SELECT
+    id,
+    name,
+    department,
+    salary,
+    -- Rank within department
+    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_rank,
+    RANK() OVER (ORDER BY salary DESC) AS overall_rank,
+    -- Running total
+    SUM(salary) OVER (ORDER BY hire_date ROWS UNBOUNDED PRECEDING) AS running_total,
+    -- Moving average (last 3)
+    AVG(salary) OVER (ORDER BY hire_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg,
+    -- Percent of department total
+    ROUND(salary * 100.0 / SUM(salary) OVER (PARTITION BY department), 2) AS pct_of_dept
+FROM employees
+ORDER BY department, salary DESC;`,
+        },
+        {
+          name: "UPSERT / MERGE",
+          extension: "sql",
+          category: "SQL",
+          description: "Insert or update on conflict",
+          content: `-- MySQL: INSERT ... ON DUPLICATE KEY UPDATE
+INSERT INTO users (id, name, email, updated_at)
+VALUES (1, 'Alice', 'alice@example.com', NOW())
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    email = VALUES(email),
+    updated_at = NOW();
+
+-- PostgreSQL: INSERT ... ON CONFLICT
+INSERT INTO users (id, name, email, updated_at)
+VALUES (1, 'Alice', 'alice@example.com', NOW())
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    updated_at = NOW();`,
+        },
+        {
+          name: "GROUP BY with HAVING",
+          extension: "sql",
+          category: "SQL",
+          description: "Aggregation with filtering on grouped results",
+          content: `SELECT
+    department,
+    COUNT(*) AS employee_count,
+    ROUND(AVG(salary), 2) AS avg_salary,
+    MIN(salary) AS min_salary,
+    MAX(salary) AS max_salary,
+    SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count
+FROM employees
+WHERE hire_date >= '2020-01-01'
+GROUP BY department
+HAVING COUNT(*) >= 5
+   AND AVG(salary) > 50000
+ORDER BY avg_salary DESC;`,
+        },
+        {
+          name: "Subquery Patterns",
+          extension: "sql",
+          category: "SQL",
+          description: "Correlated subquery, EXISTS, IN",
+          content: `-- Find users with orders above their average
+SELECT u.name, o.total
+FROM users u
+JOIN orders o ON o.user_id = u.id
+WHERE o.total > (
+    SELECT AVG(o2.total)
+    FROM orders o2
+    WHERE o2.user_id = u.id
+);
+
+-- EXISTS: users who have placed at least one order
+SELECT u.name
+FROM users u
+WHERE EXISTS (
+    SELECT 1 FROM orders o WHERE o.user_id = u.id
+);
+
+-- NOT IN: users with no orders
+SELECT u.name
+FROM users u
+WHERE u.id NOT IN (
+    SELECT DISTINCT user_id FROM orders
+);`,
+        },
+      ],
+    };
   }
 
   async init() {
@@ -137,6 +668,11 @@ class SnippetsApp {
     document
       .getElementById("newSnippetBtn")
       .addEventListener("click", () => this.openNewSnippetModal());
+
+    // Templates
+    document
+      .getElementById("templatesBtn")
+      .addEventListener("click", () => this.openTemplatesModal());
 
     // Sort select
     document.getElementById("sortSelect").addEventListener("change", (e) => {
@@ -273,6 +809,7 @@ class SnippetsApp {
         this.closeShareModal();
         this.closeSharedSnippetModal();
         this.closeHistoryModal();
+        this.closeTemplatesModal();
       }
     });
 
@@ -314,6 +851,7 @@ class SnippetsApp {
         this.closeShareModal();
         this.closeSharedSnippetModal();
         this.closeHistoryModal();
+        this.closeTemplatesModal();
       } else if (this.currentSnippet) {
         this.currentSnippet = null;
         document.getElementById("snippetView").style.display = "none";
@@ -1238,6 +1776,88 @@ class SnippetsApp {
     this.renderSnippetsList();
     this.viewSnippet(this.currentSnippet.id);
     this.showNotification("Version restored");
+  }
+
+  // ─── Templates ─────────────────────────────────────────────
+
+  openTemplatesModal() {
+    this.activeTemplateTab = Object.keys(this.templates)[0];
+    this.renderTemplatesTabs();
+    this.renderTemplatesGrid();
+    document.getElementById("templatesModal").style.display = "flex";
+  }
+
+  closeTemplatesModal() {
+    document.getElementById("templatesModal").style.display = "none";
+  }
+
+  renderTemplatesTabs() {
+    const tabs = document.getElementById("templatesTabs");
+    tabs.innerHTML = Object.keys(this.templates)
+      .map(
+        (lang) =>
+          `<button class="templates-tab${lang === this.activeTemplateTab ? " active" : ""}" data-lang="${this.escapeHtml(lang)}">${this.escapeHtml(lang)}</button>`,
+      )
+      .join("");
+
+    tabs.querySelectorAll(".templates-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        this.activeTemplateTab = tab.dataset.lang;
+        this.renderTemplatesTabs();
+        this.renderTemplatesGrid();
+      });
+    });
+  }
+
+  renderTemplatesGrid() {
+    const grid = document.getElementById("templatesGrid");
+    const templates = this.templates[this.activeTemplateTab] || [];
+
+    grid.innerHTML = templates
+      .map(
+        (t, i) => `
+        <div class="template-card" data-index="${i}">
+          <div class="template-card-header">
+            <span class="template-card-name">${this.escapeHtml(t.name)}</span>
+            <span class="template-card-ext">.${t.extension}</span>
+          </div>
+          <p class="template-card-desc">${this.escapeHtml(t.description)}</p>
+          <pre class="template-card-preview"><code>${this.escapeHtml(t.content.slice(0, 120))}${t.content.length > 120 ? "..." : ""}</code></pre>
+        </div>`,
+      )
+      .join("");
+
+    grid.querySelectorAll(".template-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const index = parseInt(card.dataset.index);
+        this.useTemplate(templates[index]);
+      });
+    });
+  }
+
+  useTemplate(template) {
+    this.closeTemplatesModal();
+    this.editingSnippet = null;
+    document.getElementById("saveSnippetBtn").textContent = "Save Snippet";
+    document.getElementById("snippetNameInput").value = template.name;
+    document.getElementById("snippetDescInput").value =
+      template.description || "";
+    document.getElementById("snippetContentInput").value = template.content;
+    document.getElementById("snippetNotesInput").value = "";
+
+    // Set category if it exists in user's types
+    const matchingType = this.types.find(
+      (t) => t.name.toLowerCase() === template.category.toLowerCase(),
+    );
+    document.getElementById("snippetTypeSelect").value = matchingType
+      ? matchingType.name
+      : this.types[0]?.name || "";
+
+    document.getElementById("snippetExtSelect").value = template.extension;
+    this.clearTagChips();
+    document.getElementById("snippetModal").style.display = "flex";
+    document.getElementById("snippetNameInput").focus();
+    document.getElementById("snippetNameInput").select();
   }
 
   // Export/Import
