@@ -349,8 +349,8 @@ class SnippetsApp {
             );
         }
 
-        // Sort by updated date (most recent first)
-        filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        // Sort alphabetically by name
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
 
         if (filtered.length === 0) {
             list.innerHTML = '<li class="empty-list">No snippets found</li>';
