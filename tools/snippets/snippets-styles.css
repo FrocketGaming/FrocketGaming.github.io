@@ -698,7 +698,6 @@
 .code-container pre {
     margin: 0;
     padding: 20px;
-    height: 100%;
     min-height: 300px;
     white-space: pre-wrap;
     overflow-x: hidden;
@@ -710,7 +709,12 @@
     line-height: 1.6;
     white-space: pre-wrap;
     overflow-wrap: break-work;
-    word-break: break-word;
+}
+
+.code-line {
+    display: block;
+    padding-left: 2em;
+    text-indent: -2em;
 }
 
 /* Override highlight.js background to match theme */
