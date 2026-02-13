@@ -715,9 +715,9 @@
 }
 
 /* Line Numbers */
-.code-line {
+/*.code-line {
     display: block;
-}
+}*/
 
 .line-number {
     display: inline-block;
@@ -1279,7 +1279,7 @@
 
 .template-card-ext {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--accent-primary);
     background-color: var(--bg-tertiary);
     padding: 2px 6px;
     border-radius: 3px;
