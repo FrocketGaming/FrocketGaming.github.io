@@ -691,6 +691,7 @@
     background-color: var(--bg-primary);
     border-radius: 5px;
     overflow: auto;
+    max-height: 60vh;
     border: 1px solid var(--border-color);
 }
 
