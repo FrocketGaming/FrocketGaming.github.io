@@ -713,17 +713,6 @@
     word-break: break-word;
 }
 
-.code-line {
-    display: grid;
-    grid-template-columns: 3ch 1fr; /* line number | code */
-    align-items: start;
-}
-
-.code-line > :last-child {
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-}
-
 /* Override highlight.js background to match theme */
 .code-container pre code.hljs {
     background: transparent;
