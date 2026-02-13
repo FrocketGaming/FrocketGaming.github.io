@@ -156,6 +156,32 @@
     --syntax-deletion: #dc322f;
 }
 
+[data-theme="synthwave"] {
+    --bg-primary: #262335;
+    --bg-secondary: #2a2139;
+    --bg-tertiary: #34294f;
+    --bg-hover: #2f2747;
+    --accent-primary: #ff7edb;
+    --accent-secondary: #36f9f6;
+    --text-primary: #f0e8ff;
+    --text-secondary: #848bbd;
+    --border-color: #3b2d5e;
+    --shadow-color: #1a1528;
+    --error-color: #fe4450;
+    --warning-color: #fede5d;
+    --info-color: #36f9f6;
+    --syntax-keyword: #fede5d;
+    --syntax-string: #ff8b39;
+    --syntax-comment: #848bbd;
+    --syntax-function: #36f9f6;
+    --syntax-number: #f97e72;
+    --syntax-type: #72f1b8;
+    --syntax-variable: #ff7edb;
+    --syntax-tag: #72f1b8;
+    --syntax-addition: #72f1b8;
+    --syntax-deletion: #fe4450;
+}
+
 body {
     font-family: "Raleway", sans-serif;
     background-color: var(--bg-primary);

@@ -9,7 +9,8 @@ const ThemeManager = {
         { id: 'catppuccin', name: 'Catppuccin Mocha' },
         { id: 'atom', name: 'Atom One Dark' },
         { id: 'nord', name: 'Nord' },
-        { id: 'solarized', name: 'Solarized Dark' }
+        { id: 'solarized', name: 'Solarized Dark' },
+        { id: 'synthwave', name: "SynthWave '84" }
     ],
 
     init() {
