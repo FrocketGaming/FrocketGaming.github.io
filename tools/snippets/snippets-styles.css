@@ -709,8 +709,10 @@
     font-size: 14px;
     line-height: 1.6;
     white-space: pre-wrap;
-    overflow-wrap: break-work;
+    overflow-wrap: break-word;
     word-break: break-word;
+    text-indent: -2em;
+    padding-left: 2em;
 }
 
 /* Override highlight.js background to match theme */
