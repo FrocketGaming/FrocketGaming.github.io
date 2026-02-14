@@ -711,8 +711,12 @@
     white-space: pre-wrap;
     overflow-wrap: break-word;
     word-break: break-word;
-    text-indent: -2em;
-    padding-left: 2em;
+}
+
+.code-line {
+    display: block;
+    padding-left: 5.5em;
+    text-indent: -5.5em;
 }
 
 /* Override highlight.js background to match theme */

@@ -672,7 +672,7 @@ class SnippetsApp {
         (line, i) =>
           `<span class="code-line"><span class="line-number">${i + 1}</span>${line}</span>`,
       )
-      .join("\n");
+      .join("");
   }
 
   // Categories
