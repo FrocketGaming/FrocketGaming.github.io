@@ -62,155 +62,167 @@
     </div>
 
     <div class="todo-container">
-        <div class="input-section">
-            <input type="text" id="todoInput" placeholder="Add a new task..." />
-            <button id="calendarBtn" class="calendar-btn" title="Set deadline">
-                <i class="fa-solid fa-calendar"></i>
-            </button>
-            <input type="date" id="deadlineInput" class="deadline-input-hidden" />
-            <select id="prioritySelect" class="priority-select">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
-            </select>
-            <button id="addBtn" class="format-btn">Add</button>
-        </div>
-
-        <div class="description-toggle-section">
-            <button id="descriptionToggleBtn" class="description-toggle-btn">
-                <i class="fa-solid fa-plus"></i> Add Description (Optional)
-            </button>
-        </div>
-
-        <div class="description-section" id="descriptionSection" style="display: none;">
-            <textarea id="descriptionInput" placeholder="Add task description or notes..."></textarea>
-        </div>
-
-        <div class="project-options-section">
-            <div class="project-checkbox-wrapper">
-                <label class="project-checkbox-label">
-                    <input type="checkbox" id="projectCheckbox" class="project-checkbox">
-                    <span class="project-checkbox-text">
-                        <i class="fa-solid fa-folder"></i> This is a project
-                    </span>
-                </label>
+        <!-- Smart Composer -->
+        <div class="composer" id="composer">
+            <div class="composer-main">
+                <input type="text" id="todoInput" placeholder="Add a new task... (N or / to focus)" autocomplete="off">
+                <button id="addBtn" class="composer-add-btn" title="Add task">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
             </div>
-            <div class="parent-project-wrapper" id="parentProjectWrapper">
-                <label for="parentProjectSelect" class="parent-project-label">Assign to Project:</label>
-                <select id="parentProjectSelect" class="parent-project-select">
-                    <option value="">None (standalone task)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="stats-section" id="statsSection">
-            <div class="stats-header" onclick="todoApp.toggleStatsSection()">
-                <h3 class="section-title">
-                    <i class="fa-solid fa-chart-simple"></i> Stats Dashboard
-                </h3>
-                <span class="toggle-icon" id="statsToggleIcon">▶</span>
-            </div>
-            <div class="progress-bar-container-always-visible">
-                <div class="progress-bar-label">Overall Progress</div>
-                <div class="progress-bar">
-                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+            <div class="composer-preview" id="composerPreview"></div>
+            <div class="composer-tray" id="composerTray">
+                <div class="composer-row">
+                    <div class="composer-field composer-field-auto">
+                        <label>Priority</label>
+                        <div class="priority-chips" id="priorityChips">
+                            <button class="priority-chip priority-chip-low" data-priority="low">Low</button>
+                            <button class="priority-chip priority-chip-med active" data-priority="medium">Med</button>
+                            <button class="priority-chip priority-chip-high" data-priority="high">High</button>
+                        </div>
+                    </div>
+                    <div class="composer-field">
+                        <label for="deadlineInput">Deadline</label>
+                        <input type="date" id="deadlineInput" class="composer-date">
+                    </div>
+                    <div class="composer-field">
+                        <label for="recurrenceSelect">Recurrence</label>
+                        <select id="recurrenceSelect" class="composer-select">
+                            <option value="">None</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom (days)</option>
+                        </select>
+                    </div>
+                    <div class="composer-field composer-field-auto" id="customIntervalField" style="display:none;">
+                        <label for="customIntervalInput">Every N days</label>
+                        <input type="number" id="customIntervalInput" class="composer-date" min="1" value="3" style="width:80px;">
+                    </div>
                 </div>
-            </div>
-            <div class="stats-wrapper" id="statsWrapper" style="display: none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Total Tasks</div>
-                        <div class="stat-value" id="statTotal">0</div>
+                <div class="composer-row">
+                    <div class="composer-field">
+                        <label for="parentProjectSelect">Project</label>
+                        <select id="parentProjectSelect" class="composer-select">
+                            <option value="">None</option>
+                        </select>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Active</div>
-                        <div class="stat-value" id="statActive">0</div>
+                    <div class="composer-field composer-field-auto">
+                        <label class="composer-checkbox-label">
+                            <input type="checkbox" id="projectCheckbox">
+                            <span><i class="fa-solid fa-folder"></i> Create as project</span>
+                        </label>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Completed</div>
-                        <div class="stat-value" id="statCompleted">0</div>
+                </div>
+                <div class="composer-row">
+                    <div class="composer-field">
+                        <label for="descriptionInput">Description</label>
+                        <textarea id="descriptionInput" placeholder="Notes or details..." rows="2"></textarea>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Completion Rate</div>
-                        <div class="stat-value" id="statCompletionRate">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Overdue</div>
-                        <div class="stat-value stat-overdue" id="statOverdue">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">High Priority</div>
-                        <div class="stat-value" id="statHigh">0</div>
-                    </div>
+                </div>
+                <div class="composer-hints">
+                    <span class="hint-tag"><code>::h</code> <code>::m</code> <code>::l</code> priority</span>
+                    <span class="hint-tag"><code>::today</code> <code>::tomorrow</code> <code>::3d</code> deadline</span>
+                    <span class="hint-tag"><code>::p[Name]</code> project</span>
+                    <span class="hint-tag"><code>::daily</code> <code>::weekly</code> <code>::every:Xd</code> recurrence</span>
                 </div>
             </div>
         </div>
 
+        <!-- Progress Strip -->
+        <div class="progress-strip" id="progressStrip">
+            <div class="progress-strip-bar">
+                <div class="progress-strip-fill" id="progressStripFill"></div>
+            </div>
+            <span class="progress-strip-label" id="progressStripLabel">0/0 tasks</span>
+            <button class="progress-strip-toggle" id="statsToggleBtn" title="Toggle stats">
+                <i class="fa-solid fa-chart-simple"></i>
+            </button>
+        </div>
+
+        <!-- Stats Panel (slides down) -->
+        <div class="stats-panel" id="statsPanel">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value" id="statActive">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Done</div>
+                    <div class="stat-value" id="statCompleted">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Rate</div>
+                    <div class="stat-value" id="statCompletionRate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Overdue</div>
+                    <div class="stat-value stat-overdue" id="statOverdue">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">High</div>
+                    <div class="stat-value" id="statHigh">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar" id="searchBar">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search tasks..." autocomplete="off">
+            <button class="search-clear" id="searchClear" title="Clear search">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="filter-section" id="filterSection"></div>
+
+        <!-- Active Tasks -->
         <div class="todo-list-wrapper" id="activeSection">
-            <h3 class="section-title">Active Tasks</h3>
             <ul id="todoList"></ul>
         </div>
 
+        <!-- Completed Tasks -->
         <div class="completed-section" id="completedSection">
-            <div class="completed-header" onclick="todoApp.toggleCompletedSection()">
+            <div class="completed-header" id="completedHeader">
                 <h3 class="section-title">
-                    Completed Tasks
+                    <i class="fa-solid fa-chevron-down completed-chevron" id="completedChevron"></i>
+                    Completed
                     <span id="completedCount" class="completed-count">(0)</span>
                 </h3>
-                <span class="toggle-icon" id="toggleIcon">▼</span>
+                <button id="clearCompleted" class="clear-completed-btn">Clear All</button>
             </div>
             <div class="completed-list-wrapper" id="completedWrapper">
                 <ul id="completedList"></ul>
             </div>
         </div>
-
-        <div class="clear-section">
-            <button id="clearCompleted" class="clear-bnt">Clear Completed</button>
-        </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Edit Task</h3>
-                <span class="modal-close" onclick="todoApp.closeEditModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <label for="editTaskInput">Task:</label>
-                <input type="text" id="editTaskInput" class="edit-input">
+    <!-- Undo Toast -->
+    <div class="undo-toast" id="undoToast">
+        <span class="undo-toast-msg" id="undoToastMsg">Task deleted</span>
+        <button class="undo-toast-btn" id="undoToastBtn">Undo</button>
+        <button class="undo-toast-dismiss" id="undoToastDismiss">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
 
-                <label for="editDescriptionInput">Description (Optional):</label>
-                <textarea id="editDescriptionInput" class="edit-textarea"></textarea>
-
-                <label for="editPrioritySelect">Priority:</label>
-                <select id="editPrioritySelect" class="edit-select">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                </select>
-
-                <label for="editDeadlineInput">Deadline (Optional):</label>
-                <input type="date" id="editDeadlineInput" class="edit-input">
-
-                <div class="edit-project-options">
-                    <label class="edit-project-checkbox-label">
-                        <input type="checkbox" id="editProjectCheckbox" class="edit-project-checkbox">
-                        <span><i class="fa-solid fa-folder"></i> This is a project</span>
-                    </label>
-                </div>
-
-                <div id="editParentProjectWrapper">
-                    <label for="editParentProjectSelect">Parent Project (Optional):</label>
-                    <select id="editParentProjectSelect" class="edit-select">
-                        <option value="">None (standalone task)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="format-btn" onclick="todoApp.saveEdit()">Save Changes</button>
-                <button class="clear-bnt" onclick="todoApp.closeEditModal()">Cancel</button>
-            </div>
+    <!-- Keyboard Shortcuts Overlay -->
+    <div class="shortcuts-overlay" id="shortcutsOverlay">
+        <div class="shortcuts-content">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-row"><kbd>N</kbd> or <kbd>/</kbd> <span>Focus task input</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd> <span>Close panels / cancel edits</span></div>
+            <div class="shortcut-row"><kbd>Enter</kbd> <span>Save edits / add tasks</span></div>
+            <div class="shortcut-row"><kbd>F</kbd> <span>Focus search</span></div>
+            <div class="shortcut-row"><kbd>?</kbd> <span>Toggle this overlay</span></div>
+            <div class="shortcut-row"><kbd>Double-click</kbd> <span>Inline rename task</span></div>
+            <button class="shortcuts-close" id="shortcutsClose">Close</button>
         </div>
     </div>
 
