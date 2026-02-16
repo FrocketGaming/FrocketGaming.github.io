@@ -342,6 +342,14 @@ class SnippetsApp {
     document
       .getElementById("saveSnippetBtn")
       .addEventListener("click", () => this.saveSnippet());
+    document
+      .getElementById("snippetTypeSelect")
+      .addEventListener("change", (e) => {
+        if (!this.editingSnippet) {
+          document.getElementById("snippetExtSelect").value =
+            this.getMostUsedExtension(e.target.value);
+        }
+      });
 
     // Delete modal
     document
@@ -1000,6 +1008,26 @@ class SnippetsApp {
   }
 
   // Snippet Modal (Create/Edit)
+  getMostUsedExtension(category) {
+    const categorySnippets = category
+      ? this.snippets.filter((s) => s.type === category)
+      : this.snippets;
+    if (categorySnippets.length === 0) return "js";
+    const counts = {};
+    for (const s of categorySnippets) {
+      counts[s.extension] = (counts[s.extension] || 0) + 1;
+    }
+    let best = "js",
+      max = 0;
+    for (const [ext, count] of Object.entries(counts)) {
+      if (count > max) {
+        max = count;
+        best = ext;
+      }
+    }
+    return best;
+  }
+
   openNewSnippetModal() {
     this.editingSnippet = null;
     document.getElementById("saveSnippetBtn").textContent = "Save Snippet";
@@ -1007,9 +1035,10 @@ class SnippetsApp {
     document.getElementById("snippetDescInput").value = "";
     document.getElementById("snippetContentInput").value = "";
     document.getElementById("snippetNotesInput").value = "";
-    document.getElementById("snippetTypeSelect").value =
-      this.activeCategory || this.types[0]?.name || "";
-    document.getElementById("snippetExtSelect").value = "js";
+    const category = this.activeCategory || this.types[0]?.name || "";
+    document.getElementById("snippetTypeSelect").value = category;
+    document.getElementById("snippetExtSelect").value =
+      this.getMostUsedExtension(category);
     this.clearTagChips();
     document.getElementById("snippetModal").style.display = "flex";
     document.getElementById("snippetNameInput").focus();
