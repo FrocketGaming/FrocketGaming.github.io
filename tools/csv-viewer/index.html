@@ -78,33 +78,29 @@
             </div>
         </div>
 
-        <div class="csv-main-content">
+        <div id="sqlSection" class="csv-main-content" style="display: none;">
             <div class="left-column">
-                <div class="table-wrapper">
-                    <div id="tableContainer" class="table-container">
-                        <div class="empty-state">Upload a CSV file to get started</div>
+                <div class="sql-panel">
+                    <div class="sql-header">
+                        <h3><i class="fa-solid fa-database"></i> SQL Playground</h3>
+                        <span id="sqlStatus" class="sql-status">Ready</span>
                     </div>
+                    <div id="sqlExamples" class="sql-examples"></div>
+                    <div class="sql-editor-container">
+                        <pre class="sql-highlight-layer" aria-hidden="true"><code id="sqlHighlight"></code></pre>
+                        <textarea id="sqlQuery" class="sql-query-input" rows="2" spellcheck="false"
+                            placeholder="Write SQL queries against the 'csv' table...&#10;Example: SELECT * FROM csv LIMIT 10"></textarea>
+                    </div>
+                    <div class="sql-controls">
+                        <button id="sqlRunBtn" class="format-btn"><i class="fa-solid fa-play"></i> Run Query</button>
+                        <button id="sqlExportBtn" class="format-btn">Export Results</button>
+                        <span id="sqlQueryInfo" class="sql-query-info"></span>
+                    </div>
+                    <div id="sqlError" class="sql-error"></div>
                 </div>
-                <div id="tableInfo" class="table-info"></div>
             </div>
 
-            <div id="sqlSection" class="right-column" style="display: none;">
-                <div class="sql-header">
-                    <h3><i class="fa-solid fa-database"></i> SQL Playground</h3>
-                    <span id="sqlStatus" class="sql-status">Ready</span>
-                </div>
-                <div id="sqlExamples" class="sql-examples"></div>
-                <div class="sql-editor-container">
-                    <pre class="sql-highlight-layer" aria-hidden="true"><code id="sqlHighlight"></code></pre>
-                    <textarea id="sqlQuery" class="sql-query-input" rows="2" spellcheck="false"
-                        placeholder="Write SQL queries against the 'csv' table...&#10;Example: SELECT * FROM csv LIMIT 10"></textarea>
-                </div>
-                <div class="sql-controls">
-                    <button id="sqlRunBtn" class="format-btn"><i class="fa-solid fa-play"></i> Run Query</button>
-                    <button id="sqlExportBtn" class="format-btn">Export Results</button>
-                    <span id="sqlQueryInfo" class="sql-query-info"></span>
-                </div>
-                <div id="sqlError" class="sql-error"></div>
+            <div class="right-column">
                 <div id="sqlResultsWrapper" class="sql-results-wrapper">
                     <div class="table-container" id="sqlResultsContainer"></div>
                 </div>

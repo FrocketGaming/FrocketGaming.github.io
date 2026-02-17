@@ -4,9 +4,6 @@ class CSVViewer {
         this.data = [];
         this.headers = [];
         this.sanitizedHeaders = [];
-        this.filteredData = [];
-        this.sortColumn = -1;
-        this.sortAscending = true;
         this.db = null;
         this.sqlReady = false;
         this.sqlResults = null;
@@ -173,8 +170,6 @@ class CSVViewer {
             // First row is headers
             this.headers = this.data[0];
             this.data = this.data.slice(1);
-            this.filteredData = [...this.data];
-
             // Compute sanitized SQL column names
             const seen = new Set();
             this.sanitizedHeaders = this.headers.map(h => {
@@ -188,8 +183,6 @@ class CSVViewer {
                 return name;
             });
 
-            this.renderTable();
-            this.updateInfo();
             this.loadIntoSQL();
 
             const profile = this.computeDataProfile();
@@ -227,101 +220,17 @@ class CSVViewer {
         return result;
     }
 
-    renderTable() {
-        const container = document.getElementById('tableContainer');
-
-        if (this.filteredData.length === 0) {
-            this.showEmptyState('No data to display');
-            return;
-        }
-
-        let tableHTML = '<table class="csv-table"><thead><tr>';
-
-        // Headers
-        this.headers.forEach((header, index) => {
-            const sortClass = this.sortColumn === index
-                ? (this.sortAscending ? 'sort-asc' : 'sort-desc')
-                : 'sortable';
-            tableHTML += `<th class="${sortClass}" data-column="${index}">${this.escapeHtml(header)}</th>`;
-        });
-
-        tableHTML += '</tr></thead><tbody>';
-
-        // Data rows
-        this.filteredData.forEach(row => {
-            tableHTML += '<tr>';
-            row.forEach(cell => {
-                tableHTML += `<td>${this.escapeHtml(cell)}</td>`;
-            });
-            tableHTML += '</tr>';
-        });
-
-        tableHTML += '</tbody></table>';
-
-        container.innerHTML = tableHTML;
-
-        // Add click handlers to headers for sorting
-        container.querySelectorAll('th').forEach((th, index) => {
-            th.addEventListener('click', () => this.sortTable(index));
-        });
-    }
-
-    sortTable(columnIndex) {
-        if (this.sortColumn === columnIndex) {
-            this.sortAscending = !this.sortAscending;
-        } else {
-            this.sortColumn = columnIndex;
-            this.sortAscending = true;
-        }
-
-        this.filteredData.sort((a, b) => {
-            const aVal = a[columnIndex] || '';
-            const bVal = b[columnIndex] || '';
-
-            // Try numeric comparison first
-            const aNum = parseFloat(aVal);
-            const bNum = parseFloat(bVal);
-
-            if (!isNaN(aNum) && !isNaN(bNum)) {
-                return this.sortAscending ? aNum - bNum : bNum - aNum;
-            }
-
-            // String comparison
-            const comparison = aVal.localeCompare(bVal);
-            return this.sortAscending ? comparison : -comparison;
-        });
-
-        this.renderTable();
-    }
-
-    updateInfo() {
-        const info = document.getElementById('tableInfo');
-        const total = this.data.length;
-        const visible = this.filteredData.length;
-
-        if (visible === total) {
-            info.textContent = `Showing ${total} row${total !== 1 ? 's' : ''}`;
-        } else {
-            info.textContent = `Showing ${visible} of ${total} row${total !== 1 ? 's' : ''}`;
-        }
-    }
-
     clear() {
         this.data = [];
         this.headers = [];
         this.sanitizedHeaders = [];
-        this.filteredData = [];
-        this.sortColumn = -1;
-        this.showEmptyState('Upload a CSV file to get started');
         this.clearSQL();
         this.clearDataProfile();
         document.getElementById('fileInput').value = '';
     }
 
     showEmptyState(message) {
-        const container = document.getElementById('tableContainer');
-        container.innerHTML = `<div class="empty-state">${message}</div>`;
-        document.getElementById('tableInfo').textContent = '';
+        // No-op: preview table removed, errors shown via alerts or SQL error area
     }
 
     escapeHtml(text) {
@@ -465,6 +374,13 @@ class CSVViewer {
             const status = document.getElementById('sqlStatus');
             status.textContent = `${this.data.length} rows loaded`;
             status.className = 'sql-status';
+
+            // Auto-run default query
+            const sqlTextarea = document.getElementById('sqlQuery');
+            sqlTextarea.value = 'SELECT * FROM csv';
+            this.updateHighlight();
+            this.autoResizeSQL();
+            this.runQuery();
         } catch (error) {
             try { this.db.run('ROLLBACK'); } catch (e) { /* no active transaction */ }
             this.showSQLError('Failed to load data into SQL: ' + error.message);
@@ -583,7 +499,7 @@ class CSVViewer {
 
             if (results.length === 0) {
                 this.sqlResults = null;
-                document.getElementById('sqlResultsWrapper').classList.remove('show');
+                document.getElementById('sqlResultsContainer').innerHTML = '';
                 document.getElementById('sqlResultsInfo').textContent = '';
                 document.getElementById('sqlQueryInfo').textContent = `Query executed in ${elapsed}ms — no results returned`;
                 return;
@@ -626,7 +542,6 @@ class CSVViewer {
         tableHTML += '</tbody></table>';
 
         container.innerHTML = tableHTML;
-        wrapper.classList.add('show');
 
         document.getElementById('sqlResultsInfo').textContent =
             `${result.values.length} row${result.values.length !== 1 ? 's' : ''} returned`;
@@ -838,7 +753,6 @@ class CSVViewer {
         this.updateHighlight();
         document.getElementById('sqlExamples').innerHTML = '';
         document.getElementById('sqlResultsContainer').innerHTML = '';
-        document.getElementById('sqlResultsWrapper').classList.remove('show');
         document.getElementById('sqlResultsInfo').textContent = '';
         document.getElementById('sqlQueryInfo').textContent = '';
         this.hideSQLError();
