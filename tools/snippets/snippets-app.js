@@ -40,6 +40,7 @@ class SnippetsApp {
       php: "php",
       rb: "ruby",
       txt: "plaintext",
+      nu: "bash",
     };
 
     this.categoryIconMap = {
@@ -82,7 +83,9 @@ class SnippetsApp {
       { id: 3, name: "SQL" },
       { id: 4, name: "HTML/CSS" },
       { id: 5, name: "Utilities" },
-      { id: 6, name: "Other" },
+      { id: 6, name: "Shell" },
+      { id: 7, name: "Nushell" },
+      { id: 8, name: "Other" },
     ];
 
     this.activeTemplateTab = "JavaScript";
@@ -145,6 +148,27 @@ class SnippetsApp {
           description: "Run promises concurrently with a concurrency limit",
           content: "async function promiseAllLimit(tasks, limit = 5) {\n  const results = [];\n  const executing = new Set();\n\n  for (const [index, task] of tasks.entries()) {\n    const promise = Promise.resolve().then(() => task());\n    results[index] = promise;\n    executing.add(promise);\n\n    const cleanup = () => executing.delete(promise);\n    promise.then(cleanup, cleanup);\n\n    if (executing.size >= limit) {\n      await Promise.race(executing);\n    }\n  }\n\n  return Promise.all(results);\n}",
         },
+        {
+          name: "Throttle",
+          extension: "js",
+          category: "Utilities",
+          description: "Throttle function — limits execution to once per interval",
+          content: "function throttle(fn, interval = 300) {\n  let lastCall = 0;\n  let timer = null;\n\n  return function (...args) {\n    const now = Date.now();\n    const remaining = interval - (now - lastCall);\n\n    if (remaining <= 0) {\n      if (timer) { clearTimeout(timer); timer = null; }\n      lastCall = now;\n      return fn.apply(this, args);\n    } else {\n      // Ensure trailing call fires at end of interval\n      clearTimeout(timer);\n      timer = setTimeout(() => {\n        lastCall = Date.now();\n        timer = null;\n        fn.apply(this, args);\n      }, remaining);\n    }\n  };\n}\n\n// Usage:\n// const throttledScroll = throttle(() => updateHeader(), 100);\n// window.addEventListener('scroll', throttledScroll);",
+        },
+        {
+          name: "Memoize",
+          extension: "js",
+          category: "Utilities",
+          description: "Cache function results by arguments",
+          content: "function memoize(fn, { maxSize = 100, keyFn } = {}) {\n  const cache = new Map();\n\n  return function (...args) {\n    const key = keyFn ? keyFn(...args) : JSON.stringify(args);\n\n    if (cache.has(key)) return cache.get(key);\n\n    const result = fn.apply(this, args);\n    cache.set(key, result);\n\n    // Evict oldest entry when cache is full\n    if (cache.size > maxSize) {\n      cache.delete(cache.keys().next().value);\n    }\n\n    return result;\n  };\n}\n\n// Usage:\n// const expensiveCalc = memoize((n) => fibonacci(n));\n// const getUser = memoize(fetchUser, { keyFn: (id) => id, maxSize: 50 });",
+        },
+        {
+          name: "EventEmitter",
+          extension: "js",
+          category: "JavaScript",
+          description: "Lightweight pub/sub EventEmitter with on, off, emit, once",
+          content: "class EventEmitter {\n  constructor() {\n    this._listeners = new Map();\n  }\n\n  on(event, listener) {\n    if (!this._listeners.has(event)) {\n      this._listeners.set(event, []);\n    }\n    this._listeners.get(event).push(listener);\n    // Returns an unsubscribe function\n    return () => this.off(event, listener);\n  }\n\n  once(event, listener) {\n    const unsub = this.on(event, (...args) => {\n      listener(...args);\n      unsub();\n    });\n    return unsub;\n  }\n\n  off(event, listener) {\n    const listeners = this._listeners.get(event);\n    if (!listeners) return;\n    this._listeners.set(event, listeners.filter((l) => l !== listener));\n  }\n\n  emit(event, ...args) {\n    (this._listeners.get(event) || []).slice().forEach((l) => l(...args));\n  }\n\n  removeAllListeners(event) {\n    if (event) this._listeners.delete(event);\n    else this._listeners.clear();\n  }\n}\n\n// Usage:\n// const bus = new EventEmitter();\n// const unsub = bus.on('data', (payload) => console.log(payload));\n// bus.emit('data', { id: 1 });\n// unsub(); // stop listening",
+        },
       ],
       Python: [
         {
@@ -196,6 +220,76 @@ class SnippetsApp {
           description: "Custom context manager with __enter__/__exit__",
           content: "from contextlib import contextmanager\nimport time\n\n@contextmanager\ndef timer(label=\"Block\"):\n    \"\"\"Time a block of code.\"\"\"\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        print(f\"{label}: {elapsed:.4f}s\")\n\n# Usage:\n# with timer(\"Data processing\"):\n#     process_data()\n\n@contextmanager\ndef temp_directory():\n    \"\"\"Create and clean up a temporary directory.\"\"\"\n    import tempfile, shutil\n    tmpdir = tempfile.mkdtemp()\n    try:\n        yield tmpdir\n    finally:\n        shutil.rmtree(tmpdir)",
         },
+        {
+          name: "NamedTuple",
+          extension: "py",
+          category: "Python",
+          description: "Typed NamedTuple with methods and unpacking",
+          content: "from typing import NamedTuple\n\nclass Point(NamedTuple):\n    x: float\n    y: float\n    label: str = \"\"\n\n    def distance_from_origin(self) -> float:\n        return (self.x ** 2 + self.y ** 2) ** 0.5\n\n    def translate(self, dx: float, dy: float) -> \"Point\":\n        return self._replace(x=self.x + dx, y=self.y + dy)\n\n# Usage\np = Point(3.0, 4.0, \"A\")\nprint(p.distance_from_origin())  # 5.0\nx, y, label = p                  # unpacking works\nprint(p._asdict())               # {'x': 3.0, 'y': 4.0, 'label': 'A'}\nprint(p._fields)                 # ('x', 'y', 'label')",
+        },
+        {
+          name: "Dataclass (Advanced)",
+          extension: "py",
+          category: "Python",
+          description: "Frozen dataclass with __post_init__, ClassVar, and property",
+          content: "from dataclasses import dataclass, field\nfrom typing import ClassVar\n\n@dataclass(frozen=True, slots=True)\nclass Config:\n    host: str\n    port: int = 8080\n    debug: bool = False\n    tags: tuple[str, ...] = field(default_factory=tuple)\n\n    MAX_CONNECTIONS: ClassVar[int] = 100\n\n    def __post_init__(self):\n        if not (1 <= self.port <= 65535):\n            raise ValueError(f\"Invalid port: {self.port}\")\n        if not self.host:\n            raise ValueError(\"host cannot be empty\")\n\n    @property\n    def url(self) -> str:\n        return f\"http://{self.host}:{self.port}\"\n\n# Usage\ncfg = Config(host=\"localhost\", port=9000, tags=(\"web\", \"api\"))\nprint(cfg.url)          # http://localhost:9000\n# cfg.port = 80         # raises FrozenInstanceError",
+        },
+        {
+          name: "Enum",
+          extension: "py",
+          category: "Python",
+          description: "Enum with auto(), class methods, and properties",
+          content: "from enum import Enum, auto\n\nclass Status(Enum):\n    PENDING = auto()\n    ACTIVE = auto()\n    PAUSED = auto()\n    INACTIVE = auto()\n    DELETED = auto()\n\n    @classmethod\n    def from_string(cls, s: str) -> \"Status\":\n        try:\n            return cls[s.upper()]\n        except KeyError:\n            raise ValueError(f\"Unknown status: {s!r}\")\n\n    @property\n    def is_terminal(self) -> bool:\n        return self in (Status.INACTIVE, Status.DELETED)\n\n    @property\n    def label(self) -> str:\n        return self.name.replace(\"_\", \" \").title()\n\n# Usage\ns = Status.ACTIVE\nprint(s.name)          # \"ACTIVE\"\nprint(s.value)         # 2\nprint(s.label)         # \"Active\"\nprint(s.is_terminal)   # False\nprint(Status.from_string(\"deleted\").is_terminal)  # True",
+        },
+        {
+          name: "TypedDict",
+          extension: "py",
+          category: "Python",
+          description: "TypedDict for typed dictionary structures",
+          content: "from typing import TypedDict, NotRequired\n\nclass Address(TypedDict):\n    street: str\n    city: str\n    country: str\n    postcode: NotRequired[str]\n\nclass User(TypedDict):\n    id: int\n    name: str\n    email: str\n    address: NotRequired[Address]\n    tags: NotRequired[list[str]]\n\n# Inheritance for extending schemas\nclass AdminUser(User):\n    role: str\n    permissions: list[str]\n\n# Usage — fully type-checked by mypy/pyright\ndef greet(user: User) -> str:\n    return f\"Hello, {user['name']}!\"\n\nuser: User = {\n    \"id\": 1,\n    \"name\": \"Alice\",\n    \"email\": \"alice@example.com\",\n    \"tags\": [\"admin\"],\n}",
+        },
+        {
+          name: "Protocol / ABC",
+          extension: "py",
+          category: "Python",
+          description: "Abstract base class and structural Protocol for type-safe interfaces",
+          content: "from abc import ABC, abstractmethod\nfrom typing import Protocol, runtime_checkable\n\n# Abstract Base Class — enforces subclass implementation\nclass Repository(ABC):\n    @abstractmethod\n    def get(self, id: int): ...\n\n    @abstractmethod\n    def save(self, item) -> None: ...\n\n    @abstractmethod\n    def delete(self, id: int) -> None: ...\n\n    def exists(self, id: int) -> bool:\n        return self.get(id) is not None\n\n# Protocol — structural (duck) typing, no inheritance needed\n@runtime_checkable\nclass Serializable(Protocol):\n    def to_dict(self) -> dict: ...\n    def to_json(self) -> str: ...\n\n# Any class with these methods satisfies the Protocol\nclass MyModel:\n    def to_dict(self) -> dict:\n        return vars(self)\n\n    def to_json(self) -> str:\n        import json\n        return json.dumps(self.to_dict())\n\nassert isinstance(MyModel(), Serializable)  # True",
+        },
+        {
+          name: "Async Patterns",
+          extension: "py",
+          category: "Python",
+          description: "asyncio: gather, TaskGroup, async generator, async context manager",
+          content: "import asyncio\nfrom typing import AsyncIterator\n\n# Run tasks concurrently\nasync def fetch_all(urls: list[str]) -> list[dict]:\n    async with asyncio.TaskGroup() as tg:\n        tasks = [tg.create_task(fetch_one(url)) for url in urls]\n    return [t.result() for t in tasks]\n\nasync def fetch_one(url: str) -> dict:\n    await asyncio.sleep(0)  # replace with aiohttp call\n    return {\"url\": url, \"status\": 200}\n\n# Async generator for pagination\nasync def paginate(endpoint: str, page_size: int = 20) -> AsyncIterator[list]:\n    page = 1\n    while True:\n        batch = await fetch_one(f\"{endpoint}?page={page}&size={page_size}\")\n        if not batch:\n            break\n        yield batch\n        page += 1\n\n# Async context manager\nclass AsyncDB:\n    async def __aenter__(self):\n        await self._connect()\n        return self\n\n    async def __aexit__(self, exc_type, exc, tb):\n        await self._close()\n\n    async def _connect(self): ...\n    async def _close(self): ...\n\n# Entry point\nif __name__ == \"__main__\":\n    asyncio.run(fetch_all([\"https://api.example.com/a\", \"https://api.example.com/b\"]))",
+        },
+        {
+          name: "Loguru Logging",
+          extension: "py",
+          category: "Python",
+          description: "Loguru logging with console + rotating file handler",
+          content: "from loguru import logger\nimport sys\n\n# Remove default handler and configure custom ones\nlogger.remove()\n\n# Console: colored, human-readable\nlogger.add(\n    sys.stderr,\n    level=\"INFO\",\n    format=\"<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}:{line}</cyan> — <level>{message}</level>\",\n    colorize=True,\n)\n\n# File: rotating, compressed, JSON-structured for log aggregation\nlogger.add(\n    \"logs/app.log\",\n    level=\"DEBUG\",\n    rotation=\"10 MB\",\n    retention=\"14 days\",\n    compression=\"gz\",\n    serialize=True,\n)\n\n# Usage\nlogger.debug(\"Detailed debug info\")\nlogger.info(\"App started\")\nlogger.warning(\"Low disk space\")\nlogger.error(\"Connection refused\")\nlogger.critical(\"System failure\")\n\n# Bind structured context to a logger\nlogger.bind(user_id=42, action=\"login\").info(\"User authenticated\")\n\n# Capture exception with full traceback\ntry:\n    risky_call()\nexcept Exception:\n    logger.exception(\"Unexpected error\")",
+        },
+        {
+          name: "pytest Structure",
+          extension: "py",
+          category: "Python",
+          description: "Fixtures, parametrize, mocking, and exception testing",
+          content: "import pytest\nfrom unittest.mock import patch\n\n# === Fixtures ===\n@pytest.fixture\ndef sample_user():\n    return {\"id\": 1, \"name\": \"Alice\", \"email\": \"alice@example.com\"}\n\n@pytest.fixture\ndef db(tmp_path):\n    from myapp.db import Database\n    db = Database(tmp_path / \"test.db\")\n    db.migrate()\n    yield db\n    db.close()\n\n# === Basic test ===\ndef test_user_display_name(sample_user):\n    from myapp.models import User\n    user = User(**sample_user)\n    assert user.display_name == \"Alice <alice@example.com>\"\n\n# === Parametrize ===\n@pytest.mark.parametrize(\"value,expected\", [\n    (\"hello\", \"HELLO\"),\n    (\"world\", \"WORLD\"),\n    (\"\",      \"\"),\n])\ndef test_to_upper(value, expected):\n    assert value.upper() == expected\n\n# === Mocking ===\ndef test_sends_email():\n    with patch(\"myapp.email.send\") as mock_send:\n        from myapp.notifications import notify_user\n        notify_user(user_id=1)\n        mock_send.assert_called_once()\n\n# === Exception testing ===\ndef test_raises_on_invalid():\n    with pytest.raises(ValueError, match=\"must be positive\"):\n        from myapp.utils import validate\n        validate(-1)",
+        },
+        {
+          name: "subprocess",
+          extension: "py",
+          category: "Python",
+          description: "Run commands, capture output, stream, and handle errors",
+          content: "import subprocess\nfrom pathlib import Path\n\n# Run and capture output (raises CalledProcessError on non-zero exit)\nresult = subprocess.run(\n    [\"git\", \"log\", \"--oneline\", \"-10\"],\n    capture_output=True,\n    text=True,\n    check=True,\n)\nprint(result.stdout)\n\n# Stream output line by line (for long-running processes)\ndef stream_command(cmd: list[str]) -> None:\n    with subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True) as proc:\n        for line in proc.stdout:\n            print(line, end=\"\")\n    if proc.returncode != 0:\n        raise subprocess.CalledProcessError(proc.returncode, cmd)\n\n# Error handling\ntry:\n    subprocess.run([\"false\"], check=True)\nexcept subprocess.CalledProcessError as e:\n    print(f\"Failed (exit {e.returncode}): {e.cmd}\")\n\n# Run in a specific directory\nsubprocess.run([\"npm\", \"install\"], cwd=Path(\"/path/to/project\"), check=True)\n\n# Capture stdout and stderr separately\nresult = subprocess.run(\n    [\"python\", \"script.py\"],\n    stdout=subprocess.PIPE,\n    stderr=subprocess.PIPE,\n    text=True,\n)\nif result.returncode != 0:\n    print(result.stderr)",
+        },
+        {
+          name: "CSV Read / Write",
+          extension: "py",
+          category: "Python",
+          description: "Read and write CSV files with DictReader, DictWriter, and dataclasses",
+          content: "import csv\nfrom dataclasses import dataclass, fields, astuple\n\n# Read CSV → list of dicts\ndef read_csv(filepath: str) -> list[dict]:\n    with open(filepath, newline=\"\", encoding=\"utf-8\") as f:\n        return list(csv.DictReader(f))\n\n# Write list of dicts → CSV\ndef write_csv(filepath: str, rows: list[dict], fieldnames: list[str] = None) -> None:\n    if not rows:\n        return\n    fieldnames = fieldnames or list(rows[0].keys())\n    with open(filepath, \"w\", newline=\"\", encoding=\"utf-8\") as f:\n        writer = csv.DictWriter(f, fieldnames=fieldnames)\n        writer.writeheader()\n        writer.writerows(rows)\n\n# Dataclass ↔ CSV\n@dataclass\nclass Product:\n    id: int\n    name: str\n    price: float\n\ndef dataclasses_to_csv(filepath: str, items: list) -> None:\n    cols = [f.name for f in fields(items[0])]\n    with open(filepath, \"w\", newline=\"\", encoding=\"utf-8\") as f:\n        w = csv.writer(f)\n        w.writerow(cols)\n        w.writerows(astuple(item) for item in items)\n\n# Usage\ndata = read_csv(\"input.csv\")\nwrite_csv(\"output.csv\", data)",
+        },
       ],
       SQL: [
         {
@@ -246,6 +340,171 @@ class SnippetsApp {
           category: "SQL",
           description: "Correlated subquery, EXISTS, IN",
           content: "-- Find users with orders above their average\nSELECT u.name, o.total\nFROM users u\nJOIN orders o ON o.user_id = u.id\nWHERE o.total > (\n    SELECT AVG(o2.total)\n    FROM orders o2\n    WHERE o2.user_id = u.id\n);\n\n-- EXISTS: users who have placed at least one order\nSELECT u.name\nFROM users u\nWHERE EXISTS (\n    SELECT 1 FROM orders o WHERE o.user_id = u.id\n);\n\n-- NOT IN: users with no orders\nSELECT u.name\nFROM users u\nWHERE u.id NOT IN (\n    SELECT DISTINCT user_id FROM orders\n);",
+        },
+        {
+          name: "Recursive CTE",
+          extension: "sql",
+          category: "SQL",
+          description: "Traverse a self-referencing hierarchy (org chart, category tree)",
+          content: "-- Recursive CTE: traverse a hierarchy (org chart, category tree, etc.)\nWITH RECURSIVE org_tree AS (\n    -- Anchor: start from root nodes (no parent)\n    SELECT\n        id,\n        name,\n        manager_id,\n        0    AS depth,\n        name AS path\n    FROM employees\n    WHERE manager_id IS NULL\n\n    UNION ALL\n\n    -- Recursive: join each child to its parent row\n    SELECT\n        e.id,\n        e.name,\n        e.manager_id,\n        ot.depth + 1,\n        ot.path || ' > ' || e.name\n    FROM employees e\n    INNER JOIN org_tree ot ON ot.id = e.manager_id\n)\nSELECT\n    id,\n    REPEAT('  ', depth) || name AS indented_name,\n    depth,\n    path\nFROM org_tree\nORDER BY path;",
+        },
+        {
+          name: "EXPLAIN ANALYZE",
+          extension: "sql",
+          category: "SQL",
+          description: "Inspect query execution plans to diagnose performance issues",
+          content: "-- PostgreSQL: full execution plan with actual timings and buffer usage\nEXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)\nSELECT\n    u.name,\n    COUNT(o.id)  AS order_count,\n    SUM(o.total) AS total_spent\nFROM users u\nJOIN orders o ON o.user_id = u.id\nWHERE u.created_at >= '2024-01-01'\nGROUP BY u.id, u.name\nHAVING COUNT(o.id) > 5\nORDER BY total_spent DESC;\n\n-- MySQL 8.0.18+:\n-- EXPLAIN ANALYZE SELECT ...;\n\n-- Key things to look for:\n--   Seq Scan       → likely missing index on a large table\n--   Rows Removed   → high value means index isn't selective enough\n--   actual time    → compare to estimated to spot planner mistakes\n--   Buffers read   → cache misses (I/O happening)\n--   Nested Loop    → can be slow for large result sets\n--   Hash Join      → generally efficient for large joins",
+        },
+        {
+          name: "Pivot (Conditional Aggregation)",
+          extension: "sql",
+          category: "SQL",
+          description: "Turn row values into columns using CASE or FILTER",
+          content: "-- Portable: conditional aggregation with CASE (MySQL, PostgreSQL, SQLite)\nSELECT\n    department,\n    SUM(CASE WHEN MONTH(sale_date) = 1  THEN amount ELSE 0 END) AS jan,\n    SUM(CASE WHEN MONTH(sale_date) = 2  THEN amount ELSE 0 END) AS feb,\n    SUM(CASE WHEN MONTH(sale_date) = 3  THEN amount ELSE 0 END) AS mar,\n    SUM(CASE WHEN MONTH(sale_date) = 4  THEN amount ELSE 0 END) AS apr,\n    SUM(CASE WHEN MONTH(sale_date) = 5  THEN amount ELSE 0 END) AS may,\n    SUM(CASE WHEN MONTH(sale_date) = 6  THEN amount ELSE 0 END) AS jun,\n    SUM(amount) AS total\nFROM sales\nWHERE YEAR(sale_date) = 2024\nGROUP BY department\nORDER BY department;\n\n-- PostgreSQL: FILTER syntax (cleaner)\nSELECT\n    department,\n    SUM(amount) FILTER (WHERE EXTRACT(MONTH FROM sale_date) = 1) AS jan,\n    SUM(amount) FILTER (WHERE EXTRACT(MONTH FROM sale_date) = 2) AS feb,\n    SUM(amount) FILTER (WHERE EXTRACT(MONTH FROM sale_date) = 3) AS mar,\n    SUM(amount) AS total\nFROM sales\nWHERE EXTRACT(YEAR FROM sale_date) = 2024\nGROUP BY department;",
+        },
+        {
+          name: "Index Creation",
+          extension: "sql",
+          category: "SQL",
+          description: "Single, composite, partial, expression, and full-text indexes",
+          content: "-- Single column\nCREATE INDEX idx_users_email ON users (email);\n\n-- Composite (put equality columns first, range/sort columns last)\nCREATE INDEX idx_orders_lookup ON orders (user_id, status, created_at DESC);\n\n-- Unique\nCREATE UNIQUE INDEX idx_users_email_unique ON users (email);\n\n-- Partial index (PostgreSQL) — only index matching rows\nCREATE INDEX idx_orders_pending ON orders (created_at)\nWHERE status = 'pending';\n\n-- Expression index (PostgreSQL)\nCREATE INDEX idx_users_lower_email ON users (LOWER(email));\n\n-- Full-text index (MySQL)\nCREATE FULLTEXT INDEX idx_articles_fts ON articles (title, body);\n\n-- Check index usage\n-- PostgreSQL:\nSELECT indexname, idx_scan, idx_tup_read\nFROM pg_stat_user_indexes\nWHERE relname = 'orders'\nORDER BY idx_scan DESC;\n\n-- MySQL:\n-- SHOW INDEX FROM orders;",
+        },
+      ],
+      Bash: [
+        {
+          name: "Script Boilerplate",
+          extension: "sh",
+          category: "Shell",
+          description: "Bash script with strict mode, argument parsing, and logging",
+          content: "#!/usr/bin/env bash\nset -euo pipefail\n\nSCRIPT_NAME=\"${0##*/}\"\n\nusage() {\n  echo \"Usage: $SCRIPT_NAME [OPTIONS] <input>\"\n  echo \"\"\n  echo \"Options:\"\n  echo \"  -o, --output FILE   Output file (default: output.txt)\"\n  echo \"  -v, --verbose       Enable verbose output\"\n  echo \"  -h, --help          Show this help\"\n}\n\nlog_info()  { echo \"[INFO]  $*\"; }\nlog_error() { echo \"[ERROR] $*\" >&2; }\ndie()       { log_error \"$*\"; exit 1; }\n\nmain() {\n  local output=\"output.txt\"\n  local verbose=false\n\n  while [[ $# -gt 0 ]]; do\n    case \"$1\" in\n      -o|--output)  output=\"$2\"; shift 2 ;;\n      -v|--verbose) verbose=true; shift ;;\n      -h|--help)    usage; exit 0 ;;\n      --)           shift; break ;;\n      -*)           die \"Unknown option: $1\" ;;\n      *)            break ;;\n    esac\n  done\n\n  [[ $# -lt 1 ]] && { log_error \"Input required\"; usage; exit 1; }\n  local input=\"$1\"\n\n  $verbose && log_info \"Processing: $input -> $output\"\n  # Your logic here\n}\n\nmain \"$@\"",
+        },
+        {
+          name: "Logging & Colors",
+          extension: "sh",
+          category: "Shell",
+          description: "Colored log functions using tput (TTY-safe)",
+          content: "# Terminal colors — automatically disabled if not a TTY\nif [[ -t 1 ]] && command -v tput &>/dev/null; then\n  RED=$(tput setaf 1) YELLOW=$(tput setaf 3)\n  GREEN=$(tput setaf 2) BLUE=$(tput setaf 4)\n  BOLD=$(tput bold) NC=$(tput sgr0)\nelse\n  RED='' YELLOW='' GREEN='' BLUE='' BOLD='' NC=''\nfi\n\nlog_info()    { echo \"${BLUE}[INFO]${NC}    $*\"; }\nlog_success() { echo \"${GREEN}[OK]${NC}      $*\"; }\nlog_warn()    { echo \"${YELLOW}[WARN]${NC}    $*\" >&2; }\nlog_error()   { echo \"${RED}[ERROR]${NC}   $*\" >&2; }\nlog_step()    { echo \"${BOLD}==> $*${NC}\"; }\ndie()         { log_error \"$*\"; exit 1; }\n\n# Usage\nlog_step \"Starting deployment\"\nlog_info \"Reading config...\"\nlog_success \"Config loaded\"\nlog_warn \"No cache found, rebuilding\"\nlog_error \"Connection refused\" && die \"Aborting\"",
+        },
+        {
+          name: "File & Safety Checks",
+          extension: "sh",
+          category: "Shell",
+          description: "Helpers to validate files, directories, and required commands",
+          content: "require_file() {\n  [[ -f \"$1\" ]] || die \"File not found: $1\"\n  [[ -r \"$1\" ]] || die \"File not readable: $1\"\n}\n\nrequire_dir() {\n  [[ -d \"$1\" ]] || die \"Directory not found: $1\"\n}\n\nensure_dir() {\n  mkdir -p \"$1\" || die \"Failed to create directory: $1\"\n}\n\nrequire_cmd() {\n  command -v \"$1\" &>/dev/null || die \"Required command not found: $1\"\n}\n\n# Prompt before destructive actions\nconfirm() {\n  local prompt=\"${1:-Are you sure?} [y/N] \"\n  read -rp \"$prompt\" answer\n  [[ \"${answer,,}\" == \"y\" ]]\n}\n\n# Usage\nrequire_file \"$INPUT_FILE\"\nrequire_dir  \"$OUTPUT_DIR\"\nrequire_cmd  jq\nrequire_cmd  curl\nconfirm \"Delete all logs?\" && rm -rf /var/log/myapp/",
+        },
+        {
+          name: "Trap & Cleanup",
+          extension: "sh",
+          category: "Shell",
+          description: "Lockfile, temp directory cleanup, and a retry helper",
+          content: "LOCKFILE=\"/tmp/${0##*/}.lock\"\nWORK_DIR=\"\"\n\ncleanup() {\n  local exit_code=$?\n  rm -f \"$LOCKFILE\"\n  [[ -n \"$WORK_DIR\" ]] && rm -rf \"$WORK_DIR\"\n  exit $exit_code\n}\ntrap cleanup EXIT INT TERM\n\n# Prevent concurrent runs\nif ! ( set -o noclobber; echo \"$$\" > \"$LOCKFILE\" ) 2>/dev/null; then\n  die \"Already running (PID: $(cat \"$LOCKFILE\"))\"\nfi\n\nWORK_DIR=\"$(mktemp -d)\"\nlog_info \"Temp dir: $WORK_DIR\"\n\n# Retry a command N times with delay\nretry() {\n  local attempts=\"${1:-3}\"; shift\n  local delay=\"${1:-2}\"; shift\n  local i\n  for (( i=1; i<=attempts; i++ )); do\n    \"$@\" && return 0\n    log_warn \"Attempt $i/$attempts failed. Retrying in ${delay}s...\"\n    sleep \"$delay\"\n  done\n  die \"Command failed after $attempts attempts: $*\"\n}",
+        },
+        {
+          name: "Loop Patterns",
+          extension: "sh",
+          category: "Shell",
+          description: "find+while, read line by line, indexed array, CSV fields",
+          content: "# Iterate files — null-safe for names with spaces\nfind /path/to/dir -name \"*.log\" -maxdepth 2 -type f -print0 \\\n  | while IFS= read -r -d '' file; do\n    echo \"Processing: $file\"\n  done\n\n# Read file line by line (handles missing final newline)\nwhile IFS= read -r line || [[ -n \"$line\" ]]; do\n  [[ -z \"$line\" || \"$line\" == '#'* ]] && continue\n  echo \"Line: $line\"\ndone < \"input.txt\"\n\n# Array loop with index\nitems=(\"alpha\" \"beta\" \"gamma\")\nfor i in \"${!items[@]}\"; do\n  printf \"%d: %s\\n\" \"$i\" \"${items[$i]}\"\ndone\n\n# Parse delimited fields per line\nwhile IFS=',' read -r name age city; do\n  echo \"Name=$name  Age=$age  City=$city\"\ndone < \"people.csv\"",
+        },
+        {
+          name: "String Utilities",
+          extension: "sh",
+          category: "Shell",
+          description: "trim, case conversion, contains, slugify, join_by",
+          content: "# Trim leading/trailing whitespace\ntrim() { echo \"$*\" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'; }\n\n# Case conversion (bash 4+)\nto_lower() { echo \"${1,,}\"; }\nto_upper() { echo \"${1^^}\"; }\n\n# Check if string contains substring (returns exit code)\ncontains() { [[ \"$1\" == *\"$2\"* ]]; }\n\n# Slugify: lowercase, non-alphanum runs become hyphens\nslugify() {\n  echo \"$1\" \\\n    | tr '[:upper:]' '[:lower:]' \\\n    | tr -cs 'a-z0-9' '-' \\\n    | sed 's/^-//;s/-$//'\n}\n\n# Join array elements with a delimiter\njoin_by() { local IFS=\"$1\"; shift; echo \"$*\"; }\n\n# Usage\ntrim \"  hello world  \"    # \"hello world\"\nto_lower \"Hello World\"    # \"hello world\"\nslugify \"My Blog Post!\"   # \"my-blog-post\"\njoin_by \",\" a b c d       # \"a,b,c,d\"\ncontains \"foobar\" \"oba\" && echo yes",
+        },
+        {
+          name: "jq JSON Parsing",
+          extension: "sh",
+          category: "Shell",
+          description: "Extract, filter, transform, and update JSON with jq",
+          content: "# Requires: jq\n\n# Extract values (-r = raw output, no quotes around strings)\njq -r '.name' data.json\njq -r '.user.address.city' data.json\n\n# Iterate an array — one value per line\njq -r '.users[] | .name' data.json\n\n# Filter by condition\njq '[.users[] | select(.active == true)]' data.json\n\n# Reshape: build a new object from each element\njq '[.users[] | {id, label: .name, email}]' data.json\n\n# Loop results in bash\nwhile IFS= read -r name; do\n    echo \"Hello, $name\"\ndone < <(jq -r '.users[].name' data.json)\n\n# Pass bash variables into jq\nuser_id=42\njq --argjson id \"$user_id\" '.users[] | select(.id == $id)' data.json\n\n# Merge two JSON objects\njq -n --argjson a '{\"x\":1}' --argjson b '{\"y\":2}' '$a + $b'\n\n# Update a field (jq cannot edit files in-place)\njq '.version = \"2.0.0\"' package.json > tmp.$$ && mv tmp.$$ package.json",
+        },
+        {
+          name: "curl with Auth & Retry",
+          extension: "sh",
+          category: "Shell",
+          description: "Authenticated GET/POST helpers and file download with retry",
+          content: "BASE_URL=\"https://api.example.com\"\nTOKEN=\"${API_TOKEN:-}\"\n\n# Authenticated GET\napi_get() {\n    curl -fsSL \\\n        -H \"Authorization: Bearer $TOKEN\" \\\n        -H \"Accept: application/json\" \\\n        \"${BASE_URL}$1\"\n}\n\n# Authenticated POST with JSON body\napi_post() {\n    local endpoint=\"$1\" body=\"$2\"\n    curl -fsSL -X POST \\\n        -H \"Authorization: Bearer $TOKEN\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"$body\" \\\n        \"${BASE_URL}${endpoint}\"\n}\n\n# Download with progress bar and automatic retries\ndownload_file() {\n    local url=\"$1\" dest=\"$2\"\n    curl -fL \\\n        --retry 3 \\\n        --retry-delay 2 \\\n        --retry-all-errors \\\n        --progress-bar \\\n        -o \"$dest\" \\\n        \"$url\"\n}\n\n# Usage\nusers=$(api_get \"/users?page=1\")\necho \"$users\" | jq -r '.[].name'\n\napi_post \"/items\" '{\"name\":\"Widget\",\"price\":9.99}'\ndownload_file \"https://example.com/archive.tar.gz\" \"/tmp/archive.tar.gz\"",
+        },
+        {
+          name: "SSH / SCP / rsync",
+          extension: "sh",
+          category: "Shell",
+          description: "SSH wrapper, upload, download, and remote sync helpers",
+          content: "HOST=\"user@example.com\"\nKEY=\"$HOME/.ssh/id_rsa\"\nREMOTE_DIR=\"/var/app\"\n\n# SSH with safety flags\nssh_exec() {\n    ssh -i \"$KEY\" \\\n        -o StrictHostKeyChecking=accept-new \\\n        -o ConnectTimeout=10 \\\n        \"$HOST\" \"$@\"\n}\n\n# Upload file or directory (rsync — fast, incremental)\nupload() {\n    local src=\"$1\" dest=\"${2:-$REMOTE_DIR}\"\n    rsync -az --progress \\\n        -e \"ssh -i $KEY -o StrictHostKeyChecking=accept-new\" \\\n        \"$src\" \"${HOST}:${dest}\"\n}\n\n# Download from remote\ndownload() {\n    local remote=\"$1\" local_dest=\"${2:-.}\"\n    scp -i \"$KEY\" -r \"${HOST}:${remote}\" \"$local_dest\"\n}\n\n# Sync local → remote (mirror, deletes removed files)\nsync_to_remote() {\n    local src=\"$1\" dest=\"${2:-$REMOTE_DIR}\"\n    rsync -avz --delete \\\n        -e \"ssh -i $KEY -o StrictHostKeyChecking=accept-new\" \\\n        \"$src\" \"${HOST}:${dest}\"\n}\n\n# Usage\nssh_exec \"systemctl restart myapp && journalctl -u myapp -n 50\"\nupload \"./dist/\" \"/var/www/html/\"\nsync_to_remote \"./build/\" \"/var/app/\"\ndownload \"/var/log/app.log\" \"./logs/\"",
+        },
+        {
+          name: "Parallel Jobs",
+          extension: "sh",
+          category: "Shell",
+          description: "Run background jobs with a concurrency limit using wait",
+          content: "set -euo pipefail\n\nMAX_JOBS=4\npids=()\n\n# Block until a slot is free\nwait_for_slot() {\n    while [[ ${#pids[@]} -ge $MAX_JOBS ]]; do\n        local running=()\n        for pid in \"${pids[@]}\"; do\n            if kill -0 \"$pid\" 2>/dev/null; then\n                running+=(\"$pid\")\n            else\n                wait \"$pid\" || echo \"[WARN] job $pid failed\" >&2\n            fi\n        done\n        pids=(\"${running[@]}\")\n        [[ ${#pids[@]} -ge $MAX_JOBS ]] && sleep 0.1\n    done\n}\n\n# Worker function — replace with your real task\nprocess_item() {\n    local item=\"$1\"\n    echo \"Processing: $item\"\n    sleep 1\n}\n\n# Dispatch items in parallel\nitems=(\"a.txt\" \"b.txt\" \"c.txt\" \"d.txt\" \"e.txt\" \"f.txt\" \"g.txt\")\nfor item in \"${items[@]}\"; do\n    wait_for_slot\n    process_item \"$item\" &\n    pids+=(\"$!\")\ndone\n\n# Wait for all remaining jobs\nfor pid in \"${pids[@]}\"; do\n    wait \"$pid\" || echo \"[WARN] job $pid failed\" >&2\ndone\necho \"All jobs complete\"",
+        },
+      ],
+      Nushell: [
+        {
+          name: "Script with Main",
+          extension: "nu",
+          category: "Nushell",
+          description: "Nu script with typed flags, argument validation, and file I/O",
+          content: "#!/usr/bin/env nu\n\n# Process an input file and write output\ndef main [\n  input: path,                         # Input file\n  --output (-o): path = \"output.txt\",  # Output file\n  --verbose (-v),                      # Verbose mode\n  --limit (-n): int = 100,             # Max records\n] {\n  if not ($input | path exists) {\n    error make { msg: $\"File not found: ($input)\" }\n  }\n\n  if $verbose { print $\"Reading ($input)...\" }\n\n  let data = open $input | first $limit\n\n  if $verbose { print $\"Writing to ($output)...\" }\n  $data | to json | save --force $output\n\n  print $\"Done. Wrote ($data | length) records.\"\n}",
+        },
+        {
+          name: "HTTP Requests",
+          extension: "nu",
+          category: "Nushell",
+          description: "GET, POST, error handling, and pagination with http commands",
+          content: "# GET — returns parsed JSON automatically\nlet users = http get \"https://api.example.com/users\"\n\n# GET with auth headers\nlet data = http get\n  --headers { Authorization: \"Bearer my-token\" }\n  \"https://api.example.com/items?page=1\"\n\n# POST with JSON body\nlet result = http post\n  --content-type \"application/json\"\n  \"https://api.example.com/items\"\n  { name: \"Widget\", active: true, tags: [\"new\"] }\n\n# Error handling\nlet response = try {\n  http get \"https://api.example.com/data\"\n} catch {|err|\n  print $\"Request failed: ($err.msg)\"\n  null\n}\n\n# Paginate all results into one list\ndef fetch-all [base: string, --page-size: int = 20] {\n  mut page = 1\n  mut all = []\n  loop {\n    let batch = http get $\"($base)?page=($page)&limit=($page_size)\"\n    if ($batch | is-empty) { break }\n    $all = $all ++ $batch\n    $page += 1\n  }\n  $all\n}",
+        },
+        {
+          name: "Data Pipeline",
+          extension: "nu",
+          category: "Nushell",
+          description: "Filter, aggregate, transform, and join tables",
+          content: "# Filter, select, and sort a table\nopen data.csv\n  | where age > 30\n  | select name email age\n  | sort-by age --reverse\n  | first 10\n\n# Group and aggregate\nopen sales.csv\n  | group-by region\n  | transpose region rows\n  | insert total {|r| $r.rows | get amount | math sum }\n  | insert avg   {|r| $r.rows | get amount | math avg | math round --precision 2 }\n  | sort-by total --reverse\n\n# Transform nested JSON from an API\nhttp get \"https://api.example.com/posts\"\n  | each {|item|\n      {\n        id:    $item.id\n        title: ($item.title | str trim)\n        tags:  ($item.tags | str join \", \")\n      }\n    }\n  | where title != \"\"\n\n# Join two tables on a key\nlet orders = open orders.csv\nlet users  = open users.csv\n$orders\n  | join $users id user_id\n  | select name email total created_at\n  | sort-by created_at --reverse",
+        },
+        {
+          name: "Custom Commands",
+          extension: "nu",
+          category: "Nushell",
+          description: "Typed params, flags, table-returning commands, pipeline-aware commands",
+          content: "# Typed command with flags and defaults\ndef greet [\n  name: string,           # Name to greet\n  --formal (-f),          # Use formal greeting\n  --times (-n): int = 1,  # Repetitions\n] {\n  let greeting = if $formal { \"Good day\" } else { \"Hello\" }\n  1..$times | each { print $\"($greeting), ($name)!\" }\n}\n\n# Command that returns a table\ndef list-large-files [\n  dir: path = \".\",         # Directory to scan\n  --min-mb: float = 10.0,  # Minimum size in MB\n] -> table {\n  ls $dir\n    | where type == \"file\"\n    | insert size_mb {|f| $f.size / 1MB }\n    | where size_mb >= $min_mb\n    | select name size_mb modified\n    | sort-by size_mb --reverse\n}\n\n# Pipeline-aware command\ndef add-tax [rate: float = 0.1] {\n  each {|row| $row | upsert price ($row.price * (1 + $rate)) }\n}\n\n# Usage\ngreet \"Alice\" --formal --times 2\nlist-large-files /var/log --min-mb 5\nopen prices.csv | add-tax 0.2",
+        },
+        {
+          name: "File Operations",
+          extension: "nu",
+          category: "Nushell",
+          description: "Open formats, save/convert, path ops, and glob file search",
+          content: "# Open various formats (type auto-detected by extension)\nlet csv_data  = open data.csv\nlet json_data = open config.json\nlet toml_data = open pyproject.toml\nlet raw_text  = open readme.md\nlet log_lines = open app.log | lines\n\n# Save / convert between formats\n$csv_data  | to json --indent 2 | save output.json\n$json_data | to csv  | save output.csv\n$json_data | to toml | save config.toml\n\n# Path operations\nlet dir  = $env.PWD\nlet file = [$dir \"sub\" \"data.txt\"] | path join\nlet ext  = $file | path extension         # \".txt\"\nlet stem = $file | path parse | get stem  # \"data\"\nlet name = $file | path basename          # \"data.txt\"\n\n# Find recently modified files\nls **/*.log\n  | where modified > ((date now) - 7day)\n  | sort-by modified --reverse\n  | select name size modified",
+        },
+        {
+          name: "Error Handling",
+          extension: "nu",
+          category: "Nushell",
+          description: "try/catch, error make with span info, null-safe access, early return",
+          content: "# try / catch with fallback value\nlet config = try {\n  open \"config.json\"\n} catch {|err|\n  print $\"Warning: ($err.msg) — using defaults\"\n  { host: \"localhost\", port: 8080 }\n}\n\n# Custom structured error with span info\ndef divide [a: float, b: float] -> float {\n  if $b == 0 {\n    error make {\n      msg: \"Division by zero\"\n      label: { text: \"must be non-zero\", span: (metadata $b).span }\n    }\n  }\n  $a / $b\n}\n\n# Null-safe field access with defaults\nlet name  = $data | get --ignore-errors \"user.name\" | default \"Anonymous\"\nlet items = $data | get --ignore-errors \"items\"      | default []\n\n# Early return pattern\ndef process-file [path: path] {\n  if not ($path | path exists) {\n    return (error make { msg: $\"Not found: ($path)\" })\n  }\n  open $path | lines | length\n}",
+        },
+        {
+          name: "Environment & Config",
+          extension: "nu",
+          category: "Nushell",
+          description: "Read env vars, load .env files, Nu built-in paths",
+          content: "# Access environment variables\nlet home   = $env.HOME\nlet path   = $env.PATH\nlet editor = $env | get --ignore-errors EDITOR | default \"vim\"\n\n# Set env vars scoped to a block\nwith-env { NODE_ENV: \"production\", PORT: \"8080\" } {\n    ^node server.js\n}\n\n# Load a .env file into a record\ndef load-dotenv [file: path = \".env\"] {\n    open $file\n        | lines\n        | where { |l| not ($l | str starts-with \"#\") and ($l | str trim) != \"\" }\n        | each { |l|\n            let parts = $l | split row \"=\" | each { str trim }\n            { ($parts.0): ($parts | skip 1 | str join \"=\") }\n          }\n        | into record\n}\n\n# Nu built-in paths\nprint $nu.home-path      # home directory\nprint $nu.config-path    # config.nu location\nprint $nu.env-path       # env.nu location\nprint $nu.history-path   # history file\n\n# Persistent env — add these to env.nu:\n# $env.MY_VAR = \"value\"\n# $env.PATH = ($env.PATH | prepend \"/my/custom/bin\")",
+        },
+        {
+          name: "String Manipulation",
+          extension: "nu",
+          category: "Nushell",
+          description: "str trim/case/replace/split/join, parse, and regex",
+          content: "let s = \"  Hello, World!  \"\n\n# Basic operations\n$s | str trim                              # \"Hello, World!\"\n$s | str trim | str downcase              # \"hello, world!\"\n$s | str upcase                            # \"  HELLO, WORLD!  \"\n$s | str contains \"World\"                 # true\n$s | str starts-with \"  Hello\"            # true\n$s | str replace \"World\" \"Nushell\"        # \"  Hello, Nushell!  \"\n$s | str replace --all \"l\" \"L\"            # replace every occurrence\n$s | str trim | str length                # 13\n\n# Split and join\n\"a,b,c,d\" | split row \",\"                 # [\"a\", \"b\", \"c\", \"d\"]\n[\"a\", \"b\", \"c\"] | str join \", \"           # \"a, b, c\"\n\n# Parse structured strings\n\"name=Alice age=30\" | parse \"{key}={value}\"\n\"GET /api/users HTTP/1.1\" | parse \"{method} {path} {proto}\"\n\n# Regex replace and capture\n\"foo123bar\" | str replace --regex '\\d+' \"NUM\"\n\"2024-01-15\" | parse --regex '(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})'\n\n# Slice\n\"toolongstring\" | str substring 0..6      # \"toolon\"\n\"hello\" | str reverse                     # \"olleh\"",
+        },
+        {
+          name: "Date & Time",
+          extension: "nu",
+          category: "Nushell",
+          description: "Date formatting, parsing, arithmetic, and duration literals",
+          content: "# Current datetime\nlet now = date now\n\n# Format\n$now | format date \"%Y-%m-%d\"             # \"2024-01-15\"\n$now | format date \"%H:%M:%S\"             # \"14:30:00\"\n$now | format date \"%Y-%m-%dT%H:%M:%S\"   # ISO 8601\n\n# Parse a date string\n\"2024-01-15\" | into datetime\n\"2024-01-15T14:30:00Z\" | into datetime\n\n# Arithmetic — duration literals: day hr min sec ms\nlet tomorrow   = (date now) + 1day\nlet last_week  = (date now) - 7day\nlet in_2h      = (date now) + 2hr\nlet soon       = (date now) + 30min\n\n# Comparisons\nlet ts = \"2024-01-01\" | into datetime\nif $ts < (date now) { print \"in the past\" }\n\n# Find recently modified files\nls **/*.log\n    | where modified > ((date now) - 1day)\n    | sort-by modified --reverse\n    | select name size modified\n\n# Time a block\nlet start = date now\nsleep 1sec\nprint $\"Elapsed: ((date now) - $start)\"",
         },
       ],
     };
@@ -1452,6 +1711,7 @@ class SnippetsApp {
 
   closeTemplatesModal() {
     document.getElementById("templatesModal").style.display = "none";
+    this.hideTemplatePreview();
   }
 
   renderTemplatesTabs() {
@@ -1495,7 +1755,80 @@ class SnippetsApp {
         const index = parseInt(card.dataset.index);
         this.useTemplate(templates[index]);
       });
+      card.addEventListener("mouseenter", () => {
+        clearTimeout(this._templateHideTimer);
+        const index = parseInt(card.dataset.index);
+        this._templatePreviewTimer = setTimeout(() => {
+          this.showTemplatePreview(templates[index], card);
+        }, 120);
+      });
+      card.addEventListener("mouseleave", () => {
+        clearTimeout(this._templatePreviewTimer);
+        this._templateHideTimer = setTimeout(() => this.hideTemplatePreview(), 150);
+      });
     });
+  }
+
+  showTemplatePreview(template, cardEl) {
+    let panel = document.getElementById("templateCodePreview");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "templateCodePreview";
+      panel.className = "template-code-preview";
+      panel.addEventListener("mouseenter", () => clearTimeout(this._templateHideTimer));
+      panel.addEventListener("mouseleave", () => {
+        this._templateHideTimer = setTimeout(() => this.hideTemplatePreview(), 150);
+      });
+      document.body.appendChild(panel);
+    }
+
+    const lang = this.extensionToLanguage[template.extension] || "plaintext";
+    const code = document.createElement("code");
+    code.className = `language-${lang}`;
+    code.textContent = template.content;
+    const pre = document.createElement("pre");
+    pre.appendChild(code);
+
+    panel.innerHTML = `<div class="tcp-header"><span>${this.escapeHtml(template.name)}</span><span class="tcp-ext">.${template.extension}</span></div>`;
+    panel.appendChild(pre);
+    hljs.highlightElement(code);
+
+    // Robust positioning — prefer right, fall back to left, clamp to viewport
+    const rect = cardEl.getBoundingClientRect();
+    const margin = 12;
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const panelW = Math.min(440, viewW - margin * 2);
+    const panelMaxH = Math.min(420, viewH - margin * 2);
+
+    panel.style.width = `${panelW}px`;
+    panel.style.maxHeight = `${panelMaxH}px`;
+
+    const spaceRight = viewW - rect.right - margin;
+    const spaceLeft = rect.left - margin;
+    let left;
+    if (spaceRight >= panelW) {
+      left = rect.right + margin;
+    } else if (spaceLeft >= panelW) {
+      left = rect.left - panelW - margin;
+    } else {
+      // Not enough room on either side — use whichever is bigger and clamp
+      left = spaceRight >= spaceLeft ? rect.right + margin : rect.left - panelW - margin;
+      left = Math.max(margin, Math.min(left, viewW - panelW - margin));
+    }
+
+    let top = rect.top;
+    top = Math.max(margin, Math.min(top, viewH - panelMaxH - margin));
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.style.display = "flex";
+  }
+
+  hideTemplatePreview() {
+    clearTimeout(this._templateHideTimer);
+    const panel = document.getElementById("templateCodePreview");
+    if (panel) panel.style.display = "none";
   }
 
   useTemplate(template) {
