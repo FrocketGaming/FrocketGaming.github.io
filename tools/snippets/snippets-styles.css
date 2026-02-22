@@ -636,6 +636,7 @@
     border-left: 3px solid var(--accent-primary);
     border-top: 1px solid var(--bg-tertiary);
     border-bottom: 1px solid var(--bg-tertiary);
+    border-right: 1px solid var(--bg-tertiary);
     text-align: left;
 }
 
