@@ -634,7 +634,8 @@
     background-color: var(--bg-primary);
     border-radius: 5px;
     border-left: 3px solid var(--accent-primary);
-    border-top: 2px solid var(--bg-tertiary);
+    border-top: 1px solid var(--bg-tertiary);
+    border-bottom: 1px solid var(--bg-tertiary);
     text-align: left;
 }
 
