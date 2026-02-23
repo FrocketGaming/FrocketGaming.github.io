@@ -1232,16 +1232,26 @@ class SnippetsApp {
       notesEl.textContent = "";
     }
 
-    // Code with syntax highlighting + line numbers
-    const codeElement = document.getElementById("snippetCode");
-    codeElement.textContent = snippet.content;
-    codeElement.className = "";
-    codeElement.removeAttribute("data-highlighted");
+    // Code rendering — markdown gets a live preview, everything else gets syntax highlighting
+    const codeContainer = document.getElementById("snippetCodeContainer");
+    const mdPreview = document.getElementById("markdownPreview");
 
-    const language = this.extensionToLanguage[snippet.extension] || "plaintext";
-    codeElement.classList.add(`language-${language}`);
-    hljs.highlightElement(codeElement);
-    this.addLineNumbers(codeElement);
+    if (snippet.extension === "md") {
+      codeContainer.style.display = "none";
+      mdPreview.style.display = "block";
+      this.renderMarkdownPreview(snippet.content, mdPreview);
+    } else {
+      codeContainer.style.display = "";
+      mdPreview.style.display = "none";
+      const codeElement = document.getElementById("snippetCode");
+      codeElement.textContent = snippet.content;
+      codeElement.className = "";
+      codeElement.removeAttribute("data-highlighted");
+      const language = this.extensionToLanguage[snippet.extension] || "plaintext";
+      codeElement.classList.add(`language-${language}`);
+      hljs.highlightElement(codeElement);
+      this.addLineNumbers(codeElement);
+    }
 
     // Favorite button
     this.updateFavoriteButton();
@@ -1264,6 +1274,29 @@ class SnippetsApp {
     }
 
     this.renderSnippetsList();
+  }
+
+  renderMarkdownPreview(content, container) {
+    container.innerHTML = marked.parse(content);
+
+    // Syntax-highlight fenced code blocks inside the markdown
+    container.querySelectorAll("pre code").forEach((block) => {
+      block.removeAttribute("data-highlighted");
+      hljs.highlightElement(block);
+    });
+
+    // Render LaTeX ($...$ and $$...$$)
+    if (window.renderMathInElement) {
+      renderMathInElement(container, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "\\[", right: "\\]", display: true },
+        ],
+        throwOnError: false,
+      });
+    }
   }
 
   // Snippet Modal (Create/Edit)
