@@ -368,6 +368,48 @@
                     </div>
                     <div class="form-group">
                         <label for="snippetContentInput">Content:</label>
+                        <div id="mdToolbar" class="md-toolbar" style="display:none">
+                            <div class="md-toolbar-group">
+                                <button type="button" class="md-btn" data-md-action="bold" title="Bold"><b>B</b></button>
+                                <button type="button" class="md-btn" data-md-action="italic" title="Italic"><i>I</i></button>
+                                <button type="button" class="md-btn" data-md-action="strikethrough" title="Strikethrough"><s>S</s></button>
+                                <button type="button" class="md-btn" data-md-action="inline-code" title="Inline code"><i class="fa-solid fa-code"></i></button>
+                            </div>
+                            <div class="md-toolbar-sep"></div>
+                            <div class="md-toolbar-group">
+                                <button type="button" class="md-btn md-btn-text" data-md-action="h1" title="Heading 1">H1</button>
+                                <button type="button" class="md-btn md-btn-text" data-md-action="h2" title="Heading 2">H2</button>
+                                <button type="button" class="md-btn md-btn-text" data-md-action="h3" title="Heading 3">H3</button>
+                            </div>
+                            <div class="md-toolbar-sep"></div>
+                            <div class="md-toolbar-group">
+                                <button type="button" class="md-btn" data-md-action="ul" title="Bullet list"><i class="fa-solid fa-list-ul"></i></button>
+                                <button type="button" class="md-btn" data-md-action="ol" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+                                <button type="button" class="md-btn" data-md-action="blockquote" title="Blockquote"><i class="fa-solid fa-quote-right"></i></button>
+                            </div>
+                            <div class="md-toolbar-sep"></div>
+                            <div class="md-toolbar-group">
+                                <button type="button" class="md-btn" data-md-action="code-block" title="Code block"><i class="fa-solid fa-file-code"></i></button>
+                                <button type="button" class="md-btn" data-md-action="link" title="Link"><i class="fa-solid fa-link"></i></button>
+                                <button type="button" class="md-btn" data-md-action="image" title="Image"><i class="fa-solid fa-image"></i></button>
+                                <button type="button" class="md-btn" data-md-action="table" title="Table"><i class="fa-solid fa-table"></i></button>
+                                <button type="button" class="md-btn md-btn-text" data-md-action="hr" title="Horizontal rule">—</button>
+                            </div>
+                            <div class="md-toolbar-sep"></div>
+                            <div class="md-toolbar-group">
+                                <button type="button" class="md-btn md-btn-math" data-md-action="latex-inline" title="Inline math  $...$">$x$</button>
+                                <button type="button" class="md-btn md-btn-math" data-md-action="latex-display" title="Display math  $$...$$">$$x$$</button>
+                                <div class="md-palette-wrapper" id="latexPaletteWrapper">
+                                    <button type="button" class="md-btn md-btn-math" id="latexPaletteBtn" title="LaTeX symbol palette">
+                                        Σ <i class="fa-solid fa-chevron-down" style="font-size:9px;margin-left:2px;"></i>
+                                    </button>
+                                    <div class="md-latex-palette" id="latexPalette" style="display:none">
+                                        <div class="md-palette-tabs" id="latexPaletteTabs"></div>
+                                        <div class="md-palette-grid" id="latexPaletteGrid"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <textarea
                             id="snippetContentInput"
                             class="edit-textarea code-textarea"

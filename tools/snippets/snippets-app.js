@@ -590,6 +590,97 @@ class SnippetsApp {
         },
       ],
     };
+
+    this.latexPaletteItems = {
+      Greek: [
+        { label: "α", insert: "\\alpha" }, { label: "β", insert: "\\beta" },
+        { label: "γ", insert: "\\gamma" }, { label: "δ", insert: "\\delta" },
+        { label: "ε", insert: "\\epsilon" }, { label: "ζ", insert: "\\zeta" },
+        { label: "η", insert: "\\eta" }, { label: "θ", insert: "\\theta" },
+        { label: "ι", insert: "\\iota" }, { label: "κ", insert: "\\kappa" },
+        { label: "λ", insert: "\\lambda" }, { label: "μ", insert: "\\mu" },
+        { label: "ν", insert: "\\nu" }, { label: "ξ", insert: "\\xi" },
+        { label: "π", insert: "\\pi" }, { label: "ρ", insert: "\\rho" },
+        { label: "σ", insert: "\\sigma" }, { label: "τ", insert: "\\tau" },
+        { label: "υ", insert: "\\upsilon" }, { label: "φ", insert: "\\phi" },
+        { label: "χ", insert: "\\chi" }, { label: "ψ", insert: "\\psi" },
+        { label: "ω", insert: "\\omega" },
+        { label: "Γ", insert: "\\Gamma" }, { label: "Δ", insert: "\\Delta" },
+        { label: "Θ", insert: "\\Theta" }, { label: "Λ", insert: "\\Lambda" },
+        { label: "Ξ", insert: "\\Xi" }, { label: "Π", insert: "\\Pi" },
+        { label: "Σ", insert: "\\Sigma" }, { label: "Υ", insert: "\\Upsilon" },
+        { label: "Φ", insert: "\\Phi" }, { label: "Ψ", insert: "\\Psi" },
+        { label: "Ω", insert: "\\Omega" },
+      ],
+      Operators: [
+        { label: "±", insert: "\\pm" }, { label: "∓", insert: "\\mp" },
+        { label: "×", insert: "\\times" }, { label: "÷", insert: "\\div" },
+        { label: "·", insert: "\\cdot" }, { label: "∘", insert: "\\circ" },
+        { label: "∑", insert: "\\sum" }, { label: "∏", insert: "\\prod" },
+        { label: "∫", insert: "\\int" }, { label: "∬", insert: "\\iint" },
+        { label: "∮", insert: "\\oint" }, { label: "√", insert: "\\sqrt{}" },
+        { label: "a/b", insert: "\\frac{}{}" }, { label: "∂", insert: "\\partial" },
+        { label: "∇", insert: "\\nabla" }, { label: "∞", insert: "\\infty" },
+        { label: "!", insert: "!" }, { label: "‖", insert: "\\|" },
+      ],
+      Relations: [
+        { label: "=", insert: "=" }, { label: "≠", insert: "\\neq" },
+        { label: "<", insert: "<" }, { label: ">", insert: ">" },
+        { label: "≤", insert: "\\leq" }, { label: "≥", insert: "\\geq" },
+        { label: "≈", insert: "\\approx" }, { label: "≡", insert: "\\equiv" },
+        { label: "∼", insert: "\\sim" }, { label: "∝", insert: "\\propto" },
+        { label: "∈", insert: "\\in" }, { label: "∉", insert: "\\notin" },
+        { label: "⊂", insert: "\\subset" }, { label: "⊃", insert: "\\supset" },
+        { label: "⊆", insert: "\\subseteq" }, { label: "⊇", insert: "\\supseteq" },
+        { label: "∪", insert: "\\cup" }, { label: "∩", insert: "\\cap" },
+        { label: "∅", insert: "\\emptyset" }, { label: "∀", insert: "\\forall" },
+        { label: "∃", insert: "\\exists" }, { label: "¬", insert: "\\neg" },
+        { label: "∧", insert: "\\wedge" }, { label: "∨", insert: "\\vee" },
+      ],
+      Structures: [
+        { label: "frac", insert: "\\frac{}{}" },
+        { label: "sqrt", insert: "\\sqrt{}" },
+        { label: "√[n]", insert: "\\sqrt[n]{}" },
+        { label: "vec", insert: "\\vec{}" },
+        { label: "hat", insert: "\\hat{}" },
+        { label: "bar", insert: "\\bar{}" },
+        { label: "tilde", insert: "\\tilde{}" },
+        { label: "dot", insert: "\\dot{}" },
+        { label: "ddot", insert: "\\ddot{}" },
+        { label: "x^n", insert: "^{}" },
+        { label: "x_n", insert: "_{}" },
+        { label: "binom", insert: "\\binom{}{}" },
+        { label: "lim", insert: "\\lim_{x \\to }" },
+        { label: "sum", insert: "\\sum_{i=0}^{n}" },
+        { label: "int", insert: "\\int_{a}^{b}" },
+        { label: "matrix", insert: "\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}" },
+        { label: "cases", insert: "\\begin{cases}\na & \\text{if } x > 0 \\\\\nb & \\text{otherwise}\n\\end{cases}" },
+        { label: "text", insert: "\\text{}" },
+      ],
+      Functions: [
+        { label: "\\sin", insert: "\\sin" }, { label: "\\cos", insert: "\\cos" },
+        { label: "\\tan", insert: "\\tan" }, { label: "\\cot", insert: "\\cot" },
+        { label: "\\sec", insert: "\\sec" }, { label: "\\csc", insert: "\\csc" },
+        { label: "\\arcsin", insert: "\\arcsin" }, { label: "\\arccos", insert: "\\arccos" },
+        { label: "\\arctan", insert: "\\arctan" },
+        { label: "\\log", insert: "\\log" }, { label: "\\ln", insert: "\\ln" },
+        { label: "\\exp", insert: "\\exp" },
+        { label: "\\max", insert: "\\max" }, { label: "\\min", insert: "\\min" },
+        { label: "\\sup", insert: "\\sup" }, { label: "\\inf", insert: "\\inf" },
+        { label: "\\det", insert: "\\det" }, { label: "\\dim", insert: "\\dim" },
+        { label: "\\gcd", insert: "\\gcd" }, { label: "\\mod", insert: "\\bmod" },
+      ],
+      Arrows: [
+        { label: "→", insert: "\\to" }, { label: "←", insert: "\\leftarrow" },
+        { label: "↔", insert: "\\leftrightarrow" },
+        { label: "⇒", insert: "\\Rightarrow" }, { label: "⇐", insert: "\\Leftarrow" },
+        { label: "⇔", insert: "\\Leftrightarrow" },
+        { label: "↑", insert: "\\uparrow" }, { label: "↓", insert: "\\downarrow" },
+        { label: "↦", insert: "\\mapsto" }, { label: "⟶", insert: "\\longrightarrow" },
+        { label: "⟹", insert: "\\Longrightarrow" }, { label: "⟺", insert: "\\Longleftrightarrow" },
+        { label: "↗", insert: "\\nearrow" }, { label: "↘", insert: "\\searrow" },
+      ],
+    };
   }
 
   async init() {
@@ -669,6 +760,13 @@ class SnippetsApp {
       ) {
         tooltip.classList.remove("show");
       }
+      const palette = document.getElementById("latexPalette");
+      if (
+        palette.style.display !== "none" &&
+        !e.target.closest("#latexPaletteWrapper")
+      ) {
+        palette.style.display = "none";
+      }
     });
 
     // Category
@@ -690,7 +788,60 @@ class SnippetsApp {
           document.getElementById("snippetExtSelect").value =
             this.getMostUsedExtension(e.target.value);
         }
+        this.updateMdToolbarVisibility();
       });
+
+    document.getElementById("snippetExtSelect").addEventListener("change", () => {
+      this.updateMdToolbarVisibility();
+    });
+
+    // MD toolbar button delegation
+    document.getElementById("mdToolbar").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-md-action]");
+      if (!btn || btn.id === "latexPaletteBtn") return;
+      this.handleMdToolbarAction(btn.dataset.mdAction);
+    });
+
+    // LaTeX palette toggle
+    document.getElementById("latexPaletteBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const palette = document.getElementById("latexPalette");
+      if (palette.style.display !== "none") {
+        palette.style.display = "none";
+        return;
+      }
+      // Position fixed below the button
+      const rect = e.currentTarget.getBoundingClientRect();
+      palette.style.display = "block";
+      const pw = palette.offsetWidth;
+      let left = rect.right - pw;
+      let top = rect.bottom + 6;
+      if (left < 8) left = 8;
+      if (top + palette.offsetHeight > window.innerHeight - 8) {
+        top = rect.top - palette.offsetHeight - 6;
+      }
+      palette.style.left = left + "px";
+      palette.style.top = top + "px";
+    });
+
+    // Palette tab delegation
+    document.getElementById("latexPaletteTabs").addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-palette-tab]");
+      if (!tab) return;
+      document.querySelectorAll(".md-palette-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      this.renderLatexPaletteTab(tab.dataset.paletteTab);
+    });
+
+    // Palette item delegation
+    document.getElementById("latexPaletteGrid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-latex-insert]");
+      if (!btn) return;
+      this.insertLatexSymbol(btn.dataset.latexInsert);
+    });
+
+    // Build palette content once
+    this.buildLatexPalette();
 
     // Delete modal
     document
@@ -1040,7 +1191,7 @@ class SnippetsApp {
     list.appendChild(allItem);
 
     // Add user categories
-    this.types.forEach((type) => {
+    [...this.types].sort((a, b) => a.name.localeCompare(b.name)).forEach((type) => {
       const count = this.snippets.filter((s) => s.type === type.name).length;
       const item = document.createElement("li");
       item.className = `category-item${this.activeCategory === type.name ? " active" : ""}`;
@@ -1359,6 +1510,134 @@ class SnippetsApp {
     this.renderSnippetsList();
   }
 
+  // ── MD Toolbar ──────────────────────────────────────────────────────────
+
+  updateMdToolbarVisibility() {
+    const ext = document.getElementById("snippetExtSelect").value;
+    const toolbar = document.getElementById("mdToolbar");
+    const textarea = document.getElementById("snippetContentInput");
+    if (ext === "md") {
+      toolbar.style.display = "flex";
+      textarea.classList.add("with-md-toolbar");
+    } else {
+      toolbar.style.display = "none";
+      textarea.classList.remove("with-md-toolbar");
+      document.getElementById("latexPalette").style.display = "none";
+    }
+  }
+
+  // Insert before/after selection (or placeholder text when nothing selected)
+  insertMdSyntax(before, after, placeholder = "") {
+    const ta = document.getElementById("snippetContentInput");
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end);
+    const text = selected || placeholder;
+    const replacement = before + text + after;
+    ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
+    // Select placeholder text (or keep selection wrapped)
+    ta.setSelectionRange(start + before.length, start + before.length + text.length);
+    ta.focus();
+  }
+
+  // Insert text at cursor, no wrapping
+  insertAtCursor(text) {
+    const ta = document.getElementById("snippetContentInput");
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + text + ta.value.substring(ta.selectionEnd);
+    ta.setSelectionRange(start + text.length, start + text.length);
+    ta.focus();
+  }
+
+  // Prefix each selected line (headings, lists, blockquotes)
+  insertLinePrefix(prefix) {
+    const ta = document.getElementById("snippetContentInput");
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const val = ta.value;
+    const lineStart = val.lastIndexOf("\n", start - 1) + 1;
+    const lineEndIdx = val.indexOf("\n", end);
+    const selEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
+    const lines = val.substring(lineStart, selEnd).split("\n");
+    const newText = lines.map((l) => prefix + l).join("\n");
+    ta.value = val.substring(0, lineStart) + newText + val.substring(selEnd);
+    ta.setSelectionRange(lineStart, lineStart + newText.length);
+    ta.focus();
+  }
+
+  // Insert a LaTeX symbol/command; places cursor inside first {} if present
+  insertLatexSymbol(insertText) {
+    const ta = document.getElementById("snippetContentInput");
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end);
+    // If text is selected and the command has {}, wrap selection in first {}
+    let finalText = selected && insertText.includes("{}")
+      ? insertText.replace("{}", "{" + selected + "}")
+      : insertText;
+    ta.value = ta.value.substring(0, start) + finalText + ta.value.substring(end);
+    const braceIdx = finalText.indexOf("{}");
+    if (braceIdx !== -1 && !selected) {
+      ta.setSelectionRange(start + braceIdx + 1, start + braceIdx + 1);
+    } else {
+      ta.setSelectionRange(start + finalText.length, start + finalText.length);
+    }
+    ta.focus();
+    document.getElementById("latexPalette").style.display = "none";
+  }
+
+  handleMdToolbarAction(action) {
+    switch (action) {
+      case "bold":         this.insertMdSyntax("**", "**", "text"); break;
+      case "italic":       this.insertMdSyntax("*", "*", "text"); break;
+      case "strikethrough":this.insertMdSyntax("~~", "~~", "text"); break;
+      case "inline-code":  this.insertMdSyntax("`", "`", "code"); break;
+      case "h1":           this.insertLinePrefix("# "); break;
+      case "h2":           this.insertLinePrefix("## "); break;
+      case "h3":           this.insertLinePrefix("### "); break;
+      case "ul":           this.insertLinePrefix("- "); break;
+      case "ol":           this.insertLinePrefix("1. "); break;
+      case "blockquote":   this.insertLinePrefix("> "); break;
+      case "code-block":   this.insertMdSyntax("\n```\n", "\n```\n", "code"); break;
+      case "link":         this.insertMdSyntax("[", "](url)", "text"); break;
+      case "image":        this.insertMdSyntax("![", "](url)", "alt text"); break;
+      case "table":
+        this.insertAtCursor("| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Cell | Cell | Cell |\n");
+        break;
+      case "hr":
+        this.insertAtCursor("\n\n---\n\n");
+        break;
+      case "latex-inline":
+        this.insertMdSyntax("$", "$", "expression");
+        break;
+      case "latex-display":
+        this.insertMdSyntax("\n$$\n", "\n$$\n", "expression");
+        break;
+    }
+  }
+
+  buildLatexPalette() {
+    const tabs = document.getElementById("latexPaletteTabs");
+    const tabNames = Object.keys(this.latexPaletteItems);
+    tabs.innerHTML = tabNames
+      .map((name, i) =>
+        `<button type="button" class="md-palette-tab${i === 0 ? " active" : ""}" data-palette-tab="${name}">${name}</button>`
+      )
+      .join("");
+    this.renderLatexPaletteTab(tabNames[0]);
+  }
+
+  renderLatexPaletteTab(tabName) {
+    const grid = document.getElementById("latexPaletteGrid");
+    const items = this.latexPaletteItems[tabName];
+    grid.innerHTML = items
+      .map(
+        (item) =>
+          `<button type="button" class="md-palette-item" data-latex-insert="${this.escapeHtml(item.insert)}" title="${this.escapeHtml(item.insert)}">${this.escapeHtml(item.label)}</button>`
+      )
+      .join("");
+  }
+
   renderMarkdownPreview(content, container) {
     container.innerHTML = marked.parse(content);
 
@@ -1415,6 +1694,7 @@ class SnippetsApp {
     document.getElementById("snippetExtSelect").value =
       this.getMostUsedExtension(category);
     this.clearTagChips();
+    this.updateMdToolbarVisibility();
     document.getElementById("snippetModal").style.display = "flex";
     document.getElementById("snippetNameInput").focus();
   }
@@ -1437,6 +1717,7 @@ class SnippetsApp {
     document.getElementById("snippetExtSelect").value =
       this.currentSnippet.extension;
     this.setTagChips(this.currentSnippet.tags || []);
+    this.updateMdToolbarVisibility();
     document.getElementById("snippetModal").style.display = "flex";
     document.getElementById("snippetNameInput").focus();
   }
@@ -1978,6 +2259,7 @@ class SnippetsApp {
 
     document.getElementById("snippetExtSelect").value = template.extension;
     this.clearTagChips();
+    this.updateMdToolbarVisibility();
     document.getElementById("snippetModal").style.display = "flex";
     document.getElementById("snippetNameInput").focus();
     document.getElementById("snippetNameInput").select();

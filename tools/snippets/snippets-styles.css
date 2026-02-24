@@ -1374,6 +1374,167 @@
     white-space: pre;
 }
 
+/* ── MD Toolbar ──────────────────────────────────────────── */
+.md-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 5px 8px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    flex-wrap: wrap;
+}
+
+.md-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.md-toolbar-sep {
+    width: 1px;
+    height: 18px;
+    background-color: var(--border-color);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.md-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 7px;
+    min-width: 28px;
+    height: 26px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: "Raleway", sans-serif;
+    line-height: 1;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.md-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--border-color);
+    color: var(--accent-secondary);
+}
+
+.md-btn:active {
+    background-color: rgba(116, 161, 46, 0.15);
+}
+
+.md-btn-text {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+}
+
+.md-btn-math {
+    font-style: italic;
+    font-size: 12px;
+    font-family: "Georgia", "Times New Roman", serif;
+    letter-spacing: 0.3px;
+}
+
+/* Textarea joins seamlessly with toolbar */
+.edit-textarea.with-md-toolbar {
+    border-top: 1px solid var(--border-color);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* LaTeX Palette Popup */
+.md-palette-wrapper {
+    position: relative;
+}
+
+.md-latex-palette {
+    position: fixed;
+    z-index: 5000;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 8px;
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(116, 161, 46, 0.1);
+    width: 400px;
+    overflow: hidden;
+}
+
+.md-palette-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    overflow-x: auto;
+}
+
+.md-palette-tabs::-webkit-scrollbar { height: 3px; }
+.md-palette-tabs::-webkit-scrollbar-thumb { background: var(--accent-primary); }
+
+.md-palette-tab {
+    padding: 7px 13px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: "Raleway", sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.md-palette-tab:hover { color: var(--text-primary); }
+
+.md-palette-tab.active {
+    color: var(--accent-secondary);
+    border-bottom-color: var(--accent-secondary);
+}
+
+.md-palette-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 10px;
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+.md-palette-grid::-webkit-scrollbar { width: 6px; }
+.md-palette-grid::-webkit-scrollbar-track { background: var(--bg-primary); }
+.md-palette-grid::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 3px; }
+
+.md-palette-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 7px;
+    min-width: 34px;
+    height: 30px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: "Consolas", "Monaco", monospace;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+
+.md-palette-item:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--accent-primary);
+    color: var(--accent-secondary);
+}
+
 /* Markdown Preview */
 .markdown-preview {
     flex: 1;
