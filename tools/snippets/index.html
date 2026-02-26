@@ -190,6 +190,7 @@
                             >
                         </h3>
                     </div>
+                    <div id="extFilterChips" class="ext-filter-chips"></div>
                     <div class="panel-content">
                         <ul id="snippetsList" class="snippets-list"></ul>
                     </div>
@@ -618,6 +619,26 @@
             </div>
         </div>
 
+        <!-- Variable Substitution Modal -->
+        <div id="variableModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-fill-drip"></i> Fill Variables</h3>
+                    <span class="modal-close" onclick="snippetsApp.closeVariableModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:13px; margin-bottom:15px;">Enter values for each placeholder found in this snippet.</p>
+                    <div id="variableFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="clear-bnt" onclick="snippetsApp.closeVariableModal()">Cancel</button>
+                    <button class="format-btn" onclick="snippetsApp.submitVariableModal()">
+                        <i class="fa-solid fa-copy"></i> Copy with Values
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Version History Modal -->
         <div id="historyModal" class="modal">
             <div class="modal-content modal-large">
@@ -639,9 +660,16 @@
                                 <div class="history-preview-header">
                                     <span id="historyPreviewName"></span>
                                     <span id="historyPreviewDate"></span>
+                                    <div class="history-view-toggle">
+                                        <button class="history-toggle-btn active" id="historyCodeBtn" onclick="snippetsApp.setHistoryViewMode('code')">Code</button>
+                                        <button class="history-toggle-btn" id="historyDiffBtn" onclick="snippetsApp.setHistoryViewMode('diff')">Diff</button>
+                                    </div>
                                 </div>
-                                <div class="code-container history-code">
+                                <div class="code-container history-code" id="historyCodeContainer">
                                     <pre><code id="historyPreviewCode"></code></pre>
+                                </div>
+                                <div class="diff-container history-code" id="historyDiffContainer" style="display:none">
+                                    <div id="historyDiffView"></div>
                                 </div>
                                 <button class="format-btn" id="restoreVersionBtn">
                                     <i class="fa-solid fa-rotate-left"></i> Restore This Version

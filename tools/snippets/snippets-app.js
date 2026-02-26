@@ -10,14 +10,19 @@ class SnippetsApp {
     this.types = [];
     this.currentSnippet = null;
     this.editingSnippet = null;
+    this._openedFromTemplate = false;
     this.editingCategory = null;
     this.deleteTarget = null;
     this.deleteType = null;
     this.activeCategory = null;
+    this.activeExtFilter = null;
     this.searchQuery = "";
     this.sortPreference =
       localStorage.getItem("snippets-sort-preference") || "name-asc";
     this.selectedVersion = null;
+    this.historyViewMode = "code";
+    this._historyVersions = [];
+    this._variableCallback = null;
 
     this.extensionToLanguage = {
       js: "javascript",
@@ -77,6 +82,7 @@ class SnippetsApp {
       typescript: "fa-solid fa-code",
       yaml: "fa-solid fa-file-code",
       yml: "fa-solid fa-file-code",
+      latex: "fa-solid fa-square-root-variable",
     };
 
     this.defaultTypes = [
@@ -589,6 +595,104 @@ class SnippetsApp {
             '# Current datetime\nlet now = date now\n\n# Format\n$now | format date "%Y-%m-%d"             # "2024-01-15"\n$now | format date "%H:%M:%S"             # "14:30:00"\n$now | format date "%Y-%m-%dT%H:%M:%S"   # ISO 8601\n\n# Parse a date string\n"2024-01-15" | into datetime\n"2024-01-15T14:30:00Z" | into datetime\n\n# Arithmetic — duration literals: day hr min sec ms\nlet tomorrow   = (date now) + 1day\nlet last_week  = (date now) - 7day\nlet in_2h      = (date now) + 2hr\nlet soon       = (date now) + 30min\n\n# Comparisons\nlet ts = "2024-01-01" | into datetime\nif $ts < (date now) { print "in the past" }\n\n# Find recently modified files\nls **/*.log\n    | where modified > ((date now) - 1day)\n    | sort-by modified --reverse\n    | select name size modified\n\n# Time a block\nlet start = date now\nsleep 1sec\nprint $"Elapsed: ((date now) - $start)"',
         },
       ],
+      LaTeX: [
+        {
+          name: "Vectors & Matrices",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Column vector, matrix notation, dot product, and L1/L2/max norms",
+          content:
+            '% Column vector\n\\mathbf{x} = \\begin{pmatrix} x_1 \\\\ x_2 \\\\ \\vdots \\\\ x_n \\end{pmatrix}\n\n% Matrix\n\\mathbf{A} = \\begin{bmatrix}\n  a_{11} & a_{12} & \\cdots & a_{1n} \\\\\n  a_{21} & a_{22} & \\cdots & a_{2n} \\\\\n  \\vdots & \\vdots & \\ddots & \\vdots \\\\\n  a_{m1} & a_{m2} & \\cdots & a_{mn}\n\\end{bmatrix}\n\n% Dot product\n\\mathbf{u} \\cdot \\mathbf{v} = \\mathbf{u}^\\top \\mathbf{v} = \\sum_{i=1}^{n} u_i v_i\n\n% L1, L2, and max norms\n\\|\\mathbf{x}\\|_1 = \\sum_{i=1}^{n} |x_i|, \\quad\n\\|\\mathbf{x}\\|_2 = \\sqrt{\\sum_{i=1}^{n} x_i^2}, \\quad\n\\|\\mathbf{x}\\|_\\infty = \\max_i |x_i|\n\n% Transpose and inverse product rules\n(\\mathbf{AB})^\\top = \\mathbf{B}^\\top \\mathbf{A}^\\top, \\quad\n(\\mathbf{AB})^{-1} = \\mathbf{B}^{-1} \\mathbf{A}^{-1}',
+        },
+        {
+          name: "Gradient Descent",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Update rule, batch/SGD, momentum, and Adam optimizer",
+          content:
+            '% Standard update rule\n\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)\n\n% Batch gradient descent\n\\theta := \\theta - \\frac{\\eta}{m} \\sum_{i=1}^{m} \\nabla_\\theta \\mathcal{L}^{(i)}(\\theta)\n\n% SGD with momentum\nv_{t+1} = \\beta v_t + \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t) \\\\\n\\theta_{t+1} = \\theta_t - v_{t+1}\n\n% Adam optimizer\nm_t = \\beta_1 m_{t-1} + (1 - \\beta_1) g_t \\\\\nv_t = \\beta_2 v_{t-1} + (1 - \\beta_2) g_t^2 \\\\\n\\hat{m}_t = \\frac{m_t}{1 - \\beta_1^t}, \\quad\n\\hat{v}_t = \\frac{v_t}{1 - \\beta_2^t} \\\\\n\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\epsilon}\\,\\hat{m}_t',
+        },
+        {
+          name: "Neural Network Forward Pass",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Layer computation, sigmoid, tanh, ReLU, and softmax activations",
+          content:
+            '% Layer computation\n\\mathbf{z}^{(l)} = \\mathbf{W}^{(l)} \\mathbf{a}^{(l-1)} + \\mathbf{b}^{(l)}\n\\mathbf{a}^{(l)} = f\\!\\left(\\mathbf{z}^{(l)}\\right)\n\n% Sigmoid\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad\n\\frac{d\\sigma}{dz} = \\sigma(z)\\bigl(1 - \\sigma(z)\\bigr)\n\n% Tanh\n\\tanh(z) = \\frac{e^z - e^{-z}}{e^z + e^{-z}}, \\quad\n\\frac{d\\,\\tanh}{dz} = 1 - \\tanh^2(z)\n\n% ReLU and Leaky ReLU\n\\text{ReLU}(z) = \\max(0, z), \\quad\n\\text{Leaky ReLU}(z) = \\max(\\alpha z, z)\n\n% Softmax (output layer)\n\\text{softmax}(z_i) = \\frac{e^{z_i}}{\\sum_{j=1}^{K} e^{z_j}}',
+        },
+        {
+          name: "Loss Functions",
+          extension: "tex",
+          category: "LaTeX",
+          description: "MSE, binary/categorical cross-entropy, Huber, and KL divergence",
+          content:
+            '% Mean Squared Error (MSE)\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{m} \\sum_{i=1}^{m}\n  \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Binary Cross-Entropy\n\\mathcal{L}_{\\text{BCE}} = -\\frac{1}{m} \\sum_{i=1}^{m}\n  \\Bigl[ y^{(i)} \\log \\hat{y}^{(i)}\n       + (1 - y^{(i)}) \\log(1 - \\hat{y}^{(i)}) \\Bigr]\n\n% Categorical Cross-Entropy\n\\mathcal{L}_{\\text{CE}} = -\\sum_{c=1}^{C} y_c \\log \\hat{y}_c\n\n% Huber Loss\n\\mathcal{L}_\\delta(y,\\hat{y}) =\n\\begin{cases}\n  \\tfrac{1}{2}(y-\\hat{y})^2 & \\text{if } |y-\\hat{y}| \\le \\delta \\\\\n  \\delta|y-\\hat{y}| - \\tfrac{\\delta^2}{2} & \\text{otherwise}\n\\end{cases}\n\n% KL Divergence\nD_{\\text{KL}}(P \\| Q) = \\sum_x P(x)\\log\\frac{P(x)}{Q(x)}',
+        },
+        {
+          name: "Backpropagation",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Error signals (deltas), weight/bias gradients, and parameter update",
+          content:
+            '% Output layer error signal\n\\delta^{(L)} = \\nabla_{\\mathbf{a}^{(L)}} \\mathcal{L}\n               \\odot \\sigma(\\mathbf{z}^{(L)})\n\n% Hidden layer error (backprop step)\n\\delta^{(l)} = \\bigl(\\mathbf{W}^{(l+1)}\\bigr)^\\top \\delta^{(l+1)}\n               \\odot \\sigma(\\mathbf{z}^{(l)})\n\n% Weight gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}\n  = \\delta^{(l)} \\bigl(\\mathbf{a}^{(l-1)}\\bigr)^\\top\n\n% Bias gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}^{(l)}} = \\delta^{(l)}\n\n% Parameter update\n\\mathbf{W}^{(l)} \\leftarrow \\mathbf{W}^{(l)}\n  - \\eta \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}',
+        },
+        {
+          name: "Linear Regression",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Hypothesis, cost function, normal equation, Ridge, Lasso, Elastic Net",
+          content:
+            '% Hypothesis\n\\hat{y} = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Cost function (MSE)\nJ(\\mathbf{w}, b) = \\frac{1}{2m}\n  \\sum_{i=1}^{m} \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Normal equation (closed-form solution)\n\\hat{\\mathbf{w}} =\n  \\bigl(\\mathbf{X}^\\top \\mathbf{X}\\bigr)^{-1} \\mathbf{X}^\\top \\mathbf{y}\n\n% Ridge regression (L2)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_2^2\n\n% Lasso regression (L1)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_1\n\n% Elastic Net\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda_1\\|\\mathbf{w}\\|_1 + \\frac{\\lambda_2}{2}\\|\\mathbf{w}\\|_2^2',
+        },
+        {
+          name: "Logistic Regression",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Sigmoid, predicted probability, log-likelihood, and gradient",
+          content:
+            '% Sigmoid activation\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad z = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Predicted probability\nP(y=1 \\mid \\mathbf{x}; \\mathbf{w}) = \\sigma(\\mathbf{w}^\\top \\mathbf{x} + b)\n\n% Log-likelihood\n\\ell(\\mathbf{w}) = \\sum_{i=1}^{m} \\Bigl[\n  y^{(i)} \\log \\sigma(z^{(i)})\n  + (1 - y^{(i)}) \\log\\bigl(1 - \\sigma(z^{(i)})\\bigr) \\Bigr]\n\n% Cost (negative log-likelihood)\nJ(\\mathbf{w}) = -\\frac{1}{m} \\ell(\\mathbf{w})\n\n% Gradient\n\\nabla_\\mathbf{w} J = \\frac{1}{m}\n  \\mathbf{X}^\\top \\bigl(\\hat{\\mathbf{y}} - \\mathbf{y}\\bigr)',
+        },
+        {
+          name: "Probability & Distributions",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Bayes theorem, univariate/multivariate Gaussian, expectation, entropy",
+          content:
+            '% Bayes Theorem\nP(A \\mid B) = \\frac{P(B \\mid A)\\,P(A)}{P(B)}\n\n% Univariate Gaussian\n\\mathcal{N}(x;\\,\\mu,\\sigma^2) =\n  \\frac{1}{\\sqrt{2\\pi\\sigma^2}}\n  \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)\n\n% Multivariate Gaussian\n\\mathcal{N}(\\mathbf{x};\\,\\boldsymbol{\\mu},\\boldsymbol{\\Sigma}) =\n  \\frac{1}{(2\\pi)^{d/2}|\\boldsymbol{\\Sigma}|^{1/2}}\n  \\exp\\!\\left(-\\tfrac{1}{2}\n    (\\mathbf{x}-\\boldsymbol{\\mu})^\\top\n    \\boldsymbol{\\Sigma}^{-1}\n    (\\mathbf{x}-\\boldsymbol{\\mu})\n  \\right)\n\n% Expectation and variance\n\\mathbb{E}[X] = \\int x\\,p(x)\\,dx, \\quad\n\\text{Var}(X) = \\mathbb{E}[X^2] - \\mathbb{E}[X]^2\n\n% Entropy and mutual information\nH(X) = -\\sum_x p(x)\\log p(x), \\quad\nI(X;Y) = H(X) - H(X \\mid Y)',
+        },
+        {
+          name: "SVD & PCA",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Singular value decomposition, eigendecomposition, covariance, projection",
+          content:
+            '% Singular Value Decomposition\n\\mathbf{A} = \\mathbf{U}\\boldsymbol{\\Sigma}\\mathbf{V}^\\top, \\quad\n\\mathbf{U} \\in \\mathbb{R}^{m \\times m},\\;\n\\boldsymbol{\\Sigma} \\in \\mathbb{R}^{m \\times n},\\;\n\\mathbf{V} \\in \\mathbb{R}^{n \\times n}\n\n% Eigendecomposition\n\\mathbf{A}\\mathbf{v} = \\lambda\\mathbf{v}, \\quad\n\\mathbf{A} = \\mathbf{Q}\\boldsymbol{\\Lambda}\\mathbf{Q}^{-1}\n\n% Sample covariance matrix\n\\hat{\\boldsymbol{\\Sigma}} = \\frac{1}{m-1}\n  \\sum_{i=1}^{m} (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})\n                 (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})^\\top\n\n% PCA projection (top-k eigenvectors)\n\\mathbf{z} = \\mathbf{W}_k^\\top \\mathbf{x}, \\quad\n\\mathbf{W}_k \\in \\mathbb{R}^{d \\times k}\n\n% Explained variance ratio\n\\rho_k = \\frac{\\lambda_k}{\\sum_{j=1}^{d} \\lambda_j}',
+        },
+        {
+          name: "Regularization",
+          extension: "tex",
+          category: "LaTeX",
+          description: "L1/L2/Elastic Net penalties, dropout mask, and batch normalization",
+          content:
+            '% L1 regularization (Lasso - promotes sparsity)\nJ(\\theta) = \\mathcal{L}(\\theta) + \\lambda \\sum_{j=1}^{n} |\\theta_j|\n\n% L2 regularization (Ridge / weight decay)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\frac{\\lambda}{2} \\sum_{j=1}^{n} \\theta_j^2\n\n% Elastic Net (L1 + L2)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\lambda_1 \\|\\boldsymbol{\\theta}\\|_1\n          + \\frac{\\lambda_2}{2} \\|\\boldsymbol{\\theta}\\|_2^2\n\n% Dropout (training - Bernoulli mask)\n\\tilde{\\mathbf{a}}^{(l)} = \\mathbf{m}^{(l)} \\odot \\mathbf{a}^{(l)},\n\\quad m_i \\sim \\text{Bernoulli}(1-p)\n\n% Batch normalization\n\\hat{x}_i = \\frac{x_i - \\mu_B}{\\sqrt{\\sigma_B^2 + \\epsilon}}, \\quad\ny_i = \\gamma \\hat{x}_i + \\beta',
+        },
+        {
+          name: "Attention Mechanism",
+          extension: "tex",
+          category: "LaTeX",
+          description: "Scaled dot-product, multi-head attention, and positional encoding",
+          content:
+            '% Scaled dot-product attention\n\\text{Attention}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{softmax}\\!\\left(\\frac{\\mathbf{Q}\\mathbf{K}^\\top}{\\sqrt{d_k}}\\right)\\mathbf{V}\n\n% Multi-head attention\n\\text{MultiHead}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{Concat}(\\text{head}_1, \\ldots, \\text{head}_h)\\,\\mathbf{W}^O\n\\text{head}_i\n  = \\text{Attention}(\\mathbf{Q}\\mathbf{W}_i^Q,\\,\n                     \\mathbf{K}\\mathbf{W}_i^K,\\,\n                     \\mathbf{V}\\mathbf{W}_i^V)\n\n% Sinusoidal positional encoding\n\\text{PE}_{(pos,\\,2i)}   = \\sin\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\\text{PE}_{(pos,\\,2i+1)} = \\cos\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\n% Feed-forward sublayer\n\\text{FFN}(\\mathbf{x})\n  = \\max(0,\\, \\mathbf{x}\\mathbf{W}_1 + \\mathbf{b}_1)\\,\\mathbf{W}_2 + \\mathbf{b}_2',
+        },
+        {
+          name: "K-Means & GMM",
+          extension: "tex",
+          category: "LaTeX",
+          description: "K-Means objective, centroid update, and Gaussian Mixture E/M steps",
+          content:
+            '% K-Means objective (minimize within-cluster variance)\nJ = \\sum_{k=1}^{K} \\sum_{\\mathbf{x} \\in C_k}\n    \\|\\mathbf{x} - \\boldsymbol{\\mu}_k\\|_2^2\n\n% Centroid update\n\\boldsymbol{\\mu}_k = \\frac{1}{|C_k|}\n  \\sum_{\\mathbf{x} \\in C_k} \\mathbf{x}\n\n% GMM E-step (soft assignment)\n\\gamma_{ik} = \\frac{\\pi_k\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n              \\boldsymbol{\\mu}_k, \\boldsymbol{\\Sigma}_k)}\n              {\\displaystyle\\sum_{j=1}^{K} \\pi_j\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n               \\boldsymbol{\\mu}_j, \\boldsymbol{\\Sigma}_j)}\n\n% GMM M-step\nN_k = \\sum_{i=1}^{m} \\gamma_{ik}, \\quad\n\\pi_k = \\frac{N_k}{m}, \\quad\n\\boldsymbol{\\mu}_k = \\frac{1}{N_k}\\sum_{i=1}^{m} \\gamma_{ik}\\mathbf{x}^{(i)}',
+        },
+      ],
     };
 
     this.latexPaletteItems = {
@@ -944,6 +1048,15 @@ class SnippetsApp {
         this.closeSharedSnippetModal();
         this.closeHistoryModal();
         this.closeTemplatesModal();
+        this.closeVariableModal();
+      }
+    });
+
+    // Variable modal: Enter key submits
+    document.getElementById("variableFields").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.submitVariableModal();
       }
     });
 
@@ -986,6 +1099,7 @@ class SnippetsApp {
         this.closeSharedSnippetModal();
         this.closeHistoryModal();
         this.closeTemplatesModal();
+        this.closeVariableModal();
       } else if (this.currentSnippet) {
         this.currentSnippet = null;
         document.getElementById("snippetView").style.display = "none";
@@ -1216,6 +1330,7 @@ class SnippetsApp {
 
   selectCategory(categoryName) {
     this.activeCategory = categoryName;
+    this.activeExtFilter = null;
     this.renderCategories();
     this.renderSnippetsList();
   }
@@ -1312,6 +1427,14 @@ class SnippetsApp {
       filtered = filtered.filter((s) => s.type === this.activeCategory);
     }
 
+    // Render extension filter chips based on category-filtered set
+    this.renderExtFilterChips(filtered);
+
+    // Filter by extension chip
+    if (this.activeExtFilter) {
+      filtered = filtered.filter((s) => s.extension === this.activeExtFilter);
+    }
+
     // Filter by search (matches name, description, content, tags, notes)
     if (this.searchQuery) {
       filtered = filtered.filter(
@@ -1362,6 +1485,11 @@ class SnippetsApp {
 
       const isFav = snippet.favorite || false;
       const tags = snippet.tags || [];
+      const copyCount = snippet.copyCount || 0;
+
+      const copyBadgeHtml = copyCount > 0
+        ? `<span class="snippet-copy-badge" title="${copyCount} cop${copyCount !== 1 ? "ies" : "y"}">${copyCount}</span>`
+        : "";
 
       let headerHtml;
       if (isFav) {
@@ -1369,9 +1497,20 @@ class SnippetsApp {
                     <div class="snippet-item-header">
                         <span class="snippet-item-star"><i class="fa-solid fa-star"></i></span>
                         <div class="snippet-item-name">${this.escapeHtml(snippet.name)}</div>
+                        ${copyBadgeHtml}
+                        <div class="snippet-item-actions">
+                            <button class="snippet-quick-copy" title="Quick copy" data-id="${snippet.id}"><i class="fa-regular fa-copy"></i></button>
+                        </div>
                     </div>`;
       } else {
-        headerHtml = `<div class="snippet-item-name">${this.escapeHtml(snippet.name)}</div>`;
+        headerHtml = `
+                    <div class="snippet-item-header">
+                        <div class="snippet-item-name">${this.escapeHtml(snippet.name)}</div>
+                        ${copyBadgeHtml}
+                        <div class="snippet-item-actions">
+                            <button class="snippet-quick-copy" title="Quick copy" data-id="${snippet.id}"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>`;
       }
 
       let tagsHtml = "";
@@ -1399,10 +1538,78 @@ class SnippetsApp {
         item.title = snippet.description;
       }
       item.addEventListener("click", () => this.viewSnippet(snippet.id));
+
+      // Quick-copy button — stop propagation so it doesn't open the snippet
+      const qcBtn = item.querySelector(".snippet-quick-copy");
+      qcBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.quickCopySnippet(snippet, qcBtn);
+      });
+
       list.appendChild(item);
     });
 
     this.updateSnippetsCount();
+  }
+
+  renderExtFilterChips(categoryFilteredSnippets) {
+    const container = document.getElementById("extFilterChips");
+    // Collect unique extensions present in the category-filtered set
+    const exts = [...new Set(categoryFilteredSnippets.map((s) => s.extension))].sort();
+
+    if (exts.length <= 1) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = exts
+      .map(
+        (ext) =>
+          `<button class="ext-chip${this.activeExtFilter === ext ? " active" : ""}" data-ext="${this.escapeHtml(ext)}">.${this.escapeHtml(ext)}</button>`,
+      )
+      .join("");
+
+    container.querySelectorAll(".ext-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const ext = chip.getAttribute("data-ext");
+        this.activeExtFilter = this.activeExtFilter === ext ? null : ext;
+        this.renderSnippetsList();
+      });
+    });
+  }
+
+  quickCopySnippet(snippet, btn) {
+    const doCopy = (text) => {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          this.showNotification();
+          btn.classList.add("copied");
+          btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+          setTimeout(() => {
+            btn.classList.remove("copied");
+            btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+          }, 1500);
+          this.trackCopyForSnippet(snippet);
+        })
+        .catch(() => {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          this.showNotification();
+          this.trackCopyForSnippet(snippet);
+        });
+    };
+
+    const vars = this.extractVariables(snippet.content);
+    if (vars.length > 0) {
+      this.openVariableModal(snippet.content, doCopy);
+    } else {
+      doCopy(snippet.content);
+    }
   }
 
   updateSnippetsCount() {
@@ -1725,6 +1932,14 @@ class SnippetsApp {
   closeModal() {
     document.getElementById("snippetModal").style.display = "none";
     this.editingSnippet = null;
+    if (this._openedFromTemplate) {
+      this._openedFromTemplate = false;
+      setTimeout(() => {
+        this.renderTemplatesTabs();
+        this.renderTemplatesGrid();
+        document.getElementById("templatesModal").style.display = "flex";
+      }, 0);
+    }
   }
 
   async saveSnippet() {
@@ -1792,6 +2007,7 @@ class SnippetsApp {
         this._syncSnippet(newSnippet);
       }
 
+      this._openedFromTemplate = false;
       this.closeModal();
       this.renderCategories();
       this.renderSnippetsList();
@@ -1885,41 +2101,122 @@ class SnippetsApp {
   copyToClipboard() {
     if (!this.currentSnippet) return;
 
-    navigator.clipboard
-      .writeText(this.currentSnippet.content)
-      .then(() => {
-        this.showNotification();
-        this.trackCopy();
-      })
-      .catch((err) => {
-        console.error("Failed to copy:", err);
-        const textarea = document.createElement("textarea");
-        textarea.value = this.currentSnippet.content;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        this.showNotification();
-        this.trackCopy();
-      });
+    const doCopy = (text) => {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          this.showNotification();
+          this.trackCopy();
+        })
+        .catch((err) => {
+          console.error("Failed to copy:", err);
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+          this.showNotification();
+          this.trackCopy();
+        });
+    };
+
+    const vars = this.extractVariables(this.currentSnippet.content);
+    if (vars.length > 0) {
+      this.openVariableModal(this.currentSnippet.content, doCopy);
+    } else {
+      doCopy(this.currentSnippet.content);
+    }
   }
 
   async trackCopy() {
     if (!this.currentSnippet) return;
+    await this.trackCopyForSnippet(this.currentSnippet);
 
-    // Update copyCount and lastCopiedAt WITHOUT touching updatedAt
-    this.currentSnippet.copyCount = (this.currentSnippet.copyCount || 0) + 1;
-    this.currentSnippet.lastCopiedAt = new Date().toISOString();
-    await StorageManager.put("snippets", this.currentSnippet);
-    this._syncSnippet(this.currentSnippet);
-
-    // Update the displayed copy count
+    // Update the detail-view copy count display
     const copyCount = this.currentSnippet.copyCount;
     const copyCountEl = document.getElementById("snippetCopyCount");
     const lastCopied = this.currentSnippet.lastCopiedAt
       ? ` | Last: ${this.formatDate(this.currentSnippet.lastCopiedAt)}`
       : "";
     copyCountEl.textContent = `Copied: ${copyCount} time${copyCount !== 1 ? "s" : ""}${lastCopied}`;
+  }
+
+  async trackCopyForSnippet(snippet) {
+    // Update copyCount and lastCopiedAt WITHOUT touching updatedAt
+    snippet.copyCount = (snippet.copyCount || 0) + 1;
+    snippet.lastCopiedAt = new Date().toISOString();
+    await StorageManager.put("snippets", snippet);
+    this._syncSnippet(snippet);
+    // Re-render the list to update badge (lightweight since DOM is small)
+    this.renderSnippetsList();
+  }
+
+  // ── Snippet Variables ───────────────────────────────────────────────────
+
+  extractVariables(content) {
+    const matches = content.matchAll(/\{\{(\w+)\}\}/g);
+    const seen = new Set();
+    const vars = [];
+    for (const m of matches) {
+      if (!seen.has(m[1])) {
+        seen.add(m[1]);
+        vars.push(m[1]);
+      }
+    }
+    return vars;
+  }
+
+  openVariableModal(content, callback) {
+    const vars = this.extractVariables(content);
+    if (vars.length === 0) {
+      callback(content);
+      return;
+    }
+
+    this._variableCallback = (values) => {
+      let result = content;
+      for (const [name, val] of Object.entries(values)) {
+        result = result.replaceAll(`{{${name}}}`, val);
+      }
+      callback(result);
+    };
+
+    const fieldsEl = document.getElementById("variableFields");
+    fieldsEl.innerHTML = vars
+      .map(
+        (v) => `
+        <div class="variable-field">
+            <label for="varInput_${v}">{{${v}}}</label>
+            <input class="edit-input" id="varInput_${v}" data-var="${v}" placeholder="Value for ${v}" autocomplete="off" />
+        </div>`,
+      )
+      .join("");
+
+    document.getElementById("variableModal").style.display = "flex";
+
+    // Focus first input
+    const first = fieldsEl.querySelector("input");
+    if (first) setTimeout(() => first.focus(), 50);
+  }
+
+  submitVariableModal() {
+    const inputs = document.querySelectorAll("#variableFields [data-var]");
+    const values = {};
+    inputs.forEach((input) => {
+      values[input.getAttribute("data-var")] = input.value;
+    });
+    const callback = this._variableCallback;
+    this._variableCallback = null;
+    this.closeVariableModal();
+    if (callback) {
+      callback(values);
+    }
+  }
+
+  closeVariableModal() {
+    document.getElementById("variableModal").style.display = "none";
+    this._variableCallback = null;
   }
 
   showNotification(message) {
@@ -1993,6 +2290,9 @@ class SnippetsApp {
     if (!this.currentSnippet) return;
 
     this.selectedVersion = null;
+    this.historyViewMode = "code";
+    document.getElementById("historyCodeBtn").classList.add("active");
+    document.getElementById("historyDiffBtn").classList.remove("active");
     document.getElementById("historyPreviewEmpty").style.display = "flex";
     document.getElementById("historyPreview").style.display = "none";
 
@@ -2058,18 +2358,103 @@ class SnippetsApp {
       version.savedAt,
     );
 
+    this._renderHistoryCurrentMode();
+  }
+
+  _renderHistoryCurrentMode() {
+    const version = this.selectedVersion;
+    if (!version) return;
+
+    if (this.historyViewMode === "diff") {
+      this._showHistoryDiff(version);
+    } else {
+      this._showHistoryCode(version);
+    }
+  }
+
+  _showHistoryCode(version) {
+    document.getElementById("historyCodeContainer").style.display = "";
+    document.getElementById("historyDiffContainer").style.display = "none";
+
     const codeEl = document.getElementById("historyPreviewCode");
     codeEl.textContent = version.content;
     codeEl.className = "";
     codeEl.removeAttribute("data-highlighted");
 
-    // Try to determine language from current snippet
     if (this.currentSnippet) {
       const language =
         this.extensionToLanguage[this.currentSnippet.extension] || "plaintext";
       codeEl.classList.add(`language-${language}`);
     }
     hljs.highlightElement(codeEl);
+  }
+
+  _showHistoryDiff(version) {
+    document.getElementById("historyCodeContainer").style.display = "none";
+    document.getElementById("historyDiffContainer").style.display = "";
+
+    const oldLines = version.content.split("\n");
+    const newLines = this.currentSnippet ? this.currentSnippet.content.split("\n") : [];
+    const ops = this.computeDiff(oldLines, newLines);
+
+    const diffEl = document.getElementById("historyDiffView");
+
+    if (ops.every((op) => op.type === "equal")) {
+      diffEl.innerHTML = '<div class="diff-no-changes">No differences — content is identical to current version.</div>';
+      return;
+    }
+
+    diffEl.innerHTML = ops
+      .map((op) => {
+        const glyph = op.type === "added" ? "+" : op.type === "removed" ? "−" : " ";
+        const cls = op.type === "added"
+          ? "diff-line diff-line-added"
+          : op.type === "removed"
+            ? "diff-line diff-line-removed"
+            : "diff-line diff-line-equal";
+        return `<div class="${cls}"><span class="diff-gutter">${glyph}</span>${this.escapeHtml(op.line)}</div>`;
+      })
+      .join("");
+  }
+
+  setHistoryViewMode(mode) {
+    this.historyViewMode = mode;
+    document.getElementById("historyCodeBtn").classList.toggle("active", mode === "code");
+    document.getElementById("historyDiffBtn").classList.toggle("active", mode === "diff");
+    this._renderHistoryCurrentMode();
+  }
+
+  computeDiff(oldLines, newLines) {
+    const m = oldLines.length;
+    const n = newLines.length;
+    // DP LCS table
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (oldLines[i - 1] === newLines[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+    // Backtrack
+    const ops = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+        ops.unshift({ type: "equal", line: oldLines[i - 1] });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        ops.unshift({ type: "added", line: newLines[j - 1] });
+        j--;
+      } else {
+        ops.unshift({ type: "removed", line: oldLines[i - 1] });
+        i--;
+      }
+    }
+    return ops;
   }
 
   async restoreVersion() {
@@ -2187,16 +2572,62 @@ class SnippetsApp {
       document.body.appendChild(panel);
     }
 
-    const lang = this.extensionToLanguage[template.extension] || "plaintext";
-    const code = document.createElement("code");
-    code.className = `language-${lang}`;
-    code.textContent = template.content;
-    const pre = document.createElement("pre");
-    pre.appendChild(code);
-
     panel.innerHTML = `<div class="tcp-header"><span>${this.escapeHtml(template.name)}</span><span class="tcp-ext">.${template.extension}</span></div>`;
-    panel.appendChild(pre);
-    hljs.highlightElement(code);
+
+    if (template.extension === "tex" && typeof katex !== "undefined") {
+      const container = document.createElement("div");
+      container.className = "tcp-latex";
+
+      const lines = template.content.split("\n");
+      let currentLines = [];
+
+      const flushBlock = () => {
+        const eq = currentLines.join("\n").trim();
+        currentLines = [];
+        if (!eq) return;
+        const div = document.createElement("div");
+        div.className = "tcp-eq";
+        const hasLineBreaks = eq.includes("\\\\");
+        const hasEnv = eq.includes("\\begin{");
+        const toRender =
+          hasLineBreaks && !hasEnv
+            ? `\\begin{aligned}\n${eq}\n\\end{aligned}`
+            : eq;
+        div.innerHTML = katex.renderToString(toRender, {
+          displayMode: true,
+          throwOnError: false,
+          strict: false,
+        });
+        container.appendChild(div);
+      };
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("%")) {
+          flushBlock();
+          const label = document.createElement("div");
+          label.className = "tcp-eq-label";
+          label.textContent = trimmed.slice(1).trim();
+          container.appendChild(label);
+        } else if (trimmed === "") {
+          flushBlock();
+        } else {
+          currentLines.push(line);
+        }
+      }
+      flushBlock();
+
+      panel.appendChild(container);
+    } else {
+      const lang = this.extensionToLanguage[template.extension] || "plaintext";
+      const code = document.createElement("code");
+      code.className = `language-${lang}`;
+      code.textContent = template.content;
+      const pre = document.createElement("pre");
+      pre.appendChild(code);
+      panel.appendChild(pre);
+      hljs.highlightElement(code);
+    }
 
     // Robust positioning — prefer right, fall back to left, clamp to viewport
     const rect = cardEl.getBoundingClientRect();
@@ -2241,6 +2672,7 @@ class SnippetsApp {
 
   useTemplate(template) {
     this.closeTemplatesModal();
+    this._openedFromTemplate = true;
     this.editingSnippet = null;
     document.getElementById("saveSnippetBtn").textContent = "Save Snippet";
     document.getElementById("snippetNameInput").value = template.name;
