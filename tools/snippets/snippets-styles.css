@@ -257,7 +257,7 @@
 .main-layout {
     display: flex;
     gap: 15px;
-    min-height: calc(100vh - 280px);
+    height: calc(100vh - 280px);
 }
 
 /* Panel Base Styles */
@@ -270,6 +270,7 @@
     box-shadow: 0 0 4px var(--shadow-color);
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 /* Categories Panel - Left */
