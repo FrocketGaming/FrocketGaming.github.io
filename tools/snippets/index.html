@@ -157,6 +157,11 @@
                         <div class="shortcut-row"><kbd>Ctrl+D</kbd> Duplicate snippet</div>
                         <div class="shortcut-row"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> Navigate list</div>
                         <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect</div>
+                        <div class="shortcuts-tooltip-title" style="margin-top:10px;">Variables</div>
+                        <div class="shortcut-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                            <span>Use <code class="var-syntax">{{name}}</code> in snippet content to define a variable. When copying, you'll be prompted to fill in each unique variable.</span>
+                        </div>
+                        <div class="shortcut-row" style="margin-top:2px;">Example: <code class="var-syntax">{{host}}</code>, <code class="var-syntax">{{port}}</code></div>
                     </div>
                 </div>
                 <div class="toolbar-spacer"></div>
@@ -367,7 +372,7 @@
                             />
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group-grow">
                         <label for="snippetContentInput">Content:</label>
                         <div id="mdToolbar" class="md-toolbar" style="display:none">
                             <div class="md-toolbar-group">
