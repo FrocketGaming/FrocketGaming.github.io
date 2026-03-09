@@ -76,10 +76,15 @@ class SnippetsApp {
       nushell: "fa-solid fa-terminal",
       bash: "fa-solid fa-terminal",
       powershell: "fa-solid fa-terminal",
+      fish: "fa-solid fa-terminal",
+      zsh: "fa-solid fa-terminal",
       ruby: "fa-solid fa-gem",
       c: "fa-solid fa-code",
       "c++": "fa-solid fa-code",
       typescript: "fa-solid fa-code",
+      vim: "fa-brands fa-vim",
+      nvim: "fa-brands fa-vim",
+      neovim: "fa-brands fa-vim",
       yaml: "fa-solid fa-file-code",
       yml: "fa-solid fa-file-code",
       latex: "fa-solid fa-square-root-variable",
@@ -600,9 +605,10 @@ class SnippetsApp {
           name: "Vectors & Matrices",
           extension: "tex",
           category: "LaTeX",
-          description: "Column vector, matrix notation, dot product, and L1/L2/max norms",
+          description:
+            "Column vector, matrix notation, dot product, and L1/L2/max norms",
           content:
-            '% Column vector\n\\mathbf{x} = \\begin{pmatrix} x_1 \\\\ x_2 \\\\ \\vdots \\\\ x_n \\end{pmatrix}\n\n% Matrix\n\\mathbf{A} = \\begin{bmatrix}\n  a_{11} & a_{12} & \\cdots & a_{1n} \\\\\n  a_{21} & a_{22} & \\cdots & a_{2n} \\\\\n  \\vdots & \\vdots & \\ddots & \\vdots \\\\\n  a_{m1} & a_{m2} & \\cdots & a_{mn}\n\\end{bmatrix}\n\n% Dot product\n\\mathbf{u} \\cdot \\mathbf{v} = \\mathbf{u}^\\top \\mathbf{v} = \\sum_{i=1}^{n} u_i v_i\n\n% L1, L2, and max norms\n\\|\\mathbf{x}\\|_1 = \\sum_{i=1}^{n} |x_i|, \\quad\n\\|\\mathbf{x}\\|_2 = \\sqrt{\\sum_{i=1}^{n} x_i^2}, \\quad\n\\|\\mathbf{x}\\|_\\infty = \\max_i |x_i|\n\n% Transpose and inverse product rules\n(\\mathbf{AB})^\\top = \\mathbf{B}^\\top \\mathbf{A}^\\top, \\quad\n(\\mathbf{AB})^{-1} = \\mathbf{B}^{-1} \\mathbf{A}^{-1}',
+            "% Column vector\n\\mathbf{x} = \\begin{pmatrix} x_1 \\\\ x_2 \\\\ \\vdots \\\\ x_n \\end{pmatrix}\n\n% Matrix\n\\mathbf{A} = \\begin{bmatrix}\n  a_{11} & a_{12} & \\cdots & a_{1n} \\\\\n  a_{21} & a_{22} & \\cdots & a_{2n} \\\\\n  \\vdots & \\vdots & \\ddots & \\vdots \\\\\n  a_{m1} & a_{m2} & \\cdots & a_{mn}\n\\end{bmatrix}\n\n% Dot product\n\\mathbf{u} \\cdot \\mathbf{v} = \\mathbf{u}^\\top \\mathbf{v} = \\sum_{i=1}^{n} u_i v_i\n\n% L1, L2, and max norms\n\\|\\mathbf{x}\\|_1 = \\sum_{i=1}^{n} |x_i|, \\quad\n\\|\\mathbf{x}\\|_2 = \\sqrt{\\sum_{i=1}^{n} x_i^2}, \\quad\n\\|\\mathbf{x}\\|_\\infty = \\max_i |x_i|\n\n% Transpose and inverse product rules\n(\\mathbf{AB})^\\top = \\mathbf{B}^\\top \\mathbf{A}^\\top, \\quad\n(\\mathbf{AB})^{-1} = \\mathbf{B}^{-1} \\mathbf{A}^{-1}",
         },
         {
           name: "Gradient Descent",
@@ -610,136 +616,183 @@ class SnippetsApp {
           category: "LaTeX",
           description: "Update rule, batch/SGD, momentum, and Adam optimizer",
           content:
-            '% Standard update rule\n\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)\n\n% Batch gradient descent\n\\theta := \\theta - \\frac{\\eta}{m} \\sum_{i=1}^{m} \\nabla_\\theta \\mathcal{L}^{(i)}(\\theta)\n\n% SGD with momentum\nv_{t+1} = \\beta v_t + \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t) \\\\\n\\theta_{t+1} = \\theta_t - v_{t+1}\n\n% Adam optimizer\nm_t = \\beta_1 m_{t-1} + (1 - \\beta_1) g_t \\\\\nv_t = \\beta_2 v_{t-1} + (1 - \\beta_2) g_t^2 \\\\\n\\hat{m}_t = \\frac{m_t}{1 - \\beta_1^t}, \\quad\n\\hat{v}_t = \\frac{v_t}{1 - \\beta_2^t} \\\\\n\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\epsilon}\\,\\hat{m}_t',
+            "% Standard update rule\n\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)\n\n% Batch gradient descent\n\\theta := \\theta - \\frac{\\eta}{m} \\sum_{i=1}^{m} \\nabla_\\theta \\mathcal{L}^{(i)}(\\theta)\n\n% SGD with momentum\nv_{t+1} = \\beta v_t + \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t) \\\\\n\\theta_{t+1} = \\theta_t - v_{t+1}\n\n% Adam optimizer\nm_t = \\beta_1 m_{t-1} + (1 - \\beta_1) g_t \\\\\nv_t = \\beta_2 v_{t-1} + (1 - \\beta_2) g_t^2 \\\\\n\\hat{m}_t = \\frac{m_t}{1 - \\beta_1^t}, \\quad\n\\hat{v}_t = \\frac{v_t}{1 - \\beta_2^t} \\\\\n\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\epsilon}\\,\\hat{m}_t",
         },
         {
           name: "Neural Network Forward Pass",
           extension: "tex",
           category: "LaTeX",
-          description: "Layer computation, sigmoid, tanh, ReLU, and softmax activations",
+          description:
+            "Layer computation, sigmoid, tanh, ReLU, and softmax activations",
           content:
-            '% Layer computation\n\\mathbf{z}^{(l)} = \\mathbf{W}^{(l)} \\mathbf{a}^{(l-1)} + \\mathbf{b}^{(l)}\n\\mathbf{a}^{(l)} = f\\!\\left(\\mathbf{z}^{(l)}\\right)\n\n% Sigmoid\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad\n\\frac{d\\sigma}{dz} = \\sigma(z)\\bigl(1 - \\sigma(z)\\bigr)\n\n% Tanh\n\\tanh(z) = \\frac{e^z - e^{-z}}{e^z + e^{-z}}, \\quad\n\\frac{d\\,\\tanh}{dz} = 1 - \\tanh^2(z)\n\n% ReLU and Leaky ReLU\n\\text{ReLU}(z) = \\max(0, z), \\quad\n\\text{Leaky ReLU}(z) = \\max(\\alpha z, z)\n\n% Softmax (output layer)\n\\text{softmax}(z_i) = \\frac{e^{z_i}}{\\sum_{j=1}^{K} e^{z_j}}',
+            "% Layer computation\n\\mathbf{z}^{(l)} = \\mathbf{W}^{(l)} \\mathbf{a}^{(l-1)} + \\mathbf{b}^{(l)}\n\\mathbf{a}^{(l)} = f\\!\\left(\\mathbf{z}^{(l)}\\right)\n\n% Sigmoid\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad\n\\frac{d\\sigma}{dz} = \\sigma(z)\\bigl(1 - \\sigma(z)\\bigr)\n\n% Tanh\n\\tanh(z) = \\frac{e^z - e^{-z}}{e^z + e^{-z}}, \\quad\n\\frac{d\\,\\tanh}{dz} = 1 - \\tanh^2(z)\n\n% ReLU and Leaky ReLU\n\\text{ReLU}(z) = \\max(0, z), \\quad\n\\text{Leaky ReLU}(z) = \\max(\\alpha z, z)\n\n% Softmax (output layer)\n\\text{softmax}(z_i) = \\frac{e^{z_i}}{\\sum_{j=1}^{K} e^{z_j}}",
         },
         {
           name: "Loss Functions",
           extension: "tex",
           category: "LaTeX",
-          description: "MSE, binary/categorical cross-entropy, Huber, and KL divergence",
+          description:
+            "MSE, binary/categorical cross-entropy, Huber, and KL divergence",
           content:
-            '% Mean Squared Error (MSE)\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{m} \\sum_{i=1}^{m}\n  \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Binary Cross-Entropy\n\\mathcal{L}_{\\text{BCE}} = -\\frac{1}{m} \\sum_{i=1}^{m}\n  \\Bigl[ y^{(i)} \\log \\hat{y}^{(i)}\n       + (1 - y^{(i)}) \\log(1 - \\hat{y}^{(i)}) \\Bigr]\n\n% Categorical Cross-Entropy\n\\mathcal{L}_{\\text{CE}} = -\\sum_{c=1}^{C} y_c \\log \\hat{y}_c\n\n% Huber Loss\n\\mathcal{L}_\\delta(y,\\hat{y}) =\n\\begin{cases}\n  \\tfrac{1}{2}(y-\\hat{y})^2 & \\text{if } |y-\\hat{y}| \\le \\delta \\\\\n  \\delta|y-\\hat{y}| - \\tfrac{\\delta^2}{2} & \\text{otherwise}\n\\end{cases}\n\n% KL Divergence\nD_{\\text{KL}}(P \\| Q) = \\sum_x P(x)\\log\\frac{P(x)}{Q(x)}',
+            "% Mean Squared Error (MSE)\n\\mathcal{L}_{\\text{MSE}} = \\frac{1}{m} \\sum_{i=1}^{m}\n  \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Binary Cross-Entropy\n\\mathcal{L}_{\\text{BCE}} = -\\frac{1}{m} \\sum_{i=1}^{m}\n  \\Bigl[ y^{(i)} \\log \\hat{y}^{(i)}\n       + (1 - y^{(i)}) \\log(1 - \\hat{y}^{(i)}) \\Bigr]\n\n% Categorical Cross-Entropy\n\\mathcal{L}_{\\text{CE}} = -\\sum_{c=1}^{C} y_c \\log \\hat{y}_c\n\n% Huber Loss\n\\mathcal{L}_\\delta(y,\\hat{y}) =\n\\begin{cases}\n  \\tfrac{1}{2}(y-\\hat{y})^2 & \\text{if } |y-\\hat{y}| \\le \\delta \\\\\n  \\delta|y-\\hat{y}| - \\tfrac{\\delta^2}{2} & \\text{otherwise}\n\\end{cases}\n\n% KL Divergence\nD_{\\text{KL}}(P \\| Q) = \\sum_x P(x)\\log\\frac{P(x)}{Q(x)}",
         },
         {
           name: "Backpropagation",
           extension: "tex",
           category: "LaTeX",
-          description: "Error signals (deltas), weight/bias gradients, and parameter update",
+          description:
+            "Error signals (deltas), weight/bias gradients, and parameter update",
           content:
-            '% Output layer error signal\n\\delta^{(L)} = \\nabla_{\\mathbf{a}^{(L)}} \\mathcal{L}\n               \\odot \\sigma(\\mathbf{z}^{(L)})\n\n% Hidden layer error (backprop step)\n\\delta^{(l)} = \\bigl(\\mathbf{W}^{(l+1)}\\bigr)^\\top \\delta^{(l+1)}\n               \\odot \\sigma(\\mathbf{z}^{(l)})\n\n% Weight gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}\n  = \\delta^{(l)} \\bigl(\\mathbf{a}^{(l-1)}\\bigr)^\\top\n\n% Bias gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}^{(l)}} = \\delta^{(l)}\n\n% Parameter update\n\\mathbf{W}^{(l)} \\leftarrow \\mathbf{W}^{(l)}\n  - \\eta \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}',
+            "% Output layer error signal\n\\delta^{(L)} = \\nabla_{\\mathbf{a}^{(L)}} \\mathcal{L}\n               \\odot \\sigma(\\mathbf{z}^{(L)})\n\n% Hidden layer error (backprop step)\n\\delta^{(l)} = \\bigl(\\mathbf{W}^{(l+1)}\\bigr)^\\top \\delta^{(l+1)}\n               \\odot \\sigma(\\mathbf{z}^{(l)})\n\n% Weight gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}\n  = \\delta^{(l)} \\bigl(\\mathbf{a}^{(l-1)}\\bigr)^\\top\n\n% Bias gradient\n\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}^{(l)}} = \\delta^{(l)}\n\n% Parameter update\n\\mathbf{W}^{(l)} \\leftarrow \\mathbf{W}^{(l)}\n  - \\eta \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{W}^{(l)}}",
         },
         {
           name: "Linear Regression",
           extension: "tex",
           category: "LaTeX",
-          description: "Hypothesis, cost function, normal equation, Ridge, Lasso, Elastic Net",
+          description:
+            "Hypothesis, cost function, normal equation, Ridge, Lasso, Elastic Net",
           content:
-            '% Hypothesis\n\\hat{y} = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Cost function (MSE)\nJ(\\mathbf{w}, b) = \\frac{1}{2m}\n  \\sum_{i=1}^{m} \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Normal equation (closed-form solution)\n\\hat{\\mathbf{w}} =\n  \\bigl(\\mathbf{X}^\\top \\mathbf{X}\\bigr)^{-1} \\mathbf{X}^\\top \\mathbf{y}\n\n% Ridge regression (L2)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_2^2\n\n% Lasso regression (L1)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_1\n\n% Elastic Net\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda_1\\|\\mathbf{w}\\|_1 + \\frac{\\lambda_2}{2}\\|\\mathbf{w}\\|_2^2',
+            "% Hypothesis\n\\hat{y} = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Cost function (MSE)\nJ(\\mathbf{w}, b) = \\frac{1}{2m}\n  \\sum_{i=1}^{m} \\bigl(\\hat{y}^{(i)} - y^{(i)}\\bigr)^2\n\n% Normal equation (closed-form solution)\n\\hat{\\mathbf{w}} =\n  \\bigl(\\mathbf{X}^\\top \\mathbf{X}\\bigr)^{-1} \\mathbf{X}^\\top \\mathbf{y}\n\n% Ridge regression (L2)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_2^2\n\n% Lasso regression (L1)\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda\\|\\mathbf{w}\\|_1\n\n% Elastic Net\nJ(\\mathbf{w}) = \\frac{1}{2m}\\|\\mathbf{X}\\mathbf{w} - \\mathbf{y}\\|_2^2\n              + \\lambda_1\\|\\mathbf{w}\\|_1 + \\frac{\\lambda_2}{2}\\|\\mathbf{w}\\|_2^2",
         },
         {
           name: "Logistic Regression",
           extension: "tex",
           category: "LaTeX",
-          description: "Sigmoid, predicted probability, log-likelihood, and gradient",
+          description:
+            "Sigmoid, predicted probability, log-likelihood, and gradient",
           content:
-            '% Sigmoid activation\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad z = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Predicted probability\nP(y=1 \\mid \\mathbf{x}; \\mathbf{w}) = \\sigma(\\mathbf{w}^\\top \\mathbf{x} + b)\n\n% Log-likelihood\n\\ell(\\mathbf{w}) = \\sum_{i=1}^{m} \\Bigl[\n  y^{(i)} \\log \\sigma(z^{(i)})\n  + (1 - y^{(i)}) \\log\\bigl(1 - \\sigma(z^{(i)})\\bigr) \\Bigr]\n\n% Cost (negative log-likelihood)\nJ(\\mathbf{w}) = -\\frac{1}{m} \\ell(\\mathbf{w})\n\n% Gradient\n\\nabla_\\mathbf{w} J = \\frac{1}{m}\n  \\mathbf{X}^\\top \\bigl(\\hat{\\mathbf{y}} - \\mathbf{y}\\bigr)',
+            "% Sigmoid activation\n\\sigma(z) = \\frac{1}{1 + e^{-z}}, \\quad z = \\mathbf{w}^\\top \\mathbf{x} + b\n\n% Predicted probability\nP(y=1 \\mid \\mathbf{x}; \\mathbf{w}) = \\sigma(\\mathbf{w}^\\top \\mathbf{x} + b)\n\n% Log-likelihood\n\\ell(\\mathbf{w}) = \\sum_{i=1}^{m} \\Bigl[\n  y^{(i)} \\log \\sigma(z^{(i)})\n  + (1 - y^{(i)}) \\log\\bigl(1 - \\sigma(z^{(i)})\\bigr) \\Bigr]\n\n% Cost (negative log-likelihood)\nJ(\\mathbf{w}) = -\\frac{1}{m} \\ell(\\mathbf{w})\n\n% Gradient\n\\nabla_\\mathbf{w} J = \\frac{1}{m}\n  \\mathbf{X}^\\top \\bigl(\\hat{\\mathbf{y}} - \\mathbf{y}\\bigr)",
         },
         {
           name: "Probability & Distributions",
           extension: "tex",
           category: "LaTeX",
-          description: "Bayes theorem, univariate/multivariate Gaussian, expectation, entropy",
+          description:
+            "Bayes theorem, univariate/multivariate Gaussian, expectation, entropy",
           content:
-            '% Bayes Theorem\nP(A \\mid B) = \\frac{P(B \\mid A)\\,P(A)}{P(B)}\n\n% Univariate Gaussian\n\\mathcal{N}(x;\\,\\mu,\\sigma^2) =\n  \\frac{1}{\\sqrt{2\\pi\\sigma^2}}\n  \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)\n\n% Multivariate Gaussian\n\\mathcal{N}(\\mathbf{x};\\,\\boldsymbol{\\mu},\\boldsymbol{\\Sigma}) =\n  \\frac{1}{(2\\pi)^{d/2}|\\boldsymbol{\\Sigma}|^{1/2}}\n  \\exp\\!\\left(-\\tfrac{1}{2}\n    (\\mathbf{x}-\\boldsymbol{\\mu})^\\top\n    \\boldsymbol{\\Sigma}^{-1}\n    (\\mathbf{x}-\\boldsymbol{\\mu})\n  \\right)\n\n% Expectation and variance\n\\mathbb{E}[X] = \\int x\\,p(x)\\,dx, \\quad\n\\text{Var}(X) = \\mathbb{E}[X^2] - \\mathbb{E}[X]^2\n\n% Entropy and mutual information\nH(X) = -\\sum_x p(x)\\log p(x), \\quad\nI(X;Y) = H(X) - H(X \\mid Y)',
+            "% Bayes Theorem\nP(A \\mid B) = \\frac{P(B \\mid A)\\,P(A)}{P(B)}\n\n% Univariate Gaussian\n\\mathcal{N}(x;\\,\\mu,\\sigma^2) =\n  \\frac{1}{\\sqrt{2\\pi\\sigma^2}}\n  \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)\n\n% Multivariate Gaussian\n\\mathcal{N}(\\mathbf{x};\\,\\boldsymbol{\\mu},\\boldsymbol{\\Sigma}) =\n  \\frac{1}{(2\\pi)^{d/2}|\\boldsymbol{\\Sigma}|^{1/2}}\n  \\exp\\!\\left(-\\tfrac{1}{2}\n    (\\mathbf{x}-\\boldsymbol{\\mu})^\\top\n    \\boldsymbol{\\Sigma}^{-1}\n    (\\mathbf{x}-\\boldsymbol{\\mu})\n  \\right)\n\n% Expectation and variance\n\\mathbb{E}[X] = \\int x\\,p(x)\\,dx, \\quad\n\\text{Var}(X) = \\mathbb{E}[X^2] - \\mathbb{E}[X]^2\n\n% Entropy and mutual information\nH(X) = -\\sum_x p(x)\\log p(x), \\quad\nI(X;Y) = H(X) - H(X \\mid Y)",
         },
         {
           name: "SVD & PCA",
           extension: "tex",
           category: "LaTeX",
-          description: "Singular value decomposition, eigendecomposition, covariance, projection",
+          description:
+            "Singular value decomposition, eigendecomposition, covariance, projection",
           content:
-            '% Singular Value Decomposition\n\\mathbf{A} = \\mathbf{U}\\boldsymbol{\\Sigma}\\mathbf{V}^\\top, \\quad\n\\mathbf{U} \\in \\mathbb{R}^{m \\times m},\\;\n\\boldsymbol{\\Sigma} \\in \\mathbb{R}^{m \\times n},\\;\n\\mathbf{V} \\in \\mathbb{R}^{n \\times n}\n\n% Eigendecomposition\n\\mathbf{A}\\mathbf{v} = \\lambda\\mathbf{v}, \\quad\n\\mathbf{A} = \\mathbf{Q}\\boldsymbol{\\Lambda}\\mathbf{Q}^{-1}\n\n% Sample covariance matrix\n\\hat{\\boldsymbol{\\Sigma}} = \\frac{1}{m-1}\n  \\sum_{i=1}^{m} (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})\n                 (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})^\\top\n\n% PCA projection (top-k eigenvectors)\n\\mathbf{z} = \\mathbf{W}_k^\\top \\mathbf{x}, \\quad\n\\mathbf{W}_k \\in \\mathbb{R}^{d \\times k}\n\n% Explained variance ratio\n\\rho_k = \\frac{\\lambda_k}{\\sum_{j=1}^{d} \\lambda_j}',
+            "% Singular Value Decomposition\n\\mathbf{A} = \\mathbf{U}\\boldsymbol{\\Sigma}\\mathbf{V}^\\top, \\quad\n\\mathbf{U} \\in \\mathbb{R}^{m \\times m},\\;\n\\boldsymbol{\\Sigma} \\in \\mathbb{R}^{m \\times n},\\;\n\\mathbf{V} \\in \\mathbb{R}^{n \\times n}\n\n% Eigendecomposition\n\\mathbf{A}\\mathbf{v} = \\lambda\\mathbf{v}, \\quad\n\\mathbf{A} = \\mathbf{Q}\\boldsymbol{\\Lambda}\\mathbf{Q}^{-1}\n\n% Sample covariance matrix\n\\hat{\\boldsymbol{\\Sigma}} = \\frac{1}{m-1}\n  \\sum_{i=1}^{m} (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})\n                 (\\mathbf{x}^{(i)} - \\bar{\\mathbf{x}})^\\top\n\n% PCA projection (top-k eigenvectors)\n\\mathbf{z} = \\mathbf{W}_k^\\top \\mathbf{x}, \\quad\n\\mathbf{W}_k \\in \\mathbb{R}^{d \\times k}\n\n% Explained variance ratio\n\\rho_k = \\frac{\\lambda_k}{\\sum_{j=1}^{d} \\lambda_j}",
         },
         {
           name: "Regularization",
           extension: "tex",
           category: "LaTeX",
-          description: "L1/L2/Elastic Net penalties, dropout mask, and batch normalization",
+          description:
+            "L1/L2/Elastic Net penalties, dropout mask, and batch normalization",
           content:
-            '% L1 regularization (Lasso - promotes sparsity)\nJ(\\theta) = \\mathcal{L}(\\theta) + \\lambda \\sum_{j=1}^{n} |\\theta_j|\n\n% L2 regularization (Ridge / weight decay)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\frac{\\lambda}{2} \\sum_{j=1}^{n} \\theta_j^2\n\n% Elastic Net (L1 + L2)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\lambda_1 \\|\\boldsymbol{\\theta}\\|_1\n          + \\frac{\\lambda_2}{2} \\|\\boldsymbol{\\theta}\\|_2^2\n\n% Dropout (training - Bernoulli mask)\n\\tilde{\\mathbf{a}}^{(l)} = \\mathbf{m}^{(l)} \\odot \\mathbf{a}^{(l)},\n\\quad m_i \\sim \\text{Bernoulli}(1-p)\n\n% Batch normalization\n\\hat{x}_i = \\frac{x_i - \\mu_B}{\\sqrt{\\sigma_B^2 + \\epsilon}}, \\quad\ny_i = \\gamma \\hat{x}_i + \\beta',
+            "% L1 regularization (Lasso - promotes sparsity)\nJ(\\theta) = \\mathcal{L}(\\theta) + \\lambda \\sum_{j=1}^{n} |\\theta_j|\n\n% L2 regularization (Ridge / weight decay)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\frac{\\lambda}{2} \\sum_{j=1}^{n} \\theta_j^2\n\n% Elastic Net (L1 + L2)\nJ(\\theta) = \\mathcal{L}(\\theta)\n          + \\lambda_1 \\|\\boldsymbol{\\theta}\\|_1\n          + \\frac{\\lambda_2}{2} \\|\\boldsymbol{\\theta}\\|_2^2\n\n% Dropout (training - Bernoulli mask)\n\\tilde{\\mathbf{a}}^{(l)} = \\mathbf{m}^{(l)} \\odot \\mathbf{a}^{(l)},\n\\quad m_i \\sim \\text{Bernoulli}(1-p)\n\n% Batch normalization\n\\hat{x}_i = \\frac{x_i - \\mu_B}{\\sqrt{\\sigma_B^2 + \\epsilon}}, \\quad\ny_i = \\gamma \\hat{x}_i + \\beta",
         },
         {
           name: "Attention Mechanism",
           extension: "tex",
           category: "LaTeX",
-          description: "Scaled dot-product, multi-head attention, and positional encoding",
+          description:
+            "Scaled dot-product, multi-head attention, and positional encoding",
           content:
-            '% Scaled dot-product attention\n\\text{Attention}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{softmax}\\!\\left(\\frac{\\mathbf{Q}\\mathbf{K}^\\top}{\\sqrt{d_k}}\\right)\\mathbf{V}\n\n% Multi-head attention\n\\text{MultiHead}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{Concat}(\\text{head}_1, \\ldots, \\text{head}_h)\\,\\mathbf{W}^O\n\\text{head}_i\n  = \\text{Attention}(\\mathbf{Q}\\mathbf{W}_i^Q,\\,\n                     \\mathbf{K}\\mathbf{W}_i^K,\\,\n                     \\mathbf{V}\\mathbf{W}_i^V)\n\n% Sinusoidal positional encoding\n\\text{PE}_{(pos,\\,2i)}   = \\sin\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\\text{PE}_{(pos,\\,2i+1)} = \\cos\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\n% Feed-forward sublayer\n\\text{FFN}(\\mathbf{x})\n  = \\max(0,\\, \\mathbf{x}\\mathbf{W}_1 + \\mathbf{b}_1)\\,\\mathbf{W}_2 + \\mathbf{b}_2',
+            "% Scaled dot-product attention\n\\text{Attention}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{softmax}\\!\\left(\\frac{\\mathbf{Q}\\mathbf{K}^\\top}{\\sqrt{d_k}}\\right)\\mathbf{V}\n\n% Multi-head attention\n\\text{MultiHead}(\\mathbf{Q}, \\mathbf{K}, \\mathbf{V})\n  = \\text{Concat}(\\text{head}_1, \\ldots, \\text{head}_h)\\,\\mathbf{W}^O\n\\text{head}_i\n  = \\text{Attention}(\\mathbf{Q}\\mathbf{W}_i^Q,\\,\n                     \\mathbf{K}\\mathbf{W}_i^K,\\,\n                     \\mathbf{V}\\mathbf{W}_i^V)\n\n% Sinusoidal positional encoding\n\\text{PE}_{(pos,\\,2i)}   = \\sin\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\\text{PE}_{(pos,\\,2i+1)} = \\cos\\!\\left(\\frac{pos}{10000^{2i/d}}\\right)\n\n% Feed-forward sublayer\n\\text{FFN}(\\mathbf{x})\n  = \\max(0,\\, \\mathbf{x}\\mathbf{W}_1 + \\mathbf{b}_1)\\,\\mathbf{W}_2 + \\mathbf{b}_2",
         },
         {
           name: "K-Means & GMM",
           extension: "tex",
           category: "LaTeX",
-          description: "K-Means objective, centroid update, and Gaussian Mixture E/M steps",
+          description:
+            "K-Means objective, centroid update, and Gaussian Mixture E/M steps",
           content:
-            '% K-Means objective (minimize within-cluster variance)\nJ = \\sum_{k=1}^{K} \\sum_{\\mathbf{x} \\in C_k}\n    \\|\\mathbf{x} - \\boldsymbol{\\mu}_k\\|_2^2\n\n% Centroid update\n\\boldsymbol{\\mu}_k = \\frac{1}{|C_k|}\n  \\sum_{\\mathbf{x} \\in C_k} \\mathbf{x}\n\n% GMM E-step (soft assignment)\n\\gamma_{ik} = \\frac{\\pi_k\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n              \\boldsymbol{\\mu}_k, \\boldsymbol{\\Sigma}_k)}\n              {\\displaystyle\\sum_{j=1}^{K} \\pi_j\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n               \\boldsymbol{\\mu}_j, \\boldsymbol{\\Sigma}_j)}\n\n% GMM M-step\nN_k = \\sum_{i=1}^{m} \\gamma_{ik}, \\quad\n\\pi_k = \\frac{N_k}{m}, \\quad\n\\boldsymbol{\\mu}_k = \\frac{1}{N_k}\\sum_{i=1}^{m} \\gamma_{ik}\\mathbf{x}^{(i)}',
+            "% K-Means objective (minimize within-cluster variance)\nJ = \\sum_{k=1}^{K} \\sum_{\\mathbf{x} \\in C_k}\n    \\|\\mathbf{x} - \\boldsymbol{\\mu}_k\\|_2^2\n\n% Centroid update\n\\boldsymbol{\\mu}_k = \\frac{1}{|C_k|}\n  \\sum_{\\mathbf{x} \\in C_k} \\mathbf{x}\n\n% GMM E-step (soft assignment)\n\\gamma_{ik} = \\frac{\\pi_k\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n              \\boldsymbol{\\mu}_k, \\boldsymbol{\\Sigma}_k)}\n              {\\displaystyle\\sum_{j=1}^{K} \\pi_j\\,\\mathcal{N}(\\mathbf{x}^{(i)};\\,\n               \\boldsymbol{\\mu}_j, \\boldsymbol{\\Sigma}_j)}\n\n% GMM M-step\nN_k = \\sum_{i=1}^{m} \\gamma_{ik}, \\quad\n\\pi_k = \\frac{N_k}{m}, \\quad\n\\boldsymbol{\\mu}_k = \\frac{1}{N_k}\\sum_{i=1}^{m} \\gamma_{ik}\\mathbf{x}^{(i)}",
         },
       ],
     };
 
     this.latexPaletteItems = {
       Greek: [
-        { label: "α", insert: "\\alpha" }, { label: "β", insert: "\\beta" },
-        { label: "γ", insert: "\\gamma" }, { label: "δ", insert: "\\delta" },
-        { label: "ε", insert: "\\epsilon" }, { label: "ζ", insert: "\\zeta" },
-        { label: "η", insert: "\\eta" }, { label: "θ", insert: "\\theta" },
-        { label: "ι", insert: "\\iota" }, { label: "κ", insert: "\\kappa" },
-        { label: "λ", insert: "\\lambda" }, { label: "μ", insert: "\\mu" },
-        { label: "ν", insert: "\\nu" }, { label: "ξ", insert: "\\xi" },
-        { label: "π", insert: "\\pi" }, { label: "ρ", insert: "\\rho" },
-        { label: "σ", insert: "\\sigma" }, { label: "τ", insert: "\\tau" },
-        { label: "υ", insert: "\\upsilon" }, { label: "φ", insert: "\\phi" },
-        { label: "χ", insert: "\\chi" }, { label: "ψ", insert: "\\psi" },
+        { label: "α", insert: "\\alpha" },
+        { label: "β", insert: "\\beta" },
+        { label: "γ", insert: "\\gamma" },
+        { label: "δ", insert: "\\delta" },
+        { label: "ε", insert: "\\epsilon" },
+        { label: "ζ", insert: "\\zeta" },
+        { label: "η", insert: "\\eta" },
+        { label: "θ", insert: "\\theta" },
+        { label: "ι", insert: "\\iota" },
+        { label: "κ", insert: "\\kappa" },
+        { label: "λ", insert: "\\lambda" },
+        { label: "μ", insert: "\\mu" },
+        { label: "ν", insert: "\\nu" },
+        { label: "ξ", insert: "\\xi" },
+        { label: "π", insert: "\\pi" },
+        { label: "ρ", insert: "\\rho" },
+        { label: "σ", insert: "\\sigma" },
+        { label: "τ", insert: "\\tau" },
+        { label: "υ", insert: "\\upsilon" },
+        { label: "φ", insert: "\\phi" },
+        { label: "χ", insert: "\\chi" },
+        { label: "ψ", insert: "\\psi" },
         { label: "ω", insert: "\\omega" },
-        { label: "Γ", insert: "\\Gamma" }, { label: "Δ", insert: "\\Delta" },
-        { label: "Θ", insert: "\\Theta" }, { label: "Λ", insert: "\\Lambda" },
-        { label: "Ξ", insert: "\\Xi" }, { label: "Π", insert: "\\Pi" },
-        { label: "Σ", insert: "\\Sigma" }, { label: "Υ", insert: "\\Upsilon" },
-        { label: "Φ", insert: "\\Phi" }, { label: "Ψ", insert: "\\Psi" },
+        { label: "Γ", insert: "\\Gamma" },
+        { label: "Δ", insert: "\\Delta" },
+        { label: "Θ", insert: "\\Theta" },
+        { label: "Λ", insert: "\\Lambda" },
+        { label: "Ξ", insert: "\\Xi" },
+        { label: "Π", insert: "\\Pi" },
+        { label: "Σ", insert: "\\Sigma" },
+        { label: "Υ", insert: "\\Upsilon" },
+        { label: "Φ", insert: "\\Phi" },
+        { label: "Ψ", insert: "\\Psi" },
         { label: "Ω", insert: "\\Omega" },
       ],
       Operators: [
-        { label: "±", insert: "\\pm" }, { label: "∓", insert: "\\mp" },
-        { label: "×", insert: "\\times" }, { label: "÷", insert: "\\div" },
-        { label: "·", insert: "\\cdot" }, { label: "∘", insert: "\\circ" },
-        { label: "∑", insert: "\\sum" }, { label: "∏", insert: "\\prod" },
-        { label: "∫", insert: "\\int" }, { label: "∬", insert: "\\iint" },
-        { label: "∮", insert: "\\oint" }, { label: "√", insert: "\\sqrt{}" },
-        { label: "a/b", insert: "\\frac{}{}" }, { label: "∂", insert: "\\partial" },
-        { label: "∇", insert: "\\nabla" }, { label: "∞", insert: "\\infty" },
-        { label: "!", insert: "!" }, { label: "‖", insert: "\\|" },
+        { label: "±", insert: "\\pm" },
+        { label: "∓", insert: "\\mp" },
+        { label: "×", insert: "\\times" },
+        { label: "÷", insert: "\\div" },
+        { label: "·", insert: "\\cdot" },
+        { label: "∘", insert: "\\circ" },
+        { label: "∑", insert: "\\sum" },
+        { label: "∏", insert: "\\prod" },
+        { label: "∫", insert: "\\int" },
+        { label: "∬", insert: "\\iint" },
+        { label: "∮", insert: "\\oint" },
+        { label: "√", insert: "\\sqrt{}" },
+        { label: "a/b", insert: "\\frac{}{}" },
+        { label: "∂", insert: "\\partial" },
+        { label: "∇", insert: "\\nabla" },
+        { label: "∞", insert: "\\infty" },
+        { label: "!", insert: "!" },
+        { label: "‖", insert: "\\|" },
       ],
       Relations: [
-        { label: "=", insert: "=" }, { label: "≠", insert: "\\neq" },
-        { label: "<", insert: "<" }, { label: ">", insert: ">" },
-        { label: "≤", insert: "\\leq" }, { label: "≥", insert: "\\geq" },
-        { label: "≈", insert: "\\approx" }, { label: "≡", insert: "\\equiv" },
-        { label: "∼", insert: "\\sim" }, { label: "∝", insert: "\\propto" },
-        { label: "∈", insert: "\\in" }, { label: "∉", insert: "\\notin" },
-        { label: "⊂", insert: "\\subset" }, { label: "⊃", insert: "\\supset" },
-        { label: "⊆", insert: "\\subseteq" }, { label: "⊇", insert: "\\supseteq" },
-        { label: "∪", insert: "\\cup" }, { label: "∩", insert: "\\cap" },
-        { label: "∅", insert: "\\emptyset" }, { label: "∀", insert: "\\forall" },
-        { label: "∃", insert: "\\exists" }, { label: "¬", insert: "\\neg" },
-        { label: "∧", insert: "\\wedge" }, { label: "∨", insert: "\\vee" },
+        { label: "=", insert: "=" },
+        { label: "≠", insert: "\\neq" },
+        { label: "<", insert: "<" },
+        { label: ">", insert: ">" },
+        { label: "≤", insert: "\\leq" },
+        { label: "≥", insert: "\\geq" },
+        { label: "≈", insert: "\\approx" },
+        { label: "≡", insert: "\\equiv" },
+        { label: "∼", insert: "\\sim" },
+        { label: "∝", insert: "\\propto" },
+        { label: "∈", insert: "\\in" },
+        { label: "∉", insert: "\\notin" },
+        { label: "⊂", insert: "\\subset" },
+        { label: "⊃", insert: "\\supset" },
+        { label: "⊆", insert: "\\subseteq" },
+        { label: "⊇", insert: "\\supseteq" },
+        { label: "∪", insert: "\\cup" },
+        { label: "∩", insert: "\\cap" },
+        { label: "∅", insert: "\\emptyset" },
+        { label: "∀", insert: "\\forall" },
+        { label: "∃", insert: "\\exists" },
+        { label: "¬", insert: "\\neg" },
+        { label: "∧", insert: "\\wedge" },
+        { label: "∨", insert: "\\vee" },
       ],
       Structures: [
         { label: "frac", insert: "\\frac{}{}" },
@@ -757,32 +810,54 @@ class SnippetsApp {
         { label: "lim", insert: "\\lim_{x \\to }" },
         { label: "sum", insert: "\\sum_{i=0}^{n}" },
         { label: "int", insert: "\\int_{a}^{b}" },
-        { label: "matrix", insert: "\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}" },
-        { label: "cases", insert: "\\begin{cases}\na & \\text{if } x > 0 \\\\\nb & \\text{otherwise}\n\\end{cases}" },
+        {
+          label: "matrix",
+          insert: "\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}",
+        },
+        {
+          label: "cases",
+          insert:
+            "\\begin{cases}\na & \\text{if } x > 0 \\\\\nb & \\text{otherwise}\n\\end{cases}",
+        },
         { label: "text", insert: "\\text{}" },
       ],
       Functions: [
-        { label: "\\sin", insert: "\\sin" }, { label: "\\cos", insert: "\\cos" },
-        { label: "\\tan", insert: "\\tan" }, { label: "\\cot", insert: "\\cot" },
-        { label: "\\sec", insert: "\\sec" }, { label: "\\csc", insert: "\\csc" },
-        { label: "\\arcsin", insert: "\\arcsin" }, { label: "\\arccos", insert: "\\arccos" },
+        { label: "\\sin", insert: "\\sin" },
+        { label: "\\cos", insert: "\\cos" },
+        { label: "\\tan", insert: "\\tan" },
+        { label: "\\cot", insert: "\\cot" },
+        { label: "\\sec", insert: "\\sec" },
+        { label: "\\csc", insert: "\\csc" },
+        { label: "\\arcsin", insert: "\\arcsin" },
+        { label: "\\arccos", insert: "\\arccos" },
         { label: "\\arctan", insert: "\\arctan" },
-        { label: "\\log", insert: "\\log" }, { label: "\\ln", insert: "\\ln" },
+        { label: "\\log", insert: "\\log" },
+        { label: "\\ln", insert: "\\ln" },
         { label: "\\exp", insert: "\\exp" },
-        { label: "\\max", insert: "\\max" }, { label: "\\min", insert: "\\min" },
-        { label: "\\sup", insert: "\\sup" }, { label: "\\inf", insert: "\\inf" },
-        { label: "\\det", insert: "\\det" }, { label: "\\dim", insert: "\\dim" },
-        { label: "\\gcd", insert: "\\gcd" }, { label: "\\mod", insert: "\\bmod" },
+        { label: "\\max", insert: "\\max" },
+        { label: "\\min", insert: "\\min" },
+        { label: "\\sup", insert: "\\sup" },
+        { label: "\\inf", insert: "\\inf" },
+        { label: "\\det", insert: "\\det" },
+        { label: "\\dim", insert: "\\dim" },
+        { label: "\\gcd", insert: "\\gcd" },
+        { label: "\\mod", insert: "\\bmod" },
       ],
       Arrows: [
-        { label: "→", insert: "\\to" }, { label: "←", insert: "\\leftarrow" },
+        { label: "→", insert: "\\to" },
+        { label: "←", insert: "\\leftarrow" },
         { label: "↔", insert: "\\leftrightarrow" },
-        { label: "⇒", insert: "\\Rightarrow" }, { label: "⇐", insert: "\\Leftarrow" },
+        { label: "⇒", insert: "\\Rightarrow" },
+        { label: "⇐", insert: "\\Leftarrow" },
         { label: "⇔", insert: "\\Leftrightarrow" },
-        { label: "↑", insert: "\\uparrow" }, { label: "↓", insert: "\\downarrow" },
-        { label: "↦", insert: "\\mapsto" }, { label: "⟶", insert: "\\longrightarrow" },
-        { label: "⟹", insert: "\\Longrightarrow" }, { label: "⟺", insert: "\\Longleftrightarrow" },
-        { label: "↗", insert: "\\nearrow" }, { label: "↘", insert: "\\searrow" },
+        { label: "↑", insert: "\\uparrow" },
+        { label: "↓", insert: "\\downarrow" },
+        { label: "↦", insert: "\\mapsto" },
+        { label: "⟶", insert: "\\longrightarrow" },
+        { label: "⟹", insert: "\\Longrightarrow" },
+        { label: "⟺", insert: "\\Longleftrightarrow" },
+        { label: "↗", insert: "\\nearrow" },
+        { label: "↘", insert: "\\searrow" },
       ],
     };
   }
@@ -895,9 +970,11 @@ class SnippetsApp {
         this.updateMdToolbarVisibility();
       });
 
-    document.getElementById("snippetExtSelect").addEventListener("change", () => {
-      this.updateMdToolbarVisibility();
-    });
+    document
+      .getElementById("snippetExtSelect")
+      .addEventListener("change", () => {
+        this.updateMdToolbarVisibility();
+      });
 
     // MD toolbar button delegation
     document.getElementById("mdToolbar").addEventListener("click", (e) => {
@@ -907,42 +984,50 @@ class SnippetsApp {
     });
 
     // LaTeX palette toggle
-    document.getElementById("latexPaletteBtn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const palette = document.getElementById("latexPalette");
-      if (palette.style.display !== "none") {
-        palette.style.display = "none";
-        return;
-      }
-      // Position fixed below the button
-      const rect = e.currentTarget.getBoundingClientRect();
-      palette.style.display = "block";
-      const pw = palette.offsetWidth;
-      let left = rect.right - pw;
-      let top = rect.bottom + 6;
-      if (left < 8) left = 8;
-      if (top + palette.offsetHeight > window.innerHeight - 8) {
-        top = rect.top - palette.offsetHeight - 6;
-      }
-      palette.style.left = left + "px";
-      palette.style.top = top + "px";
-    });
+    document
+      .getElementById("latexPaletteBtn")
+      .addEventListener("click", (e) => {
+        e.stopPropagation();
+        const palette = document.getElementById("latexPalette");
+        if (palette.style.display !== "none") {
+          palette.style.display = "none";
+          return;
+        }
+        // Position fixed below the button
+        const rect = e.currentTarget.getBoundingClientRect();
+        palette.style.display = "block";
+        const pw = palette.offsetWidth;
+        let left = rect.right - pw;
+        let top = rect.bottom + 6;
+        if (left < 8) left = 8;
+        if (top + palette.offsetHeight > window.innerHeight - 8) {
+          top = rect.top - palette.offsetHeight - 6;
+        }
+        palette.style.left = left + "px";
+        palette.style.top = top + "px";
+      });
 
     // Palette tab delegation
-    document.getElementById("latexPaletteTabs").addEventListener("click", (e) => {
-      const tab = e.target.closest("[data-palette-tab]");
-      if (!tab) return;
-      document.querySelectorAll(".md-palette-tab").forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      this.renderLatexPaletteTab(tab.dataset.paletteTab);
-    });
+    document
+      .getElementById("latexPaletteTabs")
+      .addEventListener("click", (e) => {
+        const tab = e.target.closest("[data-palette-tab]");
+        if (!tab) return;
+        document
+          .querySelectorAll(".md-palette-tab")
+          .forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        this.renderLatexPaletteTab(tab.dataset.paletteTab);
+      });
 
     // Palette item delegation
-    document.getElementById("latexPaletteGrid").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-latex-insert]");
-      if (!btn) return;
-      this.insertLatexSymbol(btn.dataset.latexInsert);
-    });
+    document
+      .getElementById("latexPaletteGrid")
+      .addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-latex-insert]");
+        if (!btn) return;
+        this.insertLatexSymbol(btn.dataset.latexInsert);
+      });
 
     // Build palette content once
     this.buildLatexPalette();
@@ -1053,12 +1138,14 @@ class SnippetsApp {
     });
 
     // Variable modal: Enter key submits
-    document.getElementById("variableFields").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        this.submitVariableModal();
-      }
-    });
+    document
+      .getElementById("variableFields")
+      .addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.submitVariableModal();
+        }
+      });
 
     // Global keyboard shortcuts
     document.addEventListener("keydown", (e) => this.handleKeydown(e));
@@ -1305,11 +1392,13 @@ class SnippetsApp {
     list.appendChild(allItem);
 
     // Add user categories
-    [...this.types].sort((a, b) => a.name.localeCompare(b.name)).forEach((type) => {
-      const count = this.snippets.filter((s) => s.type === type.name).length;
-      const item = document.createElement("li");
-      item.className = `category-item${this.activeCategory === type.name ? " active" : ""}`;
-      item.innerHTML = `
+    [...this.types]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((type) => {
+        const count = this.snippets.filter((s) => s.type === type.name).length;
+        const item = document.createElement("li");
+        item.className = `category-item${this.activeCategory === type.name ? " active" : ""}`;
+        item.innerHTML = `
                 <span class="category-name"><i class="${this.getCategoryIcon(type.name)}"></i> ${type.name}</span>
                 <span class="category-count">${count}</span>
                 <div class="category-actions">
@@ -1321,9 +1410,9 @@ class SnippetsApp {
                     </button>
                 </div>
             `;
-      item.addEventListener("click", () => this.selectCategory(type.name));
-      list.appendChild(item);
-    });
+        item.addEventListener("click", () => this.selectCategory(type.name));
+        list.appendChild(item);
+      });
 
     this.updateTypeSelect();
   }
@@ -1487,9 +1576,10 @@ class SnippetsApp {
       const tags = snippet.tags || [];
       const copyCount = snippet.copyCount || 0;
 
-      const copyBadgeHtml = copyCount > 0
-        ? `<span class="snippet-copy-badge" title="${copyCount} cop${copyCount !== 1 ? "ies" : "y"}">${copyCount}</span>`
-        : "";
+      const copyBadgeHtml =
+        copyCount > 0
+          ? `<span class="snippet-copy-badge" title="${copyCount} cop${copyCount !== 1 ? "ies" : "y"}">${copyCount}</span>`
+          : "";
 
       let headerHtml;
       if (isFav) {
@@ -1555,7 +1645,9 @@ class SnippetsApp {
   renderExtFilterChips(categoryFilteredSnippets) {
     const container = document.getElementById("extFilterChips");
     // Collect unique extensions present in the category-filtered set
-    const exts = [...new Set(categoryFilteredSnippets.map((s) => s.extension))].sort();
+    const exts = [
+      ...new Set(categoryFilteredSnippets.map((s) => s.extension)),
+    ].sort();
 
     if (exts.length <= 1) {
       container.innerHTML = "";
@@ -1741,9 +1833,13 @@ class SnippetsApp {
     const selected = ta.value.substring(start, end);
     const text = selected || placeholder;
     const replacement = before + text + after;
-    ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
+    ta.value =
+      ta.value.substring(0, start) + replacement + ta.value.substring(end);
     // Select placeholder text (or keep selection wrapped)
-    ta.setSelectionRange(start + before.length, start + before.length + text.length);
+    ta.setSelectionRange(
+      start + before.length,
+      start + before.length + text.length,
+    );
     ta.focus();
   }
 
@@ -1751,7 +1847,8 @@ class SnippetsApp {
   insertAtCursor(text) {
     const ta = document.getElementById("snippetContentInput");
     const start = ta.selectionStart;
-    ta.value = ta.value.substring(0, start) + text + ta.value.substring(ta.selectionEnd);
+    ta.value =
+      ta.value.substring(0, start) + text + ta.value.substring(ta.selectionEnd);
     ta.setSelectionRange(start + text.length, start + text.length);
     ta.focus();
   }
@@ -1779,10 +1876,12 @@ class SnippetsApp {
     const end = ta.selectionEnd;
     const selected = ta.value.substring(start, end);
     // If text is selected and the command has {}, wrap selection in first {}
-    let finalText = selected && insertText.includes("{}")
-      ? insertText.replace("{}", "{" + selected + "}")
-      : insertText;
-    ta.value = ta.value.substring(0, start) + finalText + ta.value.substring(end);
+    let finalText =
+      selected && insertText.includes("{}")
+        ? insertText.replace("{}", "{" + selected + "}")
+        : insertText;
+    ta.value =
+      ta.value.substring(0, start) + finalText + ta.value.substring(end);
     const braceIdx = finalText.indexOf("{}");
     if (braceIdx !== -1 && !selected) {
       ta.setSelectionRange(start + braceIdx + 1, start + braceIdx + 1);
@@ -1795,21 +1894,49 @@ class SnippetsApp {
 
   handleMdToolbarAction(action) {
     switch (action) {
-      case "bold":         this.insertMdSyntax("**", "**", "text"); break;
-      case "italic":       this.insertMdSyntax("*", "*", "text"); break;
-      case "strikethrough":this.insertMdSyntax("~~", "~~", "text"); break;
-      case "inline-code":  this.insertMdSyntax("`", "`", "code"); break;
-      case "h1":           this.insertLinePrefix("# "); break;
-      case "h2":           this.insertLinePrefix("## "); break;
-      case "h3":           this.insertLinePrefix("### "); break;
-      case "ul":           this.insertLinePrefix("- "); break;
-      case "ol":           this.insertLinePrefix("1. "); break;
-      case "blockquote":   this.insertLinePrefix("> "); break;
-      case "code-block":   this.insertMdSyntax("\n```\n", "\n```\n", "code"); break;
-      case "link":         this.insertMdSyntax("[", "](url)", "text"); break;
-      case "image":        this.insertMdSyntax("![", "](url)", "alt text"); break;
+      case "bold":
+        this.insertMdSyntax("**", "**", "text");
+        break;
+      case "italic":
+        this.insertMdSyntax("*", "*", "text");
+        break;
+      case "strikethrough":
+        this.insertMdSyntax("~~", "~~", "text");
+        break;
+      case "inline-code":
+        this.insertMdSyntax("`", "`", "code");
+        break;
+      case "h1":
+        this.insertLinePrefix("# ");
+        break;
+      case "h2":
+        this.insertLinePrefix("## ");
+        break;
+      case "h3":
+        this.insertLinePrefix("### ");
+        break;
+      case "ul":
+        this.insertLinePrefix("- ");
+        break;
+      case "ol":
+        this.insertLinePrefix("1. ");
+        break;
+      case "blockquote":
+        this.insertLinePrefix("> ");
+        break;
+      case "code-block":
+        this.insertMdSyntax("\n```\n", "\n```\n", "code");
+        break;
+      case "link":
+        this.insertMdSyntax("[", "](url)", "text");
+        break;
+      case "image":
+        this.insertMdSyntax("![", "](url)", "alt text");
+        break;
       case "table":
-        this.insertAtCursor("| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Cell | Cell | Cell |\n");
+        this.insertAtCursor(
+          "| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Cell | Cell | Cell |\n",
+        );
         break;
       case "hr":
         this.insertAtCursor("\n\n---\n\n");
@@ -1827,8 +1954,9 @@ class SnippetsApp {
     const tabs = document.getElementById("latexPaletteTabs");
     const tabNames = Object.keys(this.latexPaletteItems);
     tabs.innerHTML = tabNames
-      .map((name, i) =>
-        `<button type="button" class="md-palette-tab${i === 0 ? " active" : ""}" data-palette-tab="${name}">${name}</button>`
+      .map(
+        (name, i) =>
+          `<button type="button" class="md-palette-tab${i === 0 ? " active" : ""}" data-palette-tab="${name}">${name}</button>`,
       )
       .join("");
     this.renderLatexPaletteTab(tabNames[0]);
@@ -1840,7 +1968,7 @@ class SnippetsApp {
     grid.innerHTML = items
       .map(
         (item) =>
-          `<button type="button" class="md-palette-item" data-latex-insert="${this.escapeHtml(item.insert)}" title="${this.escapeHtml(item.insert)}">${this.escapeHtml(item.label)}</button>`
+          `<button type="button" class="md-palette-item" data-latex-insert="${this.escapeHtml(item.insert)}" title="${this.escapeHtml(item.insert)}">${this.escapeHtml(item.label)}</button>`,
       )
       .join("");
   }
@@ -2394,24 +2522,29 @@ class SnippetsApp {
     document.getElementById("historyDiffContainer").style.display = "";
 
     const oldLines = version.content.split("\n");
-    const newLines = this.currentSnippet ? this.currentSnippet.content.split("\n") : [];
+    const newLines = this.currentSnippet
+      ? this.currentSnippet.content.split("\n")
+      : [];
     const ops = this.computeDiff(oldLines, newLines);
 
     const diffEl = document.getElementById("historyDiffView");
 
     if (ops.every((op) => op.type === "equal")) {
-      diffEl.innerHTML = '<div class="diff-no-changes">No differences — content is identical to current version.</div>';
+      diffEl.innerHTML =
+        '<div class="diff-no-changes">No differences — content is identical to current version.</div>';
       return;
     }
 
     diffEl.innerHTML = ops
       .map((op) => {
-        const glyph = op.type === "added" ? "+" : op.type === "removed" ? "−" : " ";
-        const cls = op.type === "added"
-          ? "diff-line diff-line-added"
-          : op.type === "removed"
-            ? "diff-line diff-line-removed"
-            : "diff-line diff-line-equal";
+        const glyph =
+          op.type === "added" ? "+" : op.type === "removed" ? "−" : " ";
+        const cls =
+          op.type === "added"
+            ? "diff-line diff-line-added"
+            : op.type === "removed"
+              ? "diff-line diff-line-removed"
+              : "diff-line diff-line-equal";
         return `<div class="${cls}"><span class="diff-gutter">${glyph}</span>${this.escapeHtml(op.line)}</div>`;
       })
       .join("");
@@ -2419,8 +2552,12 @@ class SnippetsApp {
 
   setHistoryViewMode(mode) {
     this.historyViewMode = mode;
-    document.getElementById("historyCodeBtn").classList.toggle("active", mode === "code");
-    document.getElementById("historyDiffBtn").classList.toggle("active", mode === "diff");
+    document
+      .getElementById("historyCodeBtn")
+      .classList.toggle("active", mode === "code");
+    document
+      .getElementById("historyDiffBtn")
+      .classList.toggle("active", mode === "diff");
     this._renderHistoryCurrentMode();
   }
 
@@ -2440,7 +2577,8 @@ class SnippetsApp {
     }
     // Backtrack
     const ops = [];
-    let i = m, j = n;
+    let i = m,
+      j = n;
     while (i > 0 || j > 0) {
       if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
         ops.unshift({ type: "equal", line: oldLines[i - 1] });
