@@ -706,7 +706,6 @@
 
 /* Code Container */
 .code-container {
-    flex: 1;
     background-color: var(--bg-primary);
     border-radius: 5px;
     overflow: auto;
@@ -717,8 +716,6 @@
 .code-container pre {
     margin: 0;
     padding: 20px;
-    height: 100%;
-    min-height: 300px;
     white-space: pre-wrap;
     overflow-x: hidden;
 }
@@ -1637,7 +1634,6 @@
 
 /* Markdown Preview */
 .markdown-preview {
-    flex: 1;
     padding: 20px 24px;
     background-color: var(--bg-primary);
     border-radius: 5px;
