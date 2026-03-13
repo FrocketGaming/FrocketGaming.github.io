@@ -1196,6 +1196,16 @@ class SnippetsApp {
       return;
     }
 
+    // Ctrl+S — save snippet modal if open
+    if (e.ctrlKey && e.key.toLowerCase() === "s") {
+      const modal = document.getElementById("snippetModal");
+      if (modal && modal.style.display === "flex") {
+        e.preventDefault();
+        this.saveSnippet();
+        return;
+      }
+    }
+
     // Don't fire shortcuts when typing in inputs or when a modal is open
     if (isTyping || anyModalOpen) return;
 
@@ -1331,6 +1341,90 @@ class SnippetsApp {
       // Get text content without the × remove button
       return c.firstChild.textContent.trim();
     });
+  }
+
+  renderTagsView(snippet) {
+    const tagsEl = document.getElementById("snippetTags");
+    const tags = snippet.tags || [];
+
+    tagsEl.innerHTML =
+      tags
+        .map(
+          (t) =>
+            `<span class="snippet-tag-badge" data-tag="${this.escapeHtml(t)}">${this.escapeHtml(t)}<span class="tag-badge-remove" title="Remove tag">&times;</span></span>`,
+        )
+        .join("") +
+      `<span class="tag-inline-add"><span class="tag-add-btn" title="Add tag"><i class="fa-solid fa-plus"></i> add tag</span><input type="text" class="tag-inline-input" placeholder="tag name…" style="display:none" /></span>`;
+
+    // Click tag text to filter
+    tagsEl.querySelectorAll(".snippet-tag-badge").forEach((badge) => {
+      badge.addEventListener("click", (e) => {
+        if (e.target.classList.contains("tag-badge-remove")) return;
+        const tag = badge.getAttribute("data-tag");
+        document.getElementById("searchInput").value = tag;
+        this.searchQuery = tag.toLowerCase();
+        this.renderSnippetsList();
+      });
+    });
+
+    // Remove tag
+    tagsEl.querySelectorAll(".tag-badge-remove").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const tag = btn.closest(".snippet-tag-badge").getAttribute("data-tag");
+        const newTags = (this.currentSnippet.tags || []).filter(
+          (t) => t !== tag,
+        );
+        this.saveTagsInline(newTags);
+      });
+    });
+
+    // Inline add tag
+    const addBtn = tagsEl.querySelector(".tag-add-btn");
+    const input = tagsEl.querySelector(".tag-inline-input");
+
+    const commitTag = () => {
+      const val = input.value.trim().toLowerCase().replace(/,/g, "");
+      if (val) {
+        const current = this.currentSnippet.tags || [];
+        if (!current.includes(val)) {
+          this.saveTagsInline([...current, val]);
+          return;
+        }
+      }
+      input.value = "";
+      input.style.display = "none";
+      addBtn.style.display = "";
+    };
+
+    addBtn.addEventListener("click", () => {
+      addBtn.style.display = "none";
+      input.style.display = "";
+      input.focus();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        commitTag();
+      } else if (e.key === "Escape") {
+        input.value = "";
+        input.style.display = "none";
+        addBtn.style.display = "";
+      }
+    });
+
+    input.addEventListener("blur", commitTag);
+  }
+
+  async saveTagsInline(tags) {
+    if (!this.currentSnippet) return;
+    this.currentSnippet.tags = tags;
+    this.currentSnippet.updatedAt = Date.now();
+    await StorageManager.put("snippets", this.currentSnippet);
+    this._syncSnippet(this.currentSnippet);
+    this.renderTagsView(this.currentSnippet);
+    this.renderSnippetsList();
   }
 
   // ─── Favorites ─────────────────────────────────────────────
@@ -1734,27 +1828,7 @@ class SnippetsApp {
     }
 
     // Tags
-    const tagsEl = document.getElementById("snippetTags");
-    const tags = snippet.tags || [];
-    if (tags.length > 0) {
-      tagsEl.innerHTML = tags
-        .map(
-          (t) =>
-            `<span class="snippet-tag-badge" data-tag="${this.escapeHtml(t)}">${this.escapeHtml(t)}</span>`,
-        )
-        .join("");
-      // Click tag to filter
-      tagsEl.querySelectorAll(".snippet-tag-badge").forEach((badge) => {
-        badge.addEventListener("click", () => {
-          const tag = badge.getAttribute("data-tag");
-          document.getElementById("searchInput").value = tag;
-          this.searchQuery = tag.toLowerCase();
-          this.renderSnippetsList();
-        });
-      });
-    } else {
-      tagsEl.innerHTML = "";
-    }
+    this.renderTagsView(snippet);
 
     // Notes
     const notesEl = document.getElementById("snippetNotes");
