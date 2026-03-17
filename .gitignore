@@ -172,3 +172,4 @@ cython_debug/
 
 # AI Agents
 .claude/
+claude.md

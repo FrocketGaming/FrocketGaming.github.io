@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Notes - QoL Tools</title>
+        <script>
+            (function () {
+                var theme = localStorage.getItem("qol-tools-theme");
+                if (theme && theme !== "default") {
+                    document.documentElement.setAttribute("data-theme", theme);
+                }
+            })();
+        </script>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+        />
+        <link rel="stylesheet" href="../../src/stylesheet.css" />
+        <link rel="stylesheet" href="../../src/firebase-sync.css" />
+        <link rel="stylesheet" href="notes-styles.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+
+    <body class="raleway-fnt">
+        <div class="header">
+            <div class="header-top">
+                <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+                <div class="theme-selector">
+                    <label for="themeSelect">Theme:</label>
+                    <select id="themeSelect" class="theme-select"></select>
+                </div>
+            </div>
+            <nav class="tool-nav">
+                <a href="../txt-formatter/index.html" class="tool-btn">txt formatter</a>
+                <a href="../snippets/index.html" class="tool-btn">snippets</a>
+                <a href="../todo/index.html" class="tool-btn">to-do list</a>
+                <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
+                <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
+                <a href="../image-editor/index.html" class="tool-btn">image editor</a>
+                <a href="../chart-builder/index.html" class="tool-btn">chart builder</a>
+                <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
+                <a href="../timezone/index.html" class="tool-btn">timezone</a>
+                <a href="../text-diff/index.html" class="tool-btn">text diff</a>
+            </nav>
+        </div>
+
+        <!-- Sign-in screen (unauthenticated) -->
+        <div id="signInScreen" class="sign-in-screen" style="display:none">
+            <div class="sign-in-card">
+                <i class="fa-solid fa-note-sticky sign-in-icon"></i>
+                <h2>Notes</h2>
+                <p>Sign in with Google to create and access your notes across all your devices.</p>
+                <button id="signInBtn" class="sign-in-btn">
+                    <i class="fa-brands fa-google"></i>
+                    <span>Sign in with Google</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main app (authenticated) -->
+        <div id="notesApp" class="notes-app" style="display:none">
+
+            <!-- Toolbar -->
+            <div class="notes-toolbar">
+                <button id="newNoteBtn" class="format-btn">
+                    <i class="fa-solid fa-plus"></i> New Note
+                </button>
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Search notes..." />
+                </div>
+                <div class="toolbar-spacer"></div>
+                <div class="auth-section" id="authSection">
+                    <div id="userInfo" class="user-info" style="display:none">
+                        <img id="userAvatar" class="user-avatar" src="" alt="Avatar" />
+                        <span id="userName" class="user-name"></span>
+                        <div id="syncStatus" class="sync-status" style="display:none">
+                            <span class="sync-status-dot" id="syncDot"></span>
+                            <span id="syncLabel">Synced</span>
+                        </div>
+                        <button id="signOutBtn" class="sign-out-btn" title="Sign out">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two-panel layout -->
+            <div class="notes-layout">
+
+                <!-- Left: notes list -->
+                <div class="notes-list-panel">
+                    <div id="notesList" class="notes-list"></div>
+                </div>
+
+                <!-- Right: editor -->
+                <div class="notes-editor-panel">
+                    <div class="empty-state" id="emptyState">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <p>Select a note or create a new one</p>
+                    </div>
+
+                    <div class="note-editor" id="noteEditor" style="display:none">
+                        <div class="editor-header">
+                            <input
+                                type="text"
+                                id="noteTitleInput"
+                                class="note-title-input"
+                                placeholder="Note title..."
+                            />
+                            <div class="editor-actions">
+                                <button class="action-btn" id="pinBtn" title="Pin note">
+                                    <i class="fa-regular fa-thumbtack"></i>
+                                </button>
+                                <button class="action-btn" id="previewToggleBtn" title="Preview">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button class="action-btn delete" id="deleteNoteBtn" title="Delete note">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="tag-input-wrapper" id="tagInputWrapper">
+                            <div class="tag-chips" id="tagChips"></div>
+                            <input
+                                type="text"
+                                id="tagInput"
+                                class="tag-input"
+                                placeholder="Add tag and press Enter..."
+                            />
+                        </div>
+
+                        <div class="editor-body">
+                            <textarea
+                                id="noteContentInput"
+                                class="note-textarea"
+                                placeholder="Start writing... (supports Markdown)"
+                            ></textarea>
+                            <div
+                                id="notePreview"
+                                class="note-preview markdown-preview"
+                                style="display:none"
+                            ></div>
+                        </div>
+
+                        <div class="editor-footer">
+                            <span id="noteMetaCreated" class="note-meta"></span>
+                            <span id="noteMetaUpdated" class="note-meta"></span>
+                            <span id="autoSaveStatus" class="auto-save-status"></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Delete confirmation modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h3>Delete Note</h3>
+                    <span class="modal-close" onclick="notesApp.closeDeleteModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this note? This cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="clear-bnt" id="confirmDeleteBtn">Delete</button>
+                    <button class="format-btn" onclick="notesApp.closeDeleteModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+        <script src="../../src/theme-manager.js"></script>
+        <script src="../../src/firebase-config.js"></script>
+        <script src="notes-app.js"></script>
+    </body>
+</html>
