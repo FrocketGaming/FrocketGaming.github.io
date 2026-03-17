@@ -75,6 +75,22 @@
                     <option value="created">Created</option>
                     <option value="alpha">A – Z</option>
                 </select>
+                <div class="shortcuts-info">
+                    <button class="action-btn shortcuts-btn" id="shortcutsBtn" title="Keyboard shortcuts">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
+                    <div class="shortcuts-tooltip" id="shortcutsTooltip">
+                        <div class="shortcuts-tooltip-title">Keyboard Shortcuts</div>
+                        <div class="shortcut-row"><kbd>Ctrl+S</kbd> Save note</div>
+                        <div class="shortcut-row"><kbd>Ctrl+N</kbd> New note</div>
+                        <div class="shortcut-row"><kbd>/</kbd> or <kbd>Ctrl+K</kbd> Search</div>
+                        <div class="shortcut-row"><kbd>Ctrl+B</kbd> Bold</div>
+                        <div class="shortcut-row"><kbd>Ctrl+I</kbd> Italic</div>
+                        <div class="shortcut-row"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> Navigate notes</div>
+                        <div class="shortcut-row"><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> Indent</div>
+                        <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect / Exit zen</div>
+                    </div>
+                </div>
                 <div class="toolbar-spacer"></div>
                 <div class="auth-section" id="authSection">
                     <div id="userInfo" class="user-info" style="display:none">
@@ -137,7 +153,10 @@
                                 <button class="action-btn" id="zenBtn" title="Zen mode">
                                     <i class="fa-solid fa-expand"></i>
                                 </button>
-                                <button class="action-btn delete" id="deleteNoteBtn" title="Delete note">
+                                <button class="action-btn" id="archiveNoteBtn" title="Archive note">
+                                    <i class="fa-solid fa-box-archive"></i>
+                                </button>
+                                <button class="action-btn delete" id="deleteNoteBtn" title="Delete permanently">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -172,15 +191,15 @@
             <button class="export-option" id="exportTxtBtn"><i class="fa-solid fa-file-lines"></i> Export as .txt</button>
         </div>
 
-        <!-- Delete confirmation modal -->
+        <!-- Archive / Delete confirmation modal -->
         <div id="deleteModal" class="modal">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3>Archive Note</h3>
+                    <h3 id="deleteModalTitle">Archive Note</h3>
                     <span class="modal-close" onclick="notesApp.closeDeleteModal()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p>This note will be archived and hidden from your list.</p>
+                    <p id="deleteModalBody">This note will be archived and hidden from your list.</p>
                 </div>
                 <div class="modal-footer">
                     <button class="clear-bnt" id="confirmDeleteBtn">Archive</button>

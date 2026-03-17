@@ -14,6 +14,7 @@ class NotesApp {
         this.zenMode = false;
         this.sidebarCollapsed = false;
         this.exportDropdownOpen = false;
+        this.pendingAction = null; // 'archive' | 'delete'
     }
 
     init() {
@@ -429,35 +430,70 @@ class NotesApp {
         }
     }
 
-    openDeleteModal() {
+    openDeleteModal(action = 'archive') {
+        this.pendingAction = action;
+        const title = document.getElementById('deleteModalTitle');
+        const body = document.getElementById('deleteModalBody');
+        const btn = document.getElementById('confirmDeleteBtn');
+
+        if (action === 'delete') {
+            if (title) title.textContent = 'Delete Note';
+            if (body) body.textContent = 'This note will be permanently deleted and cannot be recovered.';
+            if (btn) btn.textContent = 'Delete';
+        } else {
+            if (title) title.textContent = 'Archive Note';
+            if (body) body.textContent = 'This note will be archived and hidden from your list.';
+            if (btn) btn.textContent = 'Archive';
+        }
+
         document.getElementById('deleteModal').style.display = 'flex';
     }
 
     closeDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
+        this.pendingAction = null;
     }
 
     async confirmDelete() {
         if (!this.currentNoteId || !this.db || !this.user) return;
+        const action = this.pendingAction;
         this.closeDeleteModal();
 
         const id = this.currentNoteId;
         this.currentNoteId = null;
         this.showEmptyState();
 
-        const idx = this.notes.findIndex(n => n.id === id);
-        if (idx !== -1) this.notes[idx].archived = true;
-        this.renderNotesList();
-
-        try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(id)
-                .update({ archived: true, updatedAt: new Date().toISOString() });
-        } catch (err) {
-            console.error('Notes: Failed to archive:', err);
+        if (action === 'delete') {
+            // Hard delete
             const idx = this.notes.findIndex(n => n.id === id);
-            if (idx !== -1) this.notes[idx].archived = false;
+            const removed = idx !== -1 ? this.notes.splice(idx, 1)[0] : null;
             this.renderNotesList();
+
+            try {
+                await this.db.collection('users').doc(this.user.uid)
+                    .collection('notes').doc(id)
+                    .delete();
+            } catch (err) {
+                console.error('Notes: Failed to delete:', err);
+                if (removed) { this.notes.splice(idx, 0, removed); }
+                this.renderNotesList();
+            }
+        } else {
+            // Soft archive
+            const idx = this.notes.findIndex(n => n.id === id);
+            if (idx !== -1) this.notes[idx].archived = true;
+            this.renderNotesList();
+
+            try {
+                await this.db.collection('users').doc(this.user.uid)
+                    .collection('notes').doc(id)
+                    .update({ archived: true, updatedAt: new Date().toISOString() });
+            } catch (err) {
+                console.error('Notes: Failed to archive:', err);
+                const i = this.notes.findIndex(n => n.id === id);
+                if (i !== -1) this.notes[i].archived = false;
+                this.renderNotesList();
+            }
         }
     }
 
@@ -886,7 +922,8 @@ class NotesApp {
         document.getElementById('copyContentBtn')?.addEventListener('click', () => this.copyContent());
         document.getElementById('zenBtn')?.addEventListener('click', () => this.toggleZen());
         document.getElementById('collapseSidebarBtn')?.addEventListener('click', () => this.toggleSidebar());
-        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => this.openDeleteModal());
+        document.getElementById('archiveNoteBtn')?.addEventListener('click', () => this.openDeleteModal('archive'));
+        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => this.openDeleteModal('delete'));
         document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.confirmDelete());
 
         document.getElementById('exportBtn')?.addEventListener('click', () => this.toggleExportDropdown());
@@ -905,12 +942,21 @@ class NotesApp {
             if (e.target === document.getElementById('deleteModal')) this.closeDeleteModal();
         });
 
-        // Close export dropdown on outside click
+        // Shortcuts tooltip toggle
+        document.getElementById('shortcutsBtn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            document.getElementById('shortcutsTooltip')?.classList.toggle('show');
+        });
+
+        // Close export dropdown + shortcuts on outside click
         document.addEventListener('click', e => {
             if (this.exportDropdownOpen &&
                 !document.getElementById('exportBtn')?.contains(e.target) &&
                 !document.getElementById('exportDropdown')?.contains(e.target)) {
                 this.closeExportDropdown();
+            }
+            if (!document.getElementById('shortcutsBtn')?.contains(e.target)) {
+                document.getElementById('shortcutsTooltip')?.classList.remove('show');
             }
         });
 
@@ -941,7 +987,10 @@ class NotesApp {
             }
 
             if (e.key === 'Escape') {
-                if (this.exportDropdownOpen) {
+                const tooltip = document.getElementById('shortcutsTooltip');
+                if (tooltip?.classList.contains('show')) {
+                    tooltip.classList.remove('show');
+                } else if (this.exportDropdownOpen) {
                     this.closeExportDropdown();
                 } else if (this.zenMode) {
                     this.toggleZen();
