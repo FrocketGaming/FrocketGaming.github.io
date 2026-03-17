@@ -19,7 +19,7 @@
     border-radius: 10px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 0 20px rgba(116, 161, 46, 0.5);
+    box-shadow: 0 0 20px var(--shadow-color);
     max-height: 95vh;
     overflow-y: auto;
 }
@@ -98,8 +98,8 @@
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
-    background-color: rgba(116, 161, 46, 0.2);
-    border: 1px solid rgba(116, 161, 46, 0.4);
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--accent-primary);
     border-radius: 12px;
     font-size: 12px;
     color: var(--accent-secondary);
