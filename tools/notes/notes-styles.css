@@ -134,6 +134,70 @@
     opacity: 0.6;
 }
 
+/* ─── Action Buttons ─────────────────────────────────────── */
+
+.action-btn {
+    padding: 8px 12px;
+    background-color: transparent;
+    border: none;
+    border-radius: 5px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 16px;
+}
+
+.action-btn:hover {
+    background-color: transparent;
+    color: var(--accent-secondary);
+}
+
+.action-btn.delete:hover {
+    background-color: var(--error-color);
+    color: var(--bg-primary);
+    border-radius: 5px;
+}
+
+/* ─── Empty State ────────────────────────────────────────── */
+
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    padding: 40px;
+}
+
+.empty-state i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    color: var(--border-color);
+}
+
+.empty-state p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin: 0;
+}
+
+/* ─── Search ─────────────────────────────────────────────── */
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
 /* ─── Sign-in Screen ─────────────────────────────────────── */
 
 .sign-in-screen {

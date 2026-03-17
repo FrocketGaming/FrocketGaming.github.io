@@ -96,14 +96,6 @@ class NotesApp {
                             this.showEmptyState();
                         }
                     }
-
-                    // Show editor after note creation (currentNoteId set before snapshot fires)
-                    if (this.currentNoteId) {
-                        const note = this.notes.find(n => n.id === this.currentNoteId);
-                        if (note && document.getElementById('noteEditor').style.display === 'none') {
-                            this.showEditor(note);
-                        }
-                    }
                 },
                 error => {
                     console.error('Notes: Firestore listener error:', error);
@@ -209,8 +201,12 @@ class NotesApp {
 
     selectNote(id) {
         if (this.currentNoteId && this.currentNoteId !== id) {
-            clearTimeout(this.saveTimer);
-            this.saveCurrentNote(true);
+            // Only save if there are actual pending unsaved changes
+            if (this.saveTimer) {
+                clearTimeout(this.saveTimer);
+                this.saveTimer = null;
+                this.saveCurrentNote(true);
+            }
         }
 
         this.currentNoteId = id;
@@ -281,19 +277,31 @@ class NotesApp {
             updatedAt: now
         };
 
+        // Cancel any pending save for the current note
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+
+        // Optimistically show the new empty editor immediately
+        this.currentNoteId = id;
+        this.notes.unshift(note);
+        this.renderNotesList();
+        this.showEditor(note);
+
+        setTimeout(() => document.getElementById('noteTitleInput')?.focus(), 50);
+
         try {
-            this.currentNoteId = id;
             await this.db
                 .collection('users').doc(this.user.uid)
                 .collection('notes').doc(id).set(note);
-
-            // onSnapshot will handle rendering; focus title once editor is visible
-            setTimeout(() => {
-                document.getElementById('noteTitleInput')?.focus();
-            }, 150);
         } catch (err) {
             console.error('Notes: Failed to create note:', err);
+            // Roll back optimistic update
+            this.notes = this.notes.filter(n => n.id !== id);
             this.currentNoteId = null;
+            this.renderNotesList();
+            this.showEmptyState();
         }
     }
 
