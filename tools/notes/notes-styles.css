@@ -686,6 +686,22 @@
     background-color: var(--bg-hover);
 }
 
+/* ─── Split View ─────────────────────────────────────────── */
+
+.editor-body.split {
+    gap: 0;
+}
+
+.editor-body.split .note-textarea {
+    flex: 1;
+    border-right: 1px solid var(--border-color);
+}
+
+.editor-body.split .note-preview {
+    flex: 1;
+    display: block;
+}
+
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 720px) {

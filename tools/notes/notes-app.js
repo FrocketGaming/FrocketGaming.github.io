@@ -8,6 +8,7 @@ class NotesApp {
         this.unsub = null;
         this.saveTimer = null;
         this.previewMode = false;
+        this.splitView = false;
         this.searchQuery = '';
         this.sortBy = 'updated';
         this.zenMode = false;
@@ -286,6 +287,10 @@ class NotesApp {
             const previewBtn = document.getElementById('previewToggleBtn');
             previewBtn.querySelector('i').className = 'fa-solid fa-eye';
             previewBtn.title = 'Preview';
+        }
+
+        if (this.splitView) {
+            this.setSplitView(false);
         }
 
         this.renderTagChips(note.tags || []);
@@ -625,22 +630,32 @@ class NotesApp {
         }
     }
 
-    // ─── Preview ──────────────────────────────────────────────
+    // ─── Preview / Split View ─────────────────────────────────
+
+    renderPreview(content) {
+        const preview = document.getElementById('notePreview');
+        if (!preview) return;
+        preview.innerHTML = typeof marked !== 'undefined'
+            ? marked.parse(content || '')
+            : this.escapeHtml(content);
+    }
 
     togglePreview() {
+        // If split is on, turn it off first
+        if (this.splitView) this.setSplitView(false);
+
         this.previewMode = !this.previewMode;
         const textarea = document.getElementById('noteContentInput');
         const preview = document.getElementById('notePreview');
         const btn = document.getElementById('previewToggleBtn');
+        const body = document.getElementById('editorBody');
 
         if (this.previewMode) {
             clearTimeout(this.saveTimer);
             this.saveCurrentNote(true);
             textarea.style.display = 'none';
             preview.style.display = 'block';
-            preview.innerHTML = typeof marked !== 'undefined'
-                ? marked.parse(textarea.value || '')
-                : this.escapeHtml(textarea.value);
+            this.renderPreview(textarea.value);
             btn.querySelector('i').className = 'fa-solid fa-pen';
             btn.title = 'Edit';
         } else {
@@ -650,6 +665,138 @@ class NotesApp {
             btn.title = 'Preview';
             textarea.focus();
         }
+        body?.classList.remove('split');
+    }
+
+    toggleSplit() {
+        if (this.previewMode) this.togglePreview(); // exit preview mode first
+        this.setSplitView(!this.splitView);
+    }
+
+    setSplitView(on) {
+        this.splitView = on;
+        const textarea = document.getElementById('noteContentInput');
+        const preview = document.getElementById('notePreview');
+        const body = document.getElementById('editorBody');
+        const btn = document.getElementById('splitViewBtn');
+
+        if (on) {
+            textarea.style.display = 'block';
+            preview.style.display = 'block';
+            body?.classList.add('split');
+            this.renderPreview(textarea.value);
+            btn?.querySelector('i') && (btn.querySelector('i').className = 'fa-solid fa-table-columns');
+            if (btn) btn.classList.add('active');
+        } else {
+            textarea.style.display = 'block';
+            preview.style.display = 'none';
+            body?.classList.remove('split');
+            if (btn) {
+                btn.querySelector('i').className = 'fa-solid fa-table-columns';
+                btn.classList.remove('active');
+            }
+        }
+    }
+
+    // ─── Markdown Editing Helpers ─────────────────────────────
+
+    handleTabKey(e) {
+        e.preventDefault();
+        const ta = e.target;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const value = ta.value;
+        const INDENT = '  ';
+
+        if (start === end) {
+            // No selection — insert indent at cursor
+            if (e.shiftKey) {
+                // Unindent: remove leading spaces on current line
+                const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                const lineText = value.slice(lineStart, start);
+                const spaces = lineText.match(/^ {1,2}/)?.[0] || '';
+                if (spaces) {
+                    ta.value = value.slice(0, lineStart) + value.slice(lineStart + spaces.length);
+                    ta.selectionStart = ta.selectionEnd = start - spaces.length;
+                }
+            } else {
+                ta.value = value.slice(0, start) + INDENT + value.slice(end);
+                ta.selectionStart = ta.selectionEnd = start + INDENT.length;
+            }
+        } else {
+            // Multi-line selection — block indent/unindent
+            const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+            const selected = value.slice(lineStart, end);
+            let newText;
+
+            if (e.shiftKey) {
+                newText = selected.replace(/^ {1,2}/gm, '');
+            } else {
+                newText = selected.replace(/^/gm, INDENT);
+            }
+
+            ta.value = value.slice(0, lineStart) + newText + value.slice(end);
+            ta.selectionStart = lineStart;
+            ta.selectionEnd = lineStart + newText.length;
+        }
+
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    handleEnterKey(e) {
+        const ta = e.target;
+        const pos = ta.selectionStart;
+        const value = ta.value;
+        const lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+        const lineText = value.slice(lineStart, pos);
+
+        // Match unordered list: "- ", "* ", "+ "
+        const ulMatch = lineText.match(/^(\s*)([-*+])\s/);
+        // Match ordered list: "1. ", "12. "
+        const olMatch = lineText.match(/^(\s*)(\d+)\.\s/);
+
+        if (ulMatch || olMatch) {
+            const indent = ulMatch ? ulMatch[1] : olMatch[1];
+            const lineContent = lineText.slice((ulMatch || olMatch)[0].length);
+
+            if (!lineContent.trim()) {
+                // Empty list item — break out of list
+                e.preventDefault();
+                const marker = (ulMatch || olMatch)[0];
+                ta.value = value.slice(0, lineStart) + value.slice(lineStart + marker.length);
+                ta.selectionStart = ta.selectionEnd = lineStart;
+            } else {
+                e.preventDefault();
+                let nextMarker;
+                if (ulMatch) {
+                    nextMarker = `${indent}${ulMatch[2]} `;
+                } else {
+                    nextMarker = `${indent}${parseInt(olMatch[2]) + 1}. `;
+                }
+                const insert = '\n' + nextMarker;
+                ta.value = value.slice(0, pos) + insert + value.slice(pos);
+                ta.selectionStart = ta.selectionEnd = pos + insert.length;
+            }
+
+            this.scheduleAutoSave();
+            if (this.splitView) this.renderPreview(ta.value);
+        }
+    }
+
+    handleInlineFormat(e, wrapper) {
+        e.preventDefault();
+        const ta = document.getElementById('noteContentInput');
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const selected = ta.value.slice(start, end);
+        const insert = selected ? `${wrapper}${selected}${wrapper}` : `${wrapper}${wrapper}`;
+        ta.value = ta.value.slice(0, start) + insert + ta.value.slice(end);
+        // Place cursor inside wrappers if no selection
+        const cursorPos = selected ? start + insert.length : start + wrapper.length;
+        ta.selectionStart = ta.selectionEnd = cursorPos;
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
     }
 
     // ─── Auth ─────────────────────────────────────────────────
@@ -711,7 +858,21 @@ class NotesApp {
 
         document.getElementById('noteContentInput')?.addEventListener('input', () => {
             this.scheduleAutoSave();
-            this.updateWordCount(document.getElementById('noteContentInput').value);
+            const content = document.getElementById('noteContentInput').value;
+            this.updateWordCount(content);
+            if (this.previewMode || this.splitView) this.renderPreview(content);
+        });
+
+        document.getElementById('noteContentInput')?.addEventListener('keydown', e => {
+            if (e.key === 'Tab') {
+                this.handleTabKey(e);
+            } else if (e.key === 'Enter') {
+                this.handleEnterKey(e);
+            } else if (e.ctrlKey && e.key === 'b') {
+                this.handleInlineFormat(e, '**');
+            } else if (e.ctrlKey && e.key === 'i') {
+                this.handleInlineFormat(e, '_');
+            }
         });
 
         document.getElementById('noteTitleInput')?.addEventListener('input', () => {
@@ -719,6 +880,7 @@ class NotesApp {
         });
 
         document.getElementById('previewToggleBtn')?.addEventListener('click', () => this.togglePreview());
+        document.getElementById('splitViewBtn')?.addEventListener('click', () => this.toggleSplit());
         document.getElementById('pinBtn')?.addEventListener('click', () => this.togglePin());
         document.getElementById('duplicateBtn')?.addEventListener('click', () => this.duplicateNote());
         document.getElementById('copyContentBtn')?.addEventListener('click', () => this.copyContent());
