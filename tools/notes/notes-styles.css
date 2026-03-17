@@ -1,11 +1,148 @@
+/* ─── Modal ──────────────────────────────────────────────── */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 0 20px rgba(116, 161, 46, 0.5);
+    max-height: 95vh;
+    overflow-y: auto;
+}
+
+.modal-content.modal-small {
+    max-width: 360px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    cursor: pointer;
+    font-size: 22px;
+    color: var(--text-secondary);
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* ─── Tags ───────────────────────────────────────────────── */
+
+.tag-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 42px;
+    cursor: text;
+    box-sizing: border-box;
+}
+
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background-color: rgba(116, 161, 46, 0.2);
+    border: 1px solid rgba(116, 161, 46, 0.4);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--accent-secondary);
+}
+
+.tag-chip-remove {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.tag-chip-remove:hover {
+    opacity: 1;
+}
+
+.tag-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: "Raleway", sans-serif;
+    flex: 1;
+    min-width: 120px;
+    padding: 2px 0;
+}
+
+.tag-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
 /* ─── Sign-in Screen ─────────────────────────────────────── */
 
 .sign-in-screen {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: calc(100vh - 90px);
-    padding: 40px 20px;
+    min-height: calc(100vh - 160px);
+    width: 100%;
+    padding: 40px 0;
 }
 
 .sign-in-card {
@@ -45,8 +182,7 @@
 .notes-app {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 90px);
-    overflow: hidden;
+    width: 100%;
 }
 
 .notes-toolbar {
@@ -63,9 +199,28 @@
     flex: 1;
 }
 
+#searchInput {
+    padding: 8px 15px 8px 38px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: "Raleway", sans-serif;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    outline: none;
+    width: 240px;
+    box-sizing: border-box;
+}
+
+#searchInput:focus {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 15px var(--accent-primary);
+}
+
 .notes-layout {
     display: flex;
-    flex: 1;
+    height: calc(97vh - 215px);
     overflow: hidden;
 }
 
@@ -249,13 +404,10 @@
     color: var(--accent-primary);
 }
 
-/* Tags row */
+/* Tags row — override wrapper padding for editor context */
 #tagInputWrapper {
     padding: 8px 24px;
-    border-bottom: 1px solid var(--border-color);
-    min-height: 42px;
     flex-shrink: 0;
-    align-items: center;
 }
 
 .editor-body {
