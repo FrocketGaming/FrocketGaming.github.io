@@ -477,6 +477,15 @@
     color: var(--accent-primary);
 }
 
+#pinBtn {
+    opacity: 0.35;
+}
+
+#pinBtn.active {
+    opacity: 1;
+    color: var(--accent-primary);
+}
+
 /* Tags row — override wrapper padding for editor context */
 #tagInputWrapper {
     padding: 8px 24px;
@@ -542,6 +551,139 @@
     margin-left: auto;
     opacity: 0.75;
     white-space: nowrap;
+}
+
+/* ─── Sort Select ────────────────────────────────────────── */
+
+.sort-select {
+    padding: 8px 10px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: "Raleway", sans-serif;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.sort-select:focus {
+    border-color: var(--accent-primary);
+}
+
+/* ─── Sidebar Header ─────────────────────────────────────── */
+
+.notes-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 8px 4px 12px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.notes-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.notes-panel-header .action-btn {
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+/* ─── Collapsed Sidebar ──────────────────────────────────── */
+
+.notes-list-panel.collapsed {
+    width: 36px;
+    min-width: 36px;
+}
+
+.notes-list-panel.collapsed .notes-list,
+.notes-list-panel.collapsed .notes-count {
+    display: none;
+}
+
+.notes-list-panel.collapsed .notes-panel-header {
+    justify-content: center;
+    padding: 8px 0;
+}
+
+/* ─── Zen Mode ───────────────────────────────────────────── */
+
+.notes-app.zen-mode .notes-list-panel {
+    display: none;
+}
+
+.notes-app.zen-mode .notes-toolbar {
+    display: none;
+}
+
+/* ─── Unsaved Dot ────────────────────────────────────────── */
+
+.note-list-indicators {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.unsaved-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* ─── Word Count & Char Limit ────────────────────────────── */
+
+.word-count {
+    opacity: 0.6;
+}
+
+.char-limit-warning {
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+/* ─── Export Dropdown ────────────────────────────────────── */
+
+.export-dropdown {
+    position: fixed;
+    z-index: 3000;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    overflow: hidden;
+    min-width: 160px;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: "Raleway", sans-serif;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s;
+}
+
+.export-option:hover {
+    background-color: var(--bg-hover);
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */
