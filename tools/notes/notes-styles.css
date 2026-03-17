@@ -73,6 +73,11 @@
     border-top: 1px solid var(--border-color);
 }
 
+.modal-footer .format-btn,
+.modal-footer .clear-bnt {
+    margin-top: 0;
+}
+
 /* ─── Tags ───────────────────────────────────────────────── */
 
 .tag-input-wrapper {
@@ -257,6 +262,10 @@
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+}
+
+.notes-toolbar .format-btn {
+    margin-top: 0;
 }
 
 .toolbar-spacer {
