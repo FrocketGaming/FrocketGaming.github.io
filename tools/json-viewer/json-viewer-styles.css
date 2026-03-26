@@ -216,7 +216,7 @@
 /* ─── Key ────────────────────────────────────────────────── */
 
 .json-key {
-    color: var(--syntax-keyword);
+    color: var(--accent-primary);
     cursor: pointer;
     border-radius: 3px;
     padding: 0 2px;
@@ -292,6 +292,14 @@
 
 .json-expandable.collapsed .json-count-badge {
     opacity: 0.8;
+}
+
+/* ─── SynthWave: indent guide contrast fix ───────────────── */
+/* --border-color (#3b2d5e) is nearly identical to --bg-primary
+   (#262335), making the nesting guide lines invisible           */
+
+[data-theme="synthwave"] .json-children {
+    border-left-color: #6c5a9e;
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */
