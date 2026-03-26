@@ -769,6 +769,12 @@
 
 /* ─── Responsive ─────────────────────────────────────────── */
 
+@media (max-width: 720px) {
+    .notes-list-panel {
+        width: 240px;
+    }
+}
+
 @media (max-width: 600px) {
     .notes-toolbar {
         flex-wrap: wrap;
@@ -783,17 +789,23 @@
     #searchInput {
         max-width: 100%;
     }
-}
 
-@media (max-width: 720px) {
-    .notes-list-panel {
-        width: 240px;
+    /* Auth section wraps to its own row so search/new note stay visible */
+    .auth-section {
+        order: 99;
+        flex-basis: 100%;
+    }
+
+    /* Layout height accounts for 2-row toolbar */
+    .notes-layout {
+        height: calc(97vh - 255px);
     }
 }
 
 @media (max-width: 520px) {
     .notes-layout {
         flex-direction: column;
+        height: calc(97vh - 255px);
     }
 
     .notes-list-panel {
@@ -822,5 +834,13 @@
 
     .editor-footer {
         padding: 6px 16px;
+    }
+}
+
+/* Hide username and sync label on very small screens to save space */
+@media (max-width: 400px) {
+    .user-name,
+    .sync-status {
+        display: none;
     }
 }
