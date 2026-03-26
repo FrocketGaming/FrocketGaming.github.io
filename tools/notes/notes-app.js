@@ -10,7 +10,6 @@ class NotesApp {
         this.previewMode = false;
         this.splitView = false;
         this.searchQuery = '';
-        this.sortBy = 'updated';
         this.zenMode = false;
         this.sidebarCollapsed = false;
         this.exportDropdownOpen = false;
@@ -145,17 +144,11 @@ class NotesApp {
             );
         }
 
-        if (this.sortBy === 'updated') {
-            filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-        } else if (this.sortBy === 'created') {
-            filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        } else if (this.sortBy === 'alpha') {
-            filtered.sort((a, b) => {
-                const aTitle = a.title || this.getAutoTitle(a.content) || 'Untitled';
-                const bTitle = b.title || this.getAutoTitle(b.content) || 'Untitled';
-                return aTitle.localeCompare(bTitle);
-            });
-        }
+        filtered.sort((a, b) => {
+            const aTitle = a.title || this.getAutoTitle(a.content) || 'Untitled';
+            const bTitle = b.title || this.getAutoTitle(b.content) || 'Untitled';
+            return aTitle.localeCompare(bTitle);
+        });
 
         const pinned = filtered.filter(n => n.pinned);
         const unpinned = filtered.filter(n => !n.pinned);
@@ -887,12 +880,7 @@ class NotesApp {
             this.renderNotesList();
         });
 
-        document.getElementById('sortSelect')?.addEventListener('change', e => {
-            this.sortBy = e.target.value;
-            this.renderNotesList();
-        });
-
-        document.getElementById('noteContentInput')?.addEventListener('input', () => {
+document.getElementById('noteContentInput')?.addEventListener('input', () => {
             this.scheduleAutoSave();
             const content = document.getElementById('noteContentInput').value;
             this.updateWordCount(content);

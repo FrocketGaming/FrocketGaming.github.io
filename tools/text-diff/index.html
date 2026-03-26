@@ -39,7 +39,6 @@
             <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
             <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
             <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-            <a href="../chart-builder/index.html" class="tool-btn">chart builder</a>
             <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
             <a href="../timezone/index.html" class="tool-btn">timezone</a>
             <a href="../text-diff/index.html" class="tool-btn active">text diff</a>
@@ -57,6 +56,9 @@
                 <i class="fa-solid fa-columns"></i> Side-by-Side
             </button>
             <label class="diff-checkbox-label">
+                <input type="checkbox" id="hideUnchanged" checked> Hide unchanged
+            </label>
+            <label class="diff-checkbox-label">
                 <input type="checkbox" id="ignoreWhitespace"> Ignore whitespace
             </label>
             <label class="diff-checkbox-label">
@@ -73,11 +75,11 @@
 
         <div class="diff-input-panels">
             <div class="diff-input-panel">
-                <label for="originalText">Original</label>
+                <input type="text" id="leftLabel" class="diff-label-input" value="Original" placeholder="Label…" spellcheck="false">
                 <textarea id="originalText" placeholder="Paste original text here..." spellcheck="false"></textarea>
             </div>
             <div class="diff-input-panel">
-                <label for="modifiedText">Modified</label>
+                <input type="text" id="rightLabel" class="diff-label-input" value="Modified" placeholder="Label…" spellcheck="false">
                 <textarea id="modifiedText" placeholder="Paste modified text here..." spellcheck="false"></textarea>
             </div>
         </div>

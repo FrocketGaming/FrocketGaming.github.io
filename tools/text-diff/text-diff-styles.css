@@ -1,7 +1,7 @@
 /* Text Diff Styles */
 .diff-container {
     width: 100%;
-    max-width: 1400px;
+    max-width: 1600px;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -66,13 +66,39 @@
     box-shadow: 0 0 15px var(--accent-primary);
 }
 
-.diff-input-panel label {
+.diff-label-input {
     font-size: 0.85rem;
     color: var(--text-secondary);
     margin-bottom: 8px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed transparent;
+    outline: none;
+    width: 100%;
+    padding: 0 0 2px 0;
+    font-family: "Raleway", sans-serif;
+    transition: border-color 0.2s, color 0.2s;
+    cursor: text;
+}
+
+.diff-label-input:hover {
+    border-bottom-color: var(--border-color);
+}
+
+.diff-label-input:focus {
+    border-bottom-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.diff-label-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.4;
+    text-transform: none;
+    font-weight: 400;
+    letter-spacing: 0;
 }
 
 .diff-input-panel textarea {
@@ -136,6 +162,49 @@
 
 .diff-output:empty {
     display: none;
+}
+
+/* Output Header */
+.diff-output-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    font-family: "Raleway", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.diff-header-label {
+    color: var(--text-primary);
+}
+
+.diff-header-arrow {
+    color: var(--accent-primary);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.diff-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 7px 12px;
+    font-family: "Raleway", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-primary);
 }
 
 /* Unified View */
@@ -206,6 +275,23 @@
 .diff-side-panel .diff-line.filler {
     background-color: var(--bg-tertiary);
     opacity: 0.4;
+}
+
+/* Collapsed unchanged lines */
+.diff-line.diff-collapse {
+    background-color: var(--bg-tertiary);
+    border-top: 1px dashed var(--border-color);
+    border-bottom: 1px dashed var(--border-color);
+    justify-content: center;
+    padding: 4px 10px;
+}
+
+.diff-collapse-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    font-family: monospace;
+    letter-spacing: 0.03em;
 }
 
 /* Word-level highlighting */

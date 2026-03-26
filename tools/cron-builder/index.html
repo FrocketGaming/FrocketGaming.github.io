@@ -39,22 +39,16 @@
             <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
             <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
             <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-            <a href="../chart-builder/index.html" class="tool-btn">chart builder</a>
             <a href="../cron-builder/index.html" class="tool-btn active">cron builder</a>
             <a href="../timezone/index.html" class="tool-btn">timezone</a>
             <a href="../text-diff/index.html" class="tool-btn">text diff</a>
+            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
         </nav>
     </div>
 
     <p>Build and understand cron expressions visually. All processing is done locally in your browser.</p>
 
     <div class="cron-container">
-        <div class="cron-input-section">
-            <label for="cronExpression">Cron Expression:</label>
-            <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
-            <div class="cron-description" id="cronDescription">Every minute</div>
-        </div>
-
         <div class="cron-presets">
             <h3>Presets</h3>
             <div class="preset-buttons">
@@ -71,6 +65,12 @@
                 <button class="preset-btn" data-cron="0 12 * * *">Daily at Noon</button>
                 <button class="preset-btn" data-cron="0 0 1,15 * *">1st and 15th</button>
             </div>
+        </div>
+
+        <div class="cron-input-section">
+            <label for="cronExpression">Cron Expression:</label>
+            <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
+            <div class="cron-description" id="cronDescription">Every minute</div>
         </div>
 
         <div class="cron-builder" id="cronBuilder">

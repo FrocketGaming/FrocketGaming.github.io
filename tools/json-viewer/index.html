@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Markdown Previewer - QoL Tools</title>
+    <title>JSON Viewer - QoL Tools</title>
     <script>
         (function() {
             var theme = localStorage.getItem('qol-tools-theme');
@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" href="/images/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
-    <link rel="stylesheet" href="markdown-styles.css">
+    <link rel="stylesheet" href="json-viewer-styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -42,42 +42,59 @@
             <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
             <a href="../timezone/index.html" class="tool-btn">timezone</a>
             <a href="../text-diff/index.html" class="tool-btn">text diff</a>
-            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
+            <a href="../json-viewer/index.html" class="tool-btn active">json viewer</a>
         </nav>
     </div>
 
-    <p>Write markdown on the left and see the rendered preview on the right. All processing is done locally in your browser.</p>
+    <p>Paste JSON to validate, format, and explore it as an interactive tree. Click any key to copy its path.</p>
 
-    <div class="markdown-container">
-        <div class="markdown-toolbar">
-            <button class="toolbar-btn" data-syntax="heading1" title="Heading 1">H1</button>
-            <button class="toolbar-btn" data-syntax="heading2" title="Heading 2">H2</button>
-            <button class="toolbar-btn" data-syntax="bold" title="Bold">B</button>
-            <button class="toolbar-btn" data-syntax="italic" title="Italic"><em>I</em></button>
-            <button class="toolbar-btn" data-syntax="link" title="Link"><i class="fa-solid fa-link"></i></button>
-            <button class="toolbar-btn" data-syntax="image" title="Image"><i class="fa-solid fa-image"></i></button>
-            <button class="toolbar-btn" data-syntax="code" title="Inline Code"><i class="fa-solid fa-code"></i></button>
-            <button class="toolbar-btn" data-syntax="codeblock" title="Code Block"><i class="fa-solid fa-file-code"></i></button>
-            <button class="toolbar-btn" data-syntax="list" title="Unordered List"><i class="fa-solid fa-list-ul"></i></button>
-            <button class="toolbar-btn" data-syntax="olist" title="Ordered List"><i class="fa-solid fa-list-ol"></i></button>
-            <button class="toolbar-btn" data-syntax="blockquote" title="Blockquote"><i class="fa-solid fa-quote-left"></i></button>
-            <button class="toolbar-btn" data-syntax="hr" title="Horizontal Rule"><i class="fa-solid fa-minus"></i></button>
+    <div class="json-container">
+
+        <div class="json-toolbar">
+            <button class="format-btn" id="formatBtn">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Format
+            </button>
+            <button class="toolbar-btn" id="expandAllBtn" title="Expand all nodes">
+                <i class="fa-solid fa-expand"></i> Expand All
+            </button>
+            <button class="toolbar-btn" id="collapseAllBtn" title="Collapse all nodes">
+                <i class="fa-solid fa-compress"></i> Collapse All
+            </button>
+            <button class="toolbar-btn" id="copyFormattedBtn" title="Copy formatted JSON">
+                <i class="fa-solid fa-copy"></i> Copy JSON
+            </button>
+            <button class="toolbar-btn toolbar-btn-clear" id="clearBtn">Clear</button>
+            <span class="json-stats" id="jsonStats"></span>
         </div>
-        <div class="markdown-panels">
-            <div class="markdown-editor">
-                <textarea id="markdownInput" placeholder="Type your markdown here..." spellcheck="false"></textarea>
+
+        <div class="json-panels">
+            <div class="json-input-panel">
+                <div class="json-panel-label">Input</div>
+                <textarea id="jsonInput" placeholder='Paste JSON here…' spellcheck="false"></textarea>
             </div>
-            <div class="markdown-preview">
-                <div id="previewContent" class="preview-content">
-                    <p class="preview-placeholder">Preview will appear here...</p>
+            <div class="json-output-panel">
+                <div class="json-panel-label">
+                    Tree
+                    <span class="json-path-hint" id="pathHint">click any key to copy its path</span>
+                </div>
+                <div id="jsonTree" class="json-tree">
+                    <div class="json-empty-state">
+                        <i class="fa-solid fa-code"></i>
+                        <p>Paste JSON on the left to explore it here</p>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="json-error" id="jsonError"></div>
+
     </div>
+
+    <div class="copy-notification" id="copyNotification">Copied!</div>
 
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
-    <script src="markdown-app.js"></script>
+    <script src="json-viewer-app.js"></script>
 </body>
 
 </html>

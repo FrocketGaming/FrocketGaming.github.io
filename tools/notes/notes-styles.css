@@ -192,6 +192,8 @@
 
 .search-wrapper {
     position: relative;
+    flex: 1;
+    min-width: 0;
 }
 
 .search-icon {
@@ -282,7 +284,8 @@
     font-family: "Raleway", sans-serif;
     transition: border-color 0.3s, box-shadow 0.3s;
     outline: none;
-    width: 240px;
+    width: 100%;
+    max-width: 240px;
     box-sizing: border-box;
 }
 
@@ -765,6 +768,22 @@
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+    .notes-toolbar {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .toolbar-spacer {
+        display: none;
+    }
+
+    #searchInput {
+        max-width: 100%;
+    }
+}
 
 @media (max-width: 720px) {
     .notes-list-panel {

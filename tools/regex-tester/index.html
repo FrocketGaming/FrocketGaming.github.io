@@ -39,16 +39,30 @@
             <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
             <a href="../regex-tester/index.html" class="tool-btn active">regex tester</a>
             <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-            <a href="../chart-builder/index.html" class="tool-btn">chart builder</a>
             <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
             <a href="../timezone/index.html" class="tool-btn">timezone</a>
             <a href="../text-diff/index.html" class="tool-btn">text diff</a>
+            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
         </nav>
     </div>
 
     <p>Test and debug regular expressions in real-time. All processing is done locally in your browser.</p>
 
     <div class="regex-container">
+        <div class="examples-section">
+            <h3>Common Patterns</h3>
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="web">Web</button>
+                <button class="category-tab" data-category="programming">Programming</button>
+                <button class="category-tab" data-category="numbers">Numbers</button>
+                <button class="category-tab" data-category="text">Text</button>
+                <button class="category-tab" data-category="files">Files</button>
+                <button class="category-tab" data-category="validation">Validation</button>
+                <button class="category-tab" data-category="security">Security</button>
+            </div>
+            <div id="patternsContainer" class="examples-grid"></div>
+        </div>
+
         <div class="pattern-section">
             <div class="pattern-input-wrapper">
                 <label for="regexPattern">Regular Expression:</label>
@@ -123,19 +137,6 @@
             </div>
         </div>
 
-        <div class="examples-section">
-            <h3>Common Patterns</h3>
-            <div class="category-tabs">
-                <button class="category-tab active" data-category="web">Web</button>
-                <button class="category-tab" data-category="programming">Programming</button>
-                <button class="category-tab" data-category="numbers">Numbers</button>
-                <button class="category-tab" data-category="text">Text</button>
-                <button class="category-tab" data-category="files">Files</button>
-                <button class="category-tab" data-category="validation">Validation</button>
-                <button class="category-tab" data-category="security">Security</button>
-            </div>
-            <div id="patternsContainer" class="examples-grid"></div>
-        </div>
     </div>
 
     <script src="../../src/theme-manager.js"></script>

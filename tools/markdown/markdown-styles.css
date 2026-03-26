@@ -1,7 +1,7 @@
 /* Markdown Previewer Styles */
 .markdown-container {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1600px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;

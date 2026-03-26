@@ -1,7 +1,7 @@
 /* Timezone Converter Styles */
 
 .tz-add-bar {
-    max-width: 1500px;
+    max-width: 1600px;
     margin: 0 auto 20px;
     display: flex;
     gap: 10px;
@@ -18,7 +18,7 @@
 }
 
 .tz-container {
-    max-width: 1500px;
+    max-width: 1600px;
     margin: 0 auto;
     display: flex;
     gap: 20px;
