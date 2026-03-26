@@ -19,6 +19,24 @@ class NotesApp {
     init() {
         this.initFirebase();
         this.bindEvents();
+        this.updateHeaderOffset();
+        window.addEventListener('resize', () => this.updateHeaderOffset());
+    }
+
+    // ─── Layout ───────────────────────────────────────────────
+
+    updateHeaderOffset() {
+        const header = document.querySelector('.header');
+        if (!header) return;
+        const headerH = header.offsetHeight;
+        document.body.style.paddingTop = headerH + 'px';
+
+        const toolbar = document.querySelector('.notes-toolbar');
+        const layout  = document.querySelector('.notes-layout');
+        if (toolbar && layout) {
+            const toolbarH = toolbar.offsetHeight;
+            layout.style.height = `calc(97vh - ${headerH + toolbarH}px)`;
+        }
     }
 
     // ─── Firebase ─────────────────────────────────────────────
@@ -930,10 +948,23 @@ document.getElementById('noteContentInput')?.addEventListener('input', () => {
             if (e.target === document.getElementById('deleteModal')) this.closeDeleteModal();
         });
 
-        // Shortcuts tooltip toggle
+        // Shortcuts tooltip toggle — position via fixed coords so it always
+        // appears directly below the button regardless of toolbar wrapping.
         document.getElementById('shortcutsBtn')?.addEventListener('click', e => {
             e.stopPropagation();
-            document.getElementById('shortcutsTooltip')?.classList.toggle('show');
+            const tooltip = document.getElementById('shortcutsTooltip');
+            if (!tooltip) return;
+            const wasShown = tooltip.classList.contains('show');
+            tooltip.classList.remove('show');
+            if (!wasShown) {
+                const btn  = e.currentTarget.getBoundingClientRect();
+                const tipW = 240;
+                // Prefer right-aligned with button; clamp so it never clips the left edge
+                let left = Math.max(8, btn.right - tipW);
+                tooltip.style.top  = (btn.bottom + 8) + 'px';
+                tooltip.style.left = left + 'px';
+                tooltip.classList.add('show');
+            }
         });
 
         // Close export dropdown + shortcuts on outside click

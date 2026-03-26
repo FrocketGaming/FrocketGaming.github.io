@@ -719,17 +719,16 @@
 
 .shortcuts-tooltip {
     display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed;
     margin-top: 8px;
     background-color: var(--bg-secondary);
     border: 1px solid var(--accent-primary);
     border-radius: 8px;
     padding: 12px 16px;
     min-width: 240px;
+    max-width: calc(100vw - 24px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    z-index: 100;
+    z-index: 500;
 }
 
 .shortcuts-tooltip.show {
@@ -796,16 +795,11 @@
         flex-basis: 100%;
     }
 
-    /* Layout height accounts for 2-row toolbar */
-    .notes-layout {
-        height: calc(97vh - 255px);
-    }
 }
 
 @media (max-width: 520px) {
     .notes-layout {
         flex-direction: column;
-        height: calc(97vh - 255px);
     }
 
     .notes-list-panel {
