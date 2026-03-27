@@ -513,7 +513,7 @@
 
 .snippet-item-ext {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--syntax-type);
 }
 
 .snippet-item-tags {
@@ -524,7 +524,7 @@
 
 .snippet-item-tag {
     font-size: 10px;
-    color: var(--text-secondary);
+    color: var(--syntax-tag);
     background-color: var(--bg-tertiary);
     padding: 1px 5px;
     border-radius: 3px;
