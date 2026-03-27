@@ -959,9 +959,11 @@ document.getElementById('noteContentInput')?.addEventListener('input', () => {
             if (!wasShown) {
                 const btn  = e.currentTarget.getBoundingClientRect();
                 const tipW = 240;
-                // Prefer right-aligned with button; clamp so it never clips the left edge
-                let left = Math.max(8, btn.right - tipW);
-                tooltip.style.top  = (btn.bottom + 8) + 'px';
+                // Left-align tooltip with button; slide left only if it clips the right edge
+                let left = btn.left;
+                if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+                left = Math.max(8, left);
+                tooltip.style.top  = (btn.bottom + 4) + 'px';
                 tooltip.style.left = left + 'px';
                 tooltip.classList.add('show');
             }
