@@ -192,9 +192,7 @@
 
 .search-wrapper {
     position: relative;
-    flex: 1;
     min-width: 0;
-    max-width: 240px;
 }
 
 .search-icon {
@@ -786,7 +784,6 @@
         display: none;
     }
 
-    .search-wrapper,
     #searchInput {
         max-width: 100%;
     }
