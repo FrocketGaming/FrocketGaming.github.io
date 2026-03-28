@@ -808,6 +808,7 @@
     width: 3.5em;
     text-align: right;
     padding-right: 1em;
+    margin-left: 0.5em;
     margin-right: 0.5em;
     color: var(--text-secondary);
     opacity: 0.4;
