@@ -170,5 +170,16 @@
         </div>
 
         <script src="./src/theme-manager.js"></script>
+        <script>
+            (function () {
+                var header = document.querySelector(".header");
+                function syncPadding() {
+                    document.body.style.paddingTop =
+                        header.offsetHeight + "px";
+                }
+                syncPadding();
+                new ResizeObserver(syncPadding).observe(header);
+            })();
+        </script>
     </body>
 </html>
