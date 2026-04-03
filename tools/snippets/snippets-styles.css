@@ -1927,6 +1927,7 @@
     font-weight: 500;
     flex-shrink: 0;
     opacity: 0.7;
+    line-height: 1;
 }
 
 /* Diff View */
