@@ -10,6 +10,13 @@ class JsonViewerApp {
         this.copyFormattedBtn = document.getElementById('copyFormattedBtn');
         this.clearBtn      = document.getElementById('clearBtn');
         this.copyNotif     = document.getElementById('copyNotification');
+        this.searchInput   = document.getElementById('searchInput');
+        this.searchPrev    = document.getElementById('searchPrev');
+        this.searchNext    = document.getElementById('searchNext');
+        this.searchCount   = document.getElementById('searchCount');
+        this.searchClear   = document.getElementById('searchClear');
+        this.searchMatches = [];
+        this.searchIndex   = -1;
         this.parsed        = null;
         this.debounceTimer = null;
         this.init();
@@ -26,6 +33,23 @@ class JsonViewerApp {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 this.formatInput();
+            }
+        });
+
+        // Search
+        this.searchInput.addEventListener('input', () => this.performSearch());
+        this.searchPrev.addEventListener('click', () => this.navigateSearch(-1));
+        this.searchNext.addEventListener('click', () => this.navigateSearch(1));
+        this.searchClear.addEventListener('click', () => this.clearSearch());
+        this.searchInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.shiftKey ? this.navigateSearch(-1) : this.navigateSearch(1); }
+            if (e.key === 'Escape') { this.clearSearch(); this.searchInput.blur(); }
+        });
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && this.parsed) {
+                e.preventDefault();
+                this.searchInput.focus();
+                this.searchInput.select();
             }
         });
     }
@@ -67,6 +91,7 @@ class JsonViewerApp {
         root.appendChild(this.buildNode(data, null, '', true));
         this.jsonTree.innerHTML = '';
         this.jsonTree.appendChild(root);
+        if (this.searchInput.value.trim()) this.performSearch();
     }
 
     // ─── Node Builder ──────────────────────────────────────────
@@ -209,6 +234,74 @@ class JsonViewerApp {
         return keyEl;
     }
 
+    // ─── Search ────────────────────────────────────────────────
+
+    performSearch() {
+        this.jsonTree.querySelectorAll('.search-match, .search-match-active').forEach(el => {
+            el.classList.remove('search-match', 'search-match-active');
+        });
+        this.searchMatches = [];
+        this.searchIndex = -1;
+
+        const query = this.searchInput.value.trim().toLowerCase();
+        this.searchClear.style.display = query ? '' : 'none';
+
+        if (!query || !this.parsed) {
+            this.searchCount.textContent = '';
+            this.searchPrev.disabled = true;
+            this.searchNext.disabled = true;
+            return;
+        }
+
+        this.jsonTree.querySelectorAll('.json-key, .json-value').forEach(el => {
+            if (el.textContent.toLowerCase().includes(query)) {
+                el.classList.add('search-match');
+                this.searchMatches.push(el);
+            }
+        });
+
+        if (this.searchMatches.length > 0) {
+            this.searchIndex = 0;
+            this.activateMatch(0);
+            this.searchCount.textContent = `1 / ${this.searchMatches.length}`;
+        } else {
+            this.searchCount.textContent = 'no matches';
+        }
+        this.searchPrev.disabled = this.searchMatches.length === 0;
+        this.searchNext.disabled = this.searchMatches.length === 0;
+    }
+
+    activateMatch(index) {
+        this.searchMatches.forEach(el => el.classList.remove('search-match-active'));
+        const el = this.searchMatches[index];
+        if (!el) return;
+        el.classList.add('search-match-active');
+        // Expand any collapsed ancestors
+        let node = el.parentElement;
+        while (node && !node.classList.contains('json-root')) {
+            if (node.classList.contains('json-expandable') && node.classList.contains('collapsed')) {
+                node.classList.remove('collapsed');
+                const toggle = node.querySelector(':scope > .json-row > .json-toggle');
+                if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+            }
+            node = node.parentElement;
+        }
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    navigateSearch(dir) {
+        if (this.searchMatches.length === 0) return;
+        this.searchIndex = (this.searchIndex + dir + this.searchMatches.length) % this.searchMatches.length;
+        this.activateMatch(this.searchIndex);
+        this.searchCount.textContent = `${this.searchIndex + 1} / ${this.searchMatches.length}`;
+    }
+
+    clearSearch() {
+        this.searchInput.value = '';
+        this.searchClear.style.display = 'none';
+        this.performSearch();
+    }
+
     // ─── Actions ───────────────────────────────────────────────
 
     formatInput() {
@@ -270,6 +363,11 @@ class JsonViewerApp {
         this.jsonError.textContent = '';
         this.jsonError.style.display = 'none';
         this.jsonStats.textContent = '';
+        this.searchMatches = [];
+        this.searchIndex = -1;
+        this.searchCount.textContent = '';
+        this.searchPrev.disabled = true;
+        this.searchNext.disabled = true;
     }
 
     showCopyNotif(msg) {

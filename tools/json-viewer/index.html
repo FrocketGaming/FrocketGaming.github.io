@@ -77,6 +77,14 @@
                     Tree
                     <span class="json-path-hint" id="pathHint">click any key to copy its path</span>
                 </div>
+                <div class="json-search-bar" id="searchBar">
+                    <i class="fa-solid fa-magnifying-glass json-search-icon"></i>
+                    <input type="text" id="searchInput" class="json-search-input" placeholder="Search keys and values… (Ctrl+F)">
+                    <span class="json-search-count" id="searchCount"></span>
+                    <button class="json-search-nav" id="searchPrev" title="Previous match (Shift+Enter)" disabled><i class="fa-solid fa-chevron-up"></i></button>
+                    <button class="json-search-nav" id="searchNext" title="Next match (Enter)" disabled><i class="fa-solid fa-chevron-down"></i></button>
+                    <button class="json-search-clear" id="searchClear" title="Clear search" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+                </div>
                 <div id="jsonTree" class="json-tree">
                     <div class="json-empty-state">
                         <i class="fa-solid fa-code"></i>
