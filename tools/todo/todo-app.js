@@ -657,10 +657,6 @@ class TodoApp {
     setupDragListeners(listEl) {
         listEl.querySelectorAll('.todo-item[draggable="true"]').forEach(item => {
             item.addEventListener('dragstart', (e) => {
-                // Only allow drag from handle
-                if (!e.target.closest('.drag-handle') && e.target !== item) {
-                    // Check if drag started from handle
-                }
                 this.draggedId = parseInt(item.dataset.id);
                 item.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
@@ -670,33 +666,48 @@ class TodoApp {
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 this.draggedId = null;
-                listEl.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
-                    el.classList.remove('drag-over-top', 'drag-over-bottom');
+                listEl.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-into-project').forEach(el => {
+                    el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
                 });
             });
 
             item.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                if (this.draggedId === parseInt(item.dataset.id)) return;
+                const targetId = parseInt(item.dataset.id);
+                if (this.draggedId === targetId) return;
 
-                const rect = item.getBoundingClientRect();
-                const midY = rect.top + rect.height / 2;
+                const draggedTodo = this.todos.find(t => t.id === this.draggedId);
+                const targetTodo = this.todos.find(t => t.id === targetId);
+                if (!draggedTodo || !targetTodo) return;
 
-                item.classList.remove('drag-over-top', 'drag-over-bottom');
-                if (e.clientY < midY) {
-                    item.classList.add('drag-over-top');
-                } else {
-                    item.classList.add('drag-over-bottom');
+                // Dropping a non-project onto a project it's not already in → "drop into project" zone
+                if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
+                    item.classList.remove('drag-over-top', 'drag-over-bottom');
+                    item.classList.add('drag-into-project');
+                    return;
+                }
+
+                // Same-scope reordering
+                if (draggedTodo.parentId === targetTodo.parentId) {
+                    item.classList.remove('drag-into-project');
+                    const rect = item.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    item.classList.remove('drag-over-top', 'drag-over-bottom');
+                    if (e.clientY < midY) {
+                        item.classList.add('drag-over-top');
+                    } else {
+                        item.classList.add('drag-over-bottom');
+                    }
                 }
             });
 
             item.addEventListener('dragleave', () => {
-                item.classList.remove('drag-over-top', 'drag-over-bottom');
+                item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
             });
 
             item.addEventListener('drop', async (e) => {
                 e.preventDefault();
-                item.classList.remove('drag-over-top', 'drag-over-bottom');
+                item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
 
                 const draggedId = this.draggedId;
                 const targetId = parseInt(item.dataset.id);
@@ -706,7 +717,38 @@ class TodoApp {
                 const targetTodo = this.todos.find(t => t.id === targetId);
                 if (!draggedTodo || !targetTodo) return;
 
-                // Only allow drag within same scope (same parent or both top-level)
+                // Drop into project folder
+                if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
+                    const oldParentId = draggedTodo.parentId;
+                    draggedTodo.parentId = targetTodo.id;
+
+                    // Update old parent completion status
+                    if (oldParentId) {
+                        const oldParent = this.todos.find(t => t.id === oldParentId);
+                        if (oldParent) {
+                            const remaining = this.getSubtasks(oldParentId);
+                            oldParent.completed = remaining.length > 0 && remaining.every(t => t.completed);
+                            await StorageManager.put('todos', oldParent);
+                        }
+                    }
+
+                    // Reopen project if it was completed
+                    if (targetTodo.completed && !draggedTodo.completed) {
+                        targetTodo.completed = false;
+                        await StorageManager.put('todos', targetTodo);
+                    }
+
+                    // Expand the target project so the moved item is visible
+                    const colIdx = this.uiState.collapsedProjects.indexOf(targetTodo.id);
+                    if (colIdx >= 0) this.uiState.collapsedProjects.splice(colIdx, 1);
+                    this.saveUIState();
+
+                    await StorageManager.put('todos', draggedTodo);
+                    this.render();
+                    return;
+                }
+
+                // Same-scope reordering only
                 if (draggedTodo.parentId !== targetTodo.parentId) return;
 
                 const rect = item.getBoundingClientRect();
@@ -1238,8 +1280,7 @@ class TodoApp {
             metaParts.push(`<span class="recurring-badge"><i class="fa-solid fa-repeat"></i> <span>${this.getRecurrenceLabel(todo.recurrence)}</span></span>`);
         }
         if (todo.description) {
-            const preview = todo.description.length > 60 ? todo.description.slice(0, 60) + '...' : todo.description;
-            metaParts.push(`<span class="todo-description-preview">${this.escapeHtml(preview)}</span>`);
+            metaParts.push(`<span class="todo-description-preview" data-tooltip="${this.escapeAttr(todo.description)}">${this.escapeHtml(todo.description)}</span>`);
         }
         if (isProject) {
             const progress = this.getProjectProgress(todo.id);
