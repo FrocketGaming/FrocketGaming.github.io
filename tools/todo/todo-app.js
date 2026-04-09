@@ -52,6 +52,15 @@ class TodoApp {
             this.setupEventListeners();
             this.setupKeyboardShortcuts();
             this.render();
+
+            // Initialize Firebase sync if available
+            if (typeof FirebaseSync !== 'undefined') {
+                FirebaseSync.init({
+                    onAuthChange: (user) => this.handleAuthChange(user),
+                    onSyncStatus: (status) => this.updateSyncStatusUI(status),
+                    onRemoteTodos: (todos) => this.handleRemoteTodos(todos),
+                });
+            }
         } catch (error) {
             console.error('Failed to initialize Todo App:', error);
         }
@@ -195,6 +204,12 @@ class TodoApp {
         // Undo toast
         undoToastBtn.addEventListener('click', () => this.undoDelete());
         undoToastDismiss.addEventListener('click', () => this.finalizeDelete());
+
+        // Auth buttons (optional — only present when Firebase scripts are loaded)
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        if (signInBtn) signInBtn.addEventListener('click', () => this.handleSignIn());
+        if (signOutBtn) signOutBtn.addEventListener('click', () => this.handleSignOut());
 
         // Event delegation for task list interactions
         document.getElementById('todoList').addEventListener('click', (e) => this.handleTaskClick(e));
@@ -387,6 +402,7 @@ class TodoApp {
             };
             this.todos.push(project);
             await StorageManager.put('todos', project);
+            this._syncTodo(project);
         }
         return project.id;
     }
@@ -447,10 +463,12 @@ class TodoApp {
             if (parent && parent.completed) {
                 parent.completed = false;
                 await StorageManager.put('todos', parent);
+                this._syncTodo(parent);
             }
         }
 
         await StorageManager.put('todos', todo);
+        this._syncTodo(todo);
         this.resetComposer();
         this.render();
     }
@@ -462,6 +480,7 @@ class TodoApp {
 
         todo.completed = !todo.completed;
         await StorageManager.put('todos', todo);
+        this._syncTodo(todo);
 
         // Recurring task: on completion, create next instance
         if (todo.completed && todo.recurrence && !todo.isProject) {
@@ -472,6 +491,7 @@ class TodoApp {
             for (const sub of this.getSubtasks(id)) {
                 sub.completed = todo.completed;
                 await StorageManager.put('todos', sub);
+                this._syncTodo(sub);
             }
         } else if (todo.parentId) {
             const parent = this.todos.find(t => t.id === todo.parentId);
@@ -479,6 +499,7 @@ class TodoApp {
                 const subs = this.getSubtasks(todo.parentId);
                 parent.completed = subs.every(t => t.completed);
                 await StorageManager.put('todos', parent);
+                this._syncTodo(parent);
             }
         }
 
@@ -544,6 +565,7 @@ class TodoApp {
         this.todos.push(nextTodo);
         this.lastAddedId = nextTodo.id;
         await StorageManager.put('todos', nextTodo);
+        this._syncTodo(nextTodo);
     }
 
     async deleteTodo(id) {
@@ -587,6 +609,7 @@ class TodoApp {
         const cycle = { low: 'medium', medium: 'high', high: 'low' };
         todo.priority = cycle[todo.priority || 'medium'];
         await StorageManager.put('todos', todo);
+        this._syncTodo(todo);
         this._animPriorityId = id;
         this.render();
     }
@@ -647,6 +670,7 @@ class TodoApp {
 
         for (const todo of this.pendingDelete.todos) {
             await StorageManager.delete('todos', todo.id);
+            this._deleteTodoFromCloud(todo.id);
         }
 
         this.pendingDelete = null;
@@ -729,6 +753,7 @@ class TodoApp {
                             const remaining = this.getSubtasks(oldParentId);
                             oldParent.completed = remaining.length > 0 && remaining.every(t => t.completed);
                             await StorageManager.put('todos', oldParent);
+                            this._syncTodo(oldParent);
                         }
                     }
 
@@ -736,6 +761,7 @@ class TodoApp {
                     if (targetTodo.completed && !draggedTodo.completed) {
                         targetTodo.completed = false;
                         await StorageManager.put('todos', targetTodo);
+                        this._syncTodo(targetTodo);
                     }
 
                     // Expand the target project so the moved item is visible
@@ -744,6 +770,7 @@ class TodoApp {
                     this.saveUIState();
 
                     await StorageManager.put('todos', draggedTodo);
+                    this._syncTodo(draggedTodo);
                     this.render();
                     return;
                 }
@@ -772,6 +799,7 @@ class TodoApp {
                 // Reassign order values
                 filtered.forEach((t, i) => { t.order = i; });
                 await this.saveTodos();
+                filtered.forEach(t => this._syncTodo(t));
                 this.render();
             });
         });
@@ -893,11 +921,13 @@ class TodoApp {
                     this.todos.push(subtask);
                     this.lastAddedId = subtask.id;
                     await StorageManager.put('todos', subtask);
+                    this._syncTodo(subtask);
 
                     const project = this.todos.find(t => t.id === projectId);
                     if (project && project.completed) {
                         project.completed = false;
                         await StorageManager.put('todos', project);
+                        this._syncTodo(project);
                     }
 
                     input.value = '';
@@ -940,6 +970,7 @@ class TodoApp {
                 chip.classList.add('active');
                 todo.priority = chip.dataset.priority;
                 await StorageManager.put('todos', todo);
+                this._syncTodo(todo);
                 this.render();
             });
         });
@@ -950,6 +981,7 @@ class TodoApp {
             descField.addEventListener('change', async () => {
                 todo.description = descField.value.trim();
                 await StorageManager.put('todos', todo);
+                this._syncTodo(todo);
             });
         }
 
@@ -959,6 +991,7 @@ class TodoApp {
             deadlineField.addEventListener('change', async () => {
                 todo.deadline = deadlineField.value || null;
                 await StorageManager.put('todos', todo);
+                this._syncTodo(todo);
                 this.render();
             });
         }
@@ -971,12 +1004,14 @@ class TodoApp {
                 const newParentId = projectSelect.value ? parseInt(projectSelect.value) : null;
                 todo.parentId = newParentId;
                 await StorageManager.put('todos', todo);
+                this._syncTodo(todo);
 
                 if (newParentId) {
                     const newParent = this.todos.find(t => t.id === newParentId);
                     if (newParent && newParent.completed && !todo.completed) {
                         newParent.completed = false;
                         await StorageManager.put('todos', newParent);
+                        this._syncTodo(newParent);
                     }
                 }
                 if (oldParentId) {
@@ -985,6 +1020,7 @@ class TodoApp {
                         const remaining = this.getSubtasks(oldParentId);
                         oldParent.completed = remaining.length > 0 && remaining.every(t => t.completed);
                         await StorageManager.put('todos', oldParent);
+                        this._syncTodo(oldParent);
                     }
                 }
                 this.render();
@@ -1005,6 +1041,7 @@ class TodoApp {
                     todo.recurrence = { type: val, interval: 1 };
                 }
                 await StorageManager.put('todos', todo);
+                this._syncTodo(todo);
                 this.render();
             });
 
@@ -1014,6 +1051,7 @@ class TodoApp {
                     if (todo.recurrence && todo.recurrence.type === 'custom') {
                         todo.recurrence.interval = parseInt(customField.value) || 3;
                         await StorageManager.put('todos', todo);
+                        this._syncTodo(todo);
                     }
                 });
             }
@@ -1694,6 +1732,110 @@ class TodoApp {
         this.lastAddedId = null;
         this._animCheckId = null;
         this._animPriorityId = null;
+    }
+
+    // ===== Firebase Sync Helpers =====
+
+    _syncTodo(todo) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.pushTodo(todo);
+        }
+    }
+
+    _deleteTodoFromCloud(id) {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.isSignedIn()) {
+            FirebaseSync.deleteTodo(id);
+        }
+    }
+
+    async handleRemoteTodos(remoteTodos) {
+        const remoteMap = new Map();
+        for (const t of remoteTodos) {
+            const { _syncedAt, _firestoreId, ...clean } = t;
+            remoteMap.set(clean.id, clean);
+        }
+
+        let changed = false;
+
+        for (const [id, remote] of remoteMap) {
+            const localIdx = this.todos.findIndex(t => t.id === id);
+            if (localIdx === -1) {
+                this.todos.push(remote);
+                await StorageManager.put('todos', remote);
+                changed = true;
+            } else {
+                const local = this.todos[localIdx];
+                if (JSON.stringify(local) !== JSON.stringify(remote)) {
+                    this.todos[localIdx] = remote;
+                    await StorageManager.put('todos', remote);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) this.render();
+    }
+
+    async handleAuthChange(user) {
+        this.updateAuthUI(user);
+        if (user && typeof FirebaseSync !== 'undefined' && FirebaseSync.needsTodosMerge()) {
+            const merged = await FirebaseSync.mergeOnFirstLoginTodos(this.todos);
+            this.todos = merged;
+            await StorageManager.putAll('todos', this.todos);
+            this.render();
+        }
+    }
+
+    updateAuthUI(user) {
+        const signInBtn = document.getElementById('signInBtn');
+        const userInfo = document.getElementById('userInfo');
+        if (!signInBtn || !userInfo) return;
+
+        if (user) {
+            signInBtn.style.display = 'none';
+            userInfo.style.display = 'flex';
+            const avatar = document.getElementById('userAvatar');
+            const name = document.getElementById('userName');
+            if (avatar) avatar.src = user.photoURL || '';
+            if (name) name.textContent = user.displayName || user.email || '';
+        } else {
+            signInBtn.style.display = '';
+            userInfo.style.display = 'none';
+        }
+    }
+
+    updateSyncStatusUI(status) {
+        const syncStatus = document.getElementById('syncStatus');
+        const syncDot = document.getElementById('syncDot');
+        const syncLabel = document.getElementById('syncLabel');
+        if (!syncStatus || !syncDot || !syncLabel) return;
+
+        if (!status) {
+            syncStatus.style.display = 'none';
+            return;
+        }
+        syncStatus.style.display = 'flex';
+        syncDot.className = 'sync-status-dot ' + status;
+        const labels = { syncing: 'Syncing...', synced: 'Synced', error: 'Sync error', offline: 'Offline' };
+        syncLabel.textContent = labels[status] || status;
+    }
+
+    async handleSignIn() {
+        if (typeof FirebaseSync === 'undefined') return;
+        try {
+            await FirebaseSync.signInWithGoogle();
+        } catch (error) {
+            console.error('Sign-in failed:', error);
+        }
+    }
+
+    async handleSignOut() {
+        if (typeof FirebaseSync === 'undefined') return;
+        try {
+            await FirebaseSync.signOut();
+        } catch (error) {
+            console.error('Sign-out failed:', error);
+        }
     }
 
     // ===== Export/Import =====

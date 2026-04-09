@@ -16,11 +16,13 @@ class FirebaseSync {
     static unsubSnippets = null;
     static unsubTypes = null;
     static unsubVersions = null;
+    static unsubTodos = null;
     static onAuthChange = null;
     static onSyncStatus = null;
     static onRemoteSnippets = null;
     static onRemoteTypes = null;
     static onRemoteVersions = null;
+    static onRemoteTodos = null;
     static initialized = false;
     static mergeInProgress = false;
 
@@ -66,6 +68,7 @@ class FirebaseSync {
             this.onRemoteSnippets = callbacks.onRemoteSnippets || null;
             this.onRemoteTypes = callbacks.onRemoteTypes || null;
             this.onRemoteVersions = callbacks.onRemoteVersions || null;
+            this.onRemoteTodos = callbacks.onRemoteTodos || null;
 
             // Listen for auth state changes
             this.auth.onAuthStateChanged(user => {
@@ -231,6 +234,28 @@ class FirebaseSync {
                     this.setSyncStatus('error');
                 }
             );
+
+        // Listen to todos collection
+        if (this.onRemoteTodos) {
+            this.unsubTodos = this.db
+                .collection('users').doc(userId)
+                .collection('todos')
+                .onSnapshot(
+                    snapshot => {
+                        if (this.mergeInProgress) return;
+                        const todos = [];
+                        snapshot.forEach(doc => {
+                            todos.push({ ...doc.data(), _firestoreId: doc.id });
+                        });
+                        this.onRemoteTodos(todos);
+                        this.setSyncStatus('synced');
+                    },
+                    error => {
+                        console.error('FirebaseSync: Todos listener error:', error);
+                        this.setSyncStatus('error');
+                    }
+                );
+        }
     }
 
     /**
@@ -248,6 +273,10 @@ class FirebaseSync {
         if (this.unsubVersions) {
             this.unsubVersions();
             this.unsubVersions = null;
+        }
+        if (this.unsubTodos) {
+            this.unsubTodos();
+            this.unsubTodos = null;
         }
     }
 
@@ -384,6 +413,115 @@ class FirebaseSync {
             await batch.commit();
         } catch (error) {
             console.error('FirebaseSync: Failed to delete snippet versions:', error);
+        }
+    }
+
+    // ─── Todo CRUD ────────────────────────────────────────────
+
+    /**
+     * Push a todo to Firestore (create or update)
+     * @param {Object} todo - The todo object (must have id)
+     */
+    static async pushTodo(todo) {
+        const col = this._userCollection('todos');
+        if (!col) return;
+
+        this.setSyncStatus('syncing');
+        try {
+            const docId = String(todo.id);
+            const data = { ...todo, _syncedAt: new Date().toISOString() };
+            await col.doc(docId).set(data);
+            this.setSyncStatus('synced');
+        } catch (error) {
+            console.error('FirebaseSync: Failed to push todo:', error);
+            this.setSyncStatus('error');
+        }
+    }
+
+    /**
+     * Delete a todo from Firestore
+     * @param {number|string} todoId
+     */
+    static async deleteTodo(todoId) {
+        const col = this._userCollection('todos');
+        if (!col) return;
+
+        this.setSyncStatus('syncing');
+        try {
+            await col.doc(String(todoId)).delete();
+            this.setSyncStatus('synced');
+        } catch (error) {
+            console.error('FirebaseSync: Failed to delete todo:', error);
+            this.setSyncStatus('error');
+        }
+    }
+
+    /**
+     * Check if this is the first time todos have been merged for this user
+     */
+    static needsTodosMerge() {
+        if (!this.user) return false;
+        return !localStorage.getItem(`firebase_merged_todos_${this.user.uid}`);
+    }
+
+    static markTodosMergeComplete() {
+        if (!this.user) return;
+        localStorage.setItem(`firebase_merged_todos_${this.user.uid}`, 'true');
+    }
+
+    /**
+     * Merge local todos with cloud todos (union, local wins on ID conflict).
+     * Returns the merged array and pushes it to Firestore.
+     * @param {Array} localTodos
+     * @returns {Promise<Array>} Merged todos (internal fields stripped)
+     */
+    static async mergeOnFirstLoginTodos(localTodos) {
+        if (!this.db || !this.user) return localTodos;
+
+        this.mergeInProgress = true;
+        this.setSyncStatus('syncing');
+
+        try {
+            const userId = this.user.uid;
+            const cloudSnap = await this.db
+                .collection('users').doc(userId)
+                .collection('todos').get();
+
+            const cloudTodos = [];
+            cloudSnap.forEach(doc => cloudTodos.push(doc.data()));
+
+            // Union merge: cloud first, local wins on ID conflict
+            const mergedMap = new Map();
+            for (const t of cloudTodos) {
+                mergedMap.set(t.id, t);
+            }
+            for (const t of localTodos) {
+                mergedMap.set(t.id, t);
+            }
+
+            const merged = Array.from(mergedMap.values());
+
+            // Push merged set to Firestore
+            const batch = this.db.batch();
+            const todosCol = this.db.collection('users').doc(userId).collection('todos');
+            for (const t of merged) {
+                batch.set(todosCol.doc(String(t.id)), { ...t, _syncedAt: new Date().toISOString() });
+            }
+            await batch.commit();
+
+            this.markTodosMergeComplete();
+            this.setSyncStatus('synced');
+            this.mergeInProgress = false;
+
+            return merged.map(t => {
+                const { _syncedAt, _firestoreId, ...rest } = t;
+                return rest;
+            });
+        } catch (error) {
+            console.error('FirebaseSync: Todo merge failed:', error);
+            this.setSyncStatus('error');
+            this.mergeInProgress = false;
+            return localTodos;
         }
     }
 

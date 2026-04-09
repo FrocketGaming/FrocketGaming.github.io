@@ -16,6 +16,7 @@
     <link rel="icon" type="image/png" href="/images/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="../../src/firebase-sync.css">
     <link rel="stylesheet" href="todo-styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,7 +49,7 @@
 
     <div class="header-section">
         <div class="header-content">
-            <p>Manage your tasks with this simple to-do list. Your data is saved locally in your browser.</p>
+            <p>Manage your tasks with this simple to-do list. Sign in to sync across devices.</p>
             <div class="header-actions">
                 <button id="exportBtn" class="format-btn">
                     <i class="fa-solid fa-download"></i> Export
@@ -57,6 +58,23 @@
                 <button id="importBtn" class="format-btn">
                     <i class="fa-solid fa-upload"></i> Import
                 </button>
+                <div class="auth-section" id="authSection">
+                    <button id="signInBtn" class="sign-in-btn" style="display:none;">
+                        <i class="fa-brands fa-google"></i>
+                        <span>Sign in</span>
+                    </button>
+                    <div id="userInfo" class="user-info" style="display:none;">
+                        <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+                        <span id="userName" class="user-name"></span>
+                        <div id="syncStatus" class="sync-status" style="display:none;">
+                            <span class="sync-status-dot" id="syncDot"></span>
+                            <span id="syncLabel">Synced</span>
+                        </div>
+                        <button id="signOutBtn" class="sign-out-btn" title="Sign out">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -229,6 +247,11 @@
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="../../src/storage-manager.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="../../src/firebase-config.js"></script>
+    <script src="../../src/firebase-sync.js"></script>
     <script src="todo-app.js"></script>
 </body>
 
