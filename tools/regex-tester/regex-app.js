@@ -56,6 +56,21 @@ class RegexTester {
                 { name: 'US ZIP Code', pattern: '\\b\\d{5}(-\\d{4})?\\b', flags: 'g', test: 'ZIP: 12345 or 12345-6789' },
                 { name: 'Domain', pattern: '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$', flags: 'i', test: 'example.com' }
             ],
+            dates: [
+                { name: 'Date YYYY-MM-DD', pattern: '\\b(\\d{4})-(\\d{2})-(\\d{2})\\b', flags: 'g', test: 'Timestamps: 2024-01-15, 2023-12-31, 2025-06-07' },
+                { name: 'Date MM/DD/YYYY', pattern: '\\b(\\d{2})/(\\d{2})/(\\d{4})\\b', flags: 'g', test: 'Dates: 01/15/2024, 12/31/2023, 06/07/2025' },
+                { name: 'Date DD-Mon-YYYY', pattern: '\\b(\\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\\d{4})\\b', flags: 'gi', test: 'Log: 15-Jan-2024, 3-Dec-2023' },
+                { name: 'Time HH:MM:SS', pattern: '\\b(\\d{2}):(\\d{2}):(\\d{2})\\b', flags: 'g', test: 'Events at 09:30:00 and 14:55:22 and 00:00:01' },
+                { name: 'Time HH:MM', pattern: '\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b', flags: 'g', test: 'Meeting at 09:30 and 14:55 and 00:00' },
+                { name: 'ISO 8601 Datetime', pattern: '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})?', flags: 'g', test: 'Created: 2024-01-15T09:30:00Z and updated: 2024-06-07T14:55:22.123+05:30' },
+                { name: 'Unix Timestamp (s)', pattern: '\\b1[0-9]{9}\\b', flags: 'g', test: 'Timestamps: 1705312200 and 1717768522' },
+                { name: 'Unix Timestamp (ms)', pattern: '\\b1[0-9]{12}\\b', flags: 'g', test: 'Timestamps: 1705312200000 and 1717768522456' },
+                { name: 'Filename Date YYYYMMDD', pattern: '(\\d{4})(\\d{2})(\\d{2})', flags: 'g', test: 'Files: backup_20240115.zip, log_20231231_report.txt' },
+                { name: 'Filename YYYYMMDD_HHMMSS', pattern: '(\\d{4})(\\d{2})(\\d{2})_(\\d{2})(\\d{2})(\\d{2})', flags: 'g', test: 'Files: screenshot_20240115_093022.png, recording_20231231_235959.mp4' },
+                { name: 'Hour & Minute from Timestamp', pattern: 'T(\\d{2}):(\\d{2})', flags: 'g', test: 'Logs: 2024-01-15T09:30:00Z and 2024-06-07T14:55:22Z' },
+                { name: 'Year from ISO Date', pattern: '^(\\d{4})-', flags: 'gm', test: '2024-01-15\n2023-12-31\n2025-06-07' },
+                { name: 'Month & Day from ISO Date', pattern: '\\d{4}-(\\d{2})-(\\d{2})', flags: 'g', test: 'Dates: 2024-01-15 and 2023-12-31' }
+            ],
             security: [
                 { name: 'JWT Token', pattern: 'eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+', flags: 'g', test: 'Token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' },
                 { name: 'API Key', pattern: '(?:api[_-]?key|apikey|api[_-]?secret)[\\s]*[=:\\s]+[\\s]*["\']?[A-Za-z0-9_\\-]{16,}["\']?', flags: 'gi', test: 'api_key = "abc123def456ghi789jkl012mno"' },

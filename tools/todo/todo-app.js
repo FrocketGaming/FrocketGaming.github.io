@@ -51,6 +51,7 @@ class TodoApp {
             this.loadUIState();
             this.setupEventListeners();
             this.setupKeyboardShortcuts();
+            this.setupDescriptionTooltip();
             this.render();
 
             // Initialize Firebase sync if available
@@ -949,6 +950,35 @@ class TodoApp {
         });
     }
 
+    // ===== Description Tooltip =====
+    setupDescriptionTooltip() {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'desc-tooltip';
+        document.body.appendChild(tooltip);
+
+        const lists = [document.getElementById('todoList'), document.getElementById('completedList')];
+        lists.forEach(list => {
+            list.addEventListener('mousemove', (e) => {
+                const item = e.target.closest('.todo-item');
+                if (!item || !item.dataset.description) {
+                    tooltip.classList.remove('visible');
+                    return;
+                }
+                if (tooltip.dataset.forId !== item.dataset.id) {
+                    tooltip.textContent = item.dataset.description;
+                    tooltip.dataset.forId = item.dataset.id;
+                }
+                tooltip.classList.add('visible');
+                tooltip.style.left = (e.clientX + 14) + 'px';
+                tooltip.style.top = (e.clientY + 14) + 'px';
+            });
+            list.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+                tooltip.dataset.forId = '';
+            });
+        });
+    }
+
     // ===== Detail Panel =====
     toggleDetailPanel(id) {
         if (this.expandedTaskId === id) {
@@ -1371,7 +1401,7 @@ class TodoApp {
         const dragHandle = todo.completed ? '' : `<i class="fa-solid fa-grip-vertical drag-handle"></i>`;
 
         let html = `
-            <li class="${classes}" data-id="${todo.id}" draggable="${!todo.completed}">
+            <li class="${classes}" data-id="${todo.id}" draggable="${!todo.completed}"${todo.description ? ` data-description="${this.escapeAttr(todo.description)}"` : ''}>
                 ${dragHandle}
                 ${projectPrefix}
                 <input type="checkbox" class="${checkboxClass}" ${todo.completed ? 'checked' : ''}>

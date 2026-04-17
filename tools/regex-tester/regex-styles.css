@@ -410,6 +410,8 @@
     transition: all 0.3s;
     font-size: 13px;
     font-family: 'Raleway', sans-serif;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .example-btn:hover {
