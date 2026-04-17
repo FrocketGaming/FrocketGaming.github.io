@@ -1134,6 +1134,12 @@ class TodoApp {
             this.showInlineSubtask(id);
             return;
         }
+
+        // Click on content area → toggle detail panel
+        if (e.target.closest('.todo-content')) {
+            this.toggleDetailPanel(id);
+            return;
+        }
     }
 
     // ===== Close Everything =====
