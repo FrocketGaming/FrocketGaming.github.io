@@ -46,14 +46,6 @@
         </nav>
     </div>
 
-    <p>Convert times across timezones, view a world clock, and plan meetings across time zones. All processing is done locally in your browser.</p>
-
-    <div class="tz-add-bar">
-        <input type="text" id="addTimezoneInput" list="addTimezoneList" placeholder="Add timezone / city..." class="tz-input" aria-label="Add timezone or city">
-        <datalist id="addTimezoneList"></datalist>
-        <button id="addTimezoneBtn" class="format-btn" aria-label="Add timezone"><i class="fa-solid fa-plus"></i> Add Timezone</button>
-    </div>
-
     <div class="tz-container">
         <!-- Left Column: Converter + World Clock -->
         <div class="tz-left-col">
@@ -64,21 +56,16 @@
                     <div class="tz-row">
                         <label>Source</label>
                         <input type="datetime-local" id="sourceDateTime" step="60" aria-label="Source date and time">
-                        <input type="text" id="sourceTimezone" list="sourceTimezoneList" placeholder="Type timezone..." class="tz-input" aria-label="Source timezone">
-                        <datalist id="sourceTimezoneList"></datalist>
+                        <div id="sourceTimezonePicker"></div>
                     </div>
                 </div>
-                <div class="tz-targets" id="targetContainer">
-                    <!-- Target rows added dynamically -->
-                </div>
+                <div class="tz-targets" id="targetContainer"></div>
             </div>
 
             <!-- World Clock Section -->
             <div class="tz-world-clock">
                 <h3><i class="fa-solid fa-globe"></i> World Clock</h3>
-                <div class="tz-clock-grid" id="clockGrid">
-                    <!-- Clock cards added dynamically -->
-                </div>
+                <div class="tz-clock-grid" id="clockGrid"></div>
             </div>
         </div>
 
@@ -90,13 +77,10 @@
                     <label>Source Hour:</label>
                     <select id="plannerHour" class="tz-select" aria-label="Source hour"></select>
                     <label>in</label>
-                    <input type="text" id="plannerSourceTz" list="plannerTzList" placeholder="Source timezone..." class="tz-input" aria-label="Planner source timezone">
-                    <datalist id="plannerTzList"></datalist>
+                    <div id="plannerSourceTzPicker"></div>
                 </div>
             </div>
-            <div class="tz-planner-grid" id="plannerGrid">
-                <!-- Meeting planner grid added dynamically -->
-            </div>
+            <div class="tz-planner-grid" id="plannerGrid"></div>
             <div class="tz-planner-legend">
                 <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-good"></span> Business hours (9-17)</span>
                 <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-ok"></span> Early/Late (7-9, 17-21)</span>

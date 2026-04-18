@@ -1,22 +1,5 @@
 /* Timezone Converter Styles */
 
-.tz-add-bar {
-    max-width: 1600px;
-    margin: 0 auto 20px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.tz-add-bar .tz-input {
-    flex: 1;
-    max-width: 350px;
-}
-
-.tz-add-bar .format-btn {
-    margin-top: 0;
-}
-
 .tz-container {
     max-width: 1600px;
     margin: 0 auto;
@@ -125,6 +108,117 @@ input[type="datetime-local"]:focus {
     border-color: var(--accent-primary);
 }
 
+/* Custom Timezone Picker */
+.tz-picker {
+    position: relative;
+    min-width: 200px;
+    display: inline-block;
+}
+
+.tz-picker-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.tz-picker-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.tz-picker-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    min-width: 100%;
+    width: max-content;
+    max-width: 340px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 16px var(--shadow-color);
+}
+
+.tz-picker-dropdown.tz-picker-open {
+    display: block;
+}
+
+.tz-picker-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    cursor: pointer;
+    gap: 16px;
+}
+
+.tz-picker-option:hover,
+.tz-picker-option.tz-picker-active {
+    background: var(--bg-hover);
+}
+
+.tz-picker-option.tz-picker-selected .tz-picker-option-name {
+    color: var(--accent-primary);
+}
+
+.tz-picker-option-name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.tz-picker-option-detail {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-family: "Courier New", Consolas, monospace;
+    flex-shrink: 0;
+}
+
+.tz-picker-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Per-section Add Row */
+.tz-section-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+}
+
+.tz-section-add .tz-picker {
+    flex: 1;
+    min-width: 0;
+}
+
+.tz-section-add .tz-picker-input {
+    width: 100%;
+}
+
+.tz-section-add .format-btn {
+    margin-top: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* Converter Section */
 .tz-source {
     margin-bottom: 15px;
@@ -174,12 +268,32 @@ input[type="datetime-local"]:focus {
     background: var(--bg-hover);
 }
 
-.tz-add-btn {
-    margin-top: 8px;
+/* World Clock Preview Bar */
+.tz-clock-preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
-.tz-targets .tz-row label {
+.tz-clock-preview-bar label {
     color: var(--text-secondary);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.tz-clock-preview-bar .tz-select {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+}
+
+.tz-preview-mode .tz-clock-card {
+    border-color: var(--accent-primary);
+    opacity: 0.92;
+}
+
+.tz-preview-mode .tz-clock-time {
+    color: var(--accent-secondary);
 }
 
 /* World Clock Grid */
@@ -280,10 +394,13 @@ input[type="datetime-local"]:focus {
     font-size: 0.85rem;
 }
 
-.tz-planner-controls .tz-input,
-.tz-planner-controls .tz-select {
+.tz-planner-controls .tz-picker {
     min-width: 0;
-    width: auto;
+    flex: 1;
+}
+
+.tz-planner-controls .tz-picker-input {
+    min-width: 150px;
 }
 
 .tz-planner-grid {
@@ -357,27 +474,16 @@ input[type="datetime-local"]:focus {
     color: #f0a0a0;
 }
 
-/* Theme-aware color overrides */
-[data-theme="dracula"] .tz-hour-good {
-    background: #264a26;
-    color: #a8e6a8;
-}
-
-[data-theme="dracula"] .tz-hour-ok {
-    background: #4a3a10;
-    color: #f0d68a;
-}
-
-[data-theme="dracula"] .tz-hour-bad {
-    background: #4a1010;
-    color: #f0a0a0;
-}
+[data-theme="dracula"] .tz-hour-good { background: #264a26; color: #a8e6a8; }
+[data-theme="dracula"] .tz-hour-ok  { background: #4a3a10; color: #f0d68a; }
+[data-theme="dracula"] .tz-hour-bad { background: #4a1010; color: #f0a0a0; }
 
 /* Legend */
 .tz-planner-legend {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
+    margin-bottom: 0;
 }
 
 .tz-legend-item {
@@ -437,6 +543,11 @@ input[type="datetime-local"]:focus {
 
     .tz-planner-grid {
         overflow-x: auto;
+    }
+
+    .tz-picker {
+        min-width: 0;
+        width: 100%;
     }
 }
 
