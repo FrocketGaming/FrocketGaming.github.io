@@ -1,4 +1,44 @@
 /* CSV Viewer Specific Styles */
+
+.csv-paste-area {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.csv-paste-area textarea {
+    width: 100%;
+    min-height: 160px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 10px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.csv-paste-area textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.csv-paste-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.csv-paste-actions .format-btn,
+.csv-paste-actions .clear-bnt {
+    margin-top: 0;
+}
+
 .csv-container {
     width: 100%;
     max-width: 1600px;

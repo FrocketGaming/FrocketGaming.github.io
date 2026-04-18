@@ -16,6 +16,22 @@
     box-shadow: 0 0 4px var(--shadow-color);
 }
 
+.cron-expression-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.cron-expression-row #cronExpression {
+    flex: 1;
+}
+
+.cron-expression-row .toolbar-btn {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 1rem;
+}
+
 .cron-input-section label {
     display: block;
     color: var(--accent-secondary);
@@ -204,7 +220,57 @@
     display: none !important;
 }
 
+/* Named toggle buttons (day of week / month) */
+.named-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    padding: 4px 0;
+}
+
+.named-toggle {
+    padding: 4px 7px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.named-toggle:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.named-toggle.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
 /* Next runs */
+.cron-next-runs-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.cron-next-runs-header h3 {
+    margin: 0 !important;
+}
+
+.cron-tz-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
 .cron-next-runs {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -216,7 +282,7 @@
 .cron-next-runs h3 {
     color: var(--accent-secondary);
     font-size: 18px;
-    margin: 0 0 15px 0;
+    margin: 0;
     text-align: left;
 }
 

@@ -84,6 +84,7 @@ function formatList() {
     }
 
     output.value = result;
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -146,6 +147,7 @@ function convertCase(type) {
     }
 
     output.value = result;
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -207,6 +209,7 @@ function prettifyJSON() {
     } catch (e) {
         output.value = 'Error: Invalid JSON — ' + e.message;
     }
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -220,6 +223,7 @@ function minifyJSON() {
     } catch (e) {
         output.value = 'Error: Invalid JSON — ' + e.message;
     }
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -250,6 +254,7 @@ function findAndReplace() {
     } catch (e) {
         output.value = 'Error: Invalid regex — ' + e.message;
     }
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -260,6 +265,7 @@ function trimWhitespace() {
     if (!text.trim()) return;
     const lines = text.split('\n');
     output.value = lines.map(l => l.trim()).join('\n');
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -268,6 +274,7 @@ function removeEmptyLines() {
     if (!text.trim()) return;
     const lines = text.split('\n');
     output.value = lines.filter(l => l.trim() !== '').join('\n');
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -275,6 +282,7 @@ function removeExtraSpaces() {
     const text = getSourceText();
     if (!text.trim()) return;
     output.value = text.replace(/ {2,}/g, ' ');
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -282,6 +290,7 @@ function stripHtmlTags() {
     const text = getSourceText();
     if (!text.trim()) return;
     output.value = text.replace(/<[^>]*>/g, '');
+    saveFormatterState();
     closeAllDropdowns();
 }
 
@@ -317,6 +326,8 @@ function updateStats() {
 if (inputEl) {
     inputEl.addEventListener('input', function() {
         output.value = '';
+        localStorage.removeItem('qol-formatter-output');
+        saveFormatterState();
         updateStats();
     });
     updateStats();
@@ -351,4 +362,24 @@ function showCopyPopup() {
 
 function clearOutput() {
     output.value = '';
+    localStorage.removeItem('qol-formatter-output');
 }
+
+// ========== Persistence ==========
+
+function saveFormatterState() {
+    if (inputEl) localStorage.setItem('qol-formatter-input', inputEl.value);
+    if (output) localStorage.setItem('qol-formatter-output', output.value);
+}
+
+(function loadFormatterState() {
+    const savedInput = localStorage.getItem('qol-formatter-input');
+    const savedOutput = localStorage.getItem('qol-formatter-output');
+    if (savedInput && inputEl) {
+        inputEl.value = savedInput;
+        updateStats();
+    }
+    if (savedOutput && output) {
+        output.value = savedOutput;
+    }
+})();

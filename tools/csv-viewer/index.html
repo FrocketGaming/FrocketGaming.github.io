@@ -62,7 +62,18 @@
             <button id="uploadBtn" class="format-btn">
                 <i class="fa-solid fa-upload"></i> Upload CSV
             </button>
+            <button id="pasteBtn" class="format-btn">
+                <i class="fa-solid fa-clipboard"></i> Paste CSV
+            </button>
             <button id="clearBtn" class="clear-bnt">Clear</button>
+        </div>
+
+        <div id="pasteArea" class="csv-paste-area" style="display:none;">
+            <textarea id="pasteInput" placeholder="Paste CSV content here..." spellcheck="false"></textarea>
+            <div class="csv-paste-actions">
+                <button id="pasteLoadBtn" class="format-btn"><i class="fa-solid fa-table"></i> Load</button>
+                <button id="pasteCancelBtn" class="clear-bnt">Cancel</button>
+            </div>
         </div>
 
         <div id="dataProfileSection" class="data-profile-section" style="display: none;">

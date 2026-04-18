@@ -107,6 +107,9 @@ class RegexTester {
         // Replace button
         document.getElementById('replaceBtn').addEventListener('click', () => this.testReplace());
 
+        // Copy regex button
+        document.getElementById('copyRegexBtn').addEventListener('click', () => this.copyRegex());
+
         // Category tabs
         document.querySelectorAll('.category-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -320,6 +323,18 @@ class RegexTester {
         } catch (error) {
             replaceResult.textContent = `Error: ${error.message}`;
         }
+    }
+
+    copyRegex() {
+        const pattern = document.getElementById('regexPattern').value;
+        const flags = document.getElementById('regexFlags').value;
+        if (!pattern) return;
+        navigator.clipboard.writeText(`/${pattern}/${flags}`).then(() => {
+            const btn = document.getElementById('copyRegexBtn');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        });
     }
 
     clearResults() {
