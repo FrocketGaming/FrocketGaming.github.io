@@ -850,30 +850,42 @@ class NotesApp {
 
     signIn() {
         if (!this.auth) return;
-        const client = google.accounts.oauth2.initTokenClient({
-            client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
-            scope: 'openid email profile',
-            prompt: 'select_account',
-            callback: async (tokenResponse) => {
-                if (tokenResponse.error) {
-                    console.error('Notes: Sign-in failed:', tokenResponse.error);
-                    return;
+        if (!this.gsiInitialized) {
+            google.accounts.id.initialize({
+                client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
+                auto_select: false,
+                callback: async (response) => {
+                    try {
+                        const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+                        await this.auth.signInWithCredential(credential);
+                    } catch (err) {
+                        console.error('Notes: Sign-in failed:', err);
+                    }
                 }
-                try {
-                    const credential = firebase.auth.GoogleAuthProvider.credential(null, tokenResponse.access_token);
-                    await this.auth.signInWithCredential(credential);
-                } catch (err) {
-                    console.error('Notes: Sign-in failed:', err);
+            });
+            this.gsiInitialized = true;
+        }
+        google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                if (!document.getElementById('gsi-fallback')) {
+                    const btn = document.getElementById('signInBtn');
+                    if (btn) {
+                        const container = document.createElement('div');
+                        container.id = 'gsi-fallback';
+                        container.style.cssText = 'margin-top:8px;display:flex;justify-content:center;';
+                        btn.after(container);
+                        google.accounts.id.renderButton(container, { theme: 'outline', size: 'large', text: 'sign_in_with' });
+                    }
                 }
             }
         });
-        client.requestAccessToken();
     }
 
     async signOut() {
         if (!this.auth) return;
         this.stopSync();
         await this.auth.signOut();
+        if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
     }
 
     // ─── Utilities ────────────────────────────────────────────
