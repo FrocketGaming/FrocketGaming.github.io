@@ -91,37 +91,24 @@ class FirebaseSync {
         }
     }
 
-    static signInWithGoogle() {
+    static async signInWithGoogle() {
         if (!this.auth) return;
-        if (!this.gsiInitialized) {
-            google.accounts.id.initialize({
-                client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
-                auto_select: false,
-                callback: async (response) => {
-                    try {
-                        const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
-                        await this.auth.signInWithCredential(credential);
-                    } catch (error) {
-                        console.error('FirebaseSync: Sign-in failed:', error);
-                    }
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        try {
+            await this.auth.signInWithPopup(provider);
+        } catch (error) {
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                try {
+                    await this.auth.signInWithRedirect(provider);
+                } catch (redirectError) {
+                    console.error('FirebaseSync: Sign-in redirect failed:', redirectError);
                 }
-            });
-            this.gsiInitialized = true;
-        }
-        google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                if (!document.getElementById('gsi-fallback')) {
-                    const btn = document.getElementById('signInBtn');
-                    if (btn) {
-                        const container = document.createElement('div');
-                        container.id = 'gsi-fallback';
-                        container.style.cssText = 'margin-top:8px;display:flex;justify-content:center;';
-                        btn.after(container);
-                        google.accounts.id.renderButton(container, { theme: 'outline', size: 'large', text: 'sign_in_with' });
-                    }
-                }
+            } else {
+                console.error('FirebaseSync: Sign-in failed:', error);
+                throw error;
             }
-        });
+        }
     }
 
     static async signOut() {
@@ -129,7 +116,6 @@ class FirebaseSync {
         try {
             this.stopRealtimeSync();
             await this.auth.signOut();
-            if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
         } catch (error) {
             console.error('FirebaseSync: Sign-out failed:', error);
         }
