@@ -853,6 +853,7 @@ class NotesApp {
         const client = google.accounts.oauth2.initTokenClient({
             client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
             scope: 'openid email profile',
+            prompt: 'select_account',
             callback: async (tokenResponse) => {
                 if (tokenResponse.error) {
                     console.error('Notes: Sign-in failed:', tokenResponse.error);
@@ -866,7 +867,7 @@ class NotesApp {
                 }
             }
         });
-        client.requestAccessToken({ prompt: 'select_account' });
+        client.requestAccessToken();
     }
 
     async signOut() {

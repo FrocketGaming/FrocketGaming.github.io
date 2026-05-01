@@ -97,6 +97,7 @@ class FirebaseSync {
             const client = google.accounts.oauth2.initTokenClient({
                 client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
                 scope: 'openid email profile',
+                prompt: 'select_account',
                 callback: async (tokenResponse) => {
                     if (tokenResponse.error) {
                         reject(new Error(tokenResponse.error));
@@ -112,7 +113,7 @@ class FirebaseSync {
                     }
                 }
             });
-            client.requestAccessToken({ prompt: 'select_account' });
+            client.requestAccessToken();
         });
     }
 
