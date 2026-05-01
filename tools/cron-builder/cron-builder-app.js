@@ -12,30 +12,11 @@ class CronBuilderApp {
 
     init() {
         this.setupEventListeners();
-        this.setTzLabel();
         this.parseCronExpression();
-    }
-
-    setTzLabel() {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const abbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
-            .formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || tz;
-        const el = document.getElementById('cronTzLabel');
-        if (el) el.textContent = `Local time · ${abbr}`;
     }
 
     setupEventListeners() {
         this.cronInput.addEventListener('input', () => this.parseCronExpression());
-
-        // Copy expression button
-        document.getElementById('cronCopyBtn').addEventListener('click', () => {
-            navigator.clipboard.writeText(this.cronInput.value).then(() => {
-                const btn = document.getElementById('cronCopyBtn');
-                const orig = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                setTimeout(() => { btn.innerHTML = orig; }, 1500);
-            });
-        });
 
         this.fieldCards.forEach(card => {
             const modeSelect = card.querySelector('.field-mode');
@@ -44,17 +25,8 @@ class CronBuilderApp {
                 this.buildCronExpression();
             });
 
-            card.querySelectorAll('input:not([type="hidden"])').forEach(input => {
+            card.querySelectorAll('input').forEach(input => {
                 input.addEventListener('input', () => this.buildCronExpression());
-            });
-
-            // Named toggle buttons (day-of-week and month)
-            card.querySelectorAll('.named-toggle').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    btn.classList.toggle('active');
-                    this.syncTogglesToValue(card);
-                    this.buildCronExpression();
-                });
             });
         });
 
@@ -62,20 +34,6 @@ class CronBuilderApp {
             btn.addEventListener('click', () => {
                 this.applyPreset(btn.dataset.cron);
             });
-        });
-    }
-
-    syncTogglesToValue(card) {
-        const active = [...card.querySelectorAll('.named-toggle.active')]
-            .map(b => b.dataset.value)
-            .sort((a, b) => Number(a) - Number(b));
-        card.querySelector('.specific-value').value = active.join(',');
-    }
-
-    syncValueToToggles(card, value) {
-        const selected = new Set(value.split(',').map(v => v.trim()));
-        card.querySelectorAll('.named-toggle').forEach(btn => {
-            btn.classList.toggle('active', selected.has(btn.dataset.value));
         });
     }
 
@@ -153,9 +111,6 @@ class CronBuilderApp {
         card.querySelector('.range-start').value = '';
         card.querySelector('.range-end').value = '';
         card.querySelector('.step-value').value = '';
-        card.querySelectorAll('.named-toggle').forEach(b => b.classList.remove('active'));
-
-        const hasToggles = card.querySelectorAll('.named-toggle').length > 0;
 
         if (value === '*') {
             modeSelect.value = 'every';
@@ -170,7 +125,6 @@ class CronBuilderApp {
         } else {
             modeSelect.value = 'specific';
             card.querySelector('.specific-value').value = value;
-            if (hasToggles) this.syncValueToToggles(card, value);
         }
 
         this.updateFieldVisibility(card);

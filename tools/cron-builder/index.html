@@ -69,10 +69,7 @@
 
         <div class="cron-input-section">
             <label for="cronExpression">Cron Expression:</label>
-            <div class="cron-expression-row">
-                <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
-                <button class="toolbar-btn" id="cronCopyBtn" title="Copy expression"><i class="fa-solid fa-copy"></i></button>
-            </div>
+            <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
             <div class="cron-description" id="cronDescription">Every minute</div>
         </div>
 
@@ -170,21 +167,7 @@
                 <div class="field-inputs">
                     <div class="input-every">Every month</div>
                     <div class="input-specific hidden">
-                        <input type="hidden" class="specific-value">
-                        <div class="named-toggles">
-                            <button type="button" class="named-toggle" data-value="1">Jan</button>
-                            <button type="button" class="named-toggle" data-value="2">Feb</button>
-                            <button type="button" class="named-toggle" data-value="3">Mar</button>
-                            <button type="button" class="named-toggle" data-value="4">Apr</button>
-                            <button type="button" class="named-toggle" data-value="5">May</button>
-                            <button type="button" class="named-toggle" data-value="6">Jun</button>
-                            <button type="button" class="named-toggle" data-value="7">Jul</button>
-                            <button type="button" class="named-toggle" data-value="8">Aug</button>
-                            <button type="button" class="named-toggle" data-value="9">Sep</button>
-                            <button type="button" class="named-toggle" data-value="10">Oct</button>
-                            <button type="button" class="named-toggle" data-value="11">Nov</button>
-                            <button type="button" class="named-toggle" data-value="12">Dec</button>
-                        </div>
+                        <input type="text" class="specific-value" placeholder="e.g. 1,6,12">
                     </div>
                     <div class="input-range hidden">
                         <input type="number" class="range-start" min="1" max="12" placeholder="From">
@@ -211,16 +194,7 @@
                 <div class="field-inputs">
                     <div class="input-every">Every day of week</div>
                     <div class="input-specific hidden">
-                        <input type="hidden" class="specific-value">
-                        <div class="named-toggles">
-                            <button type="button" class="named-toggle" data-value="0">Sun</button>
-                            <button type="button" class="named-toggle" data-value="1">Mon</button>
-                            <button type="button" class="named-toggle" data-value="2">Tue</button>
-                            <button type="button" class="named-toggle" data-value="3">Wed</button>
-                            <button type="button" class="named-toggle" data-value="4">Thu</button>
-                            <button type="button" class="named-toggle" data-value="5">Fri</button>
-                            <button type="button" class="named-toggle" data-value="6">Sat</button>
-                        </div>
+                        <input type="text" class="specific-value" placeholder="e.g. 1,3,5">
                     </div>
                     <div class="input-range hidden">
                         <input type="number" class="range-start" min="0" max="6" placeholder="From">
@@ -237,10 +211,7 @@
         </div>
 
         <div class="cron-next-runs">
-            <div class="cron-next-runs-header">
-                <h3>Next 5 Runs</h3>
-                <span class="cron-tz-label" id="cronTzLabel"></span>
-            </div>
+            <h3>Next 5 Runs</h3>
             <ul id="nextRunsList">
                 <li>-</li>
             </ul>

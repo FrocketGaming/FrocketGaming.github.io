@@ -25,14 +25,6 @@ class CSVViewer {
         // Handle file upload
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
 
-        // Paste CSV
-        document.getElementById('pasteBtn').addEventListener('click', () => this.showPasteArea());
-        document.getElementById('pasteLoadBtn').addEventListener('click', () => this.loadPastedCSV());
-        document.getElementById('pasteCancelBtn').addEventListener('click', () => this.hidePasteArea());
-        document.getElementById('pasteInput').addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') this.loadPastedCSV();
-        });
-
         // Data Profile toggle
         document.getElementById('profileToggleBtn').addEventListener('click', () => this.toggleProfile());
         document.getElementById('dataProfileSection').querySelector('.data-profile-header').addEventListener('click', (e) => {
@@ -117,24 +109,6 @@ class CSVViewer {
 
         // Reset file input so the same file can be uploaded again
         event.target.value = '';
-    }
-
-    showPasteArea() {
-        const area = document.getElementById('pasteArea');
-        area.style.display = 'block';
-        document.getElementById('pasteInput').focus();
-    }
-
-    hidePasteArea() {
-        document.getElementById('pasteArea').style.display = 'none';
-        document.getElementById('pasteInput').value = '';
-    }
-
-    loadPastedCSV() {
-        const text = document.getElementById('pasteInput').value.trim();
-        if (!text) return;
-        this.hidePasteArea();
-        this.parseCSV(text);
     }
 
     detectDelimiter(text) {

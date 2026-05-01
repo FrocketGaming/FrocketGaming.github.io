@@ -7,7 +7,6 @@ class JsonViewerApp {
         this.formatBtn     = document.getElementById('formatBtn');
         this.expandAllBtn  = document.getElementById('expandAllBtn');
         this.collapseAllBtn= document.getElementById('collapseAllBtn');
-        this.minifyBtn         = document.getElementById('minifyBtn');
         this.copyFormattedBtn = document.getElementById('copyFormattedBtn');
         this.clearBtn      = document.getElementById('clearBtn');
         this.copyNotif     = document.getElementById('copyNotification');
@@ -26,7 +25,6 @@ class JsonViewerApp {
     init() {
         this.jsonInput.addEventListener('input', () => this.scheduleRender());
         this.formatBtn.addEventListener('click', () => this.formatInput());
-        this.minifyBtn.addEventListener('click', () => this.minifyInput());
         this.expandAllBtn.addEventListener('click', () => this.expandAll());
         this.collapseAllBtn.addEventListener('click', () => this.collapseAll());
         this.copyFormattedBtn.addEventListener('click', () => this.copyFormatted());
@@ -312,18 +310,6 @@ class JsonViewerApp {
         try {
             const parsed = JSON.parse(raw);
             this.jsonInput.value = JSON.stringify(parsed, null, 2);
-            this.render();
-        } catch (e) {
-            this.showError(e.message);
-        }
-    }
-
-    minifyInput() {
-        const raw = this.jsonInput.value.trim();
-        if (!raw) return;
-        try {
-            const parsed = JSON.parse(raw);
-            this.jsonInput.value = JSON.stringify(parsed);
             this.render();
         } catch (e) {
             this.showError(e.message);
