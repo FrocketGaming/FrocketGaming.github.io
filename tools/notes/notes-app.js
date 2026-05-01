@@ -848,14 +848,25 @@ class NotesApp {
 
     // ─── Auth ─────────────────────────────────────────────────
 
-    async signIn() {
+    signIn() {
         if (!this.auth) return;
-        const provider = new firebase.auth.GoogleAuthProvider();
-        try {
-            await this.auth.signInWithRedirect(provider);
-        } catch (err) {
-            console.error('Notes: Sign-in failed:', err);
-        }
+        const client = google.accounts.oauth2.initTokenClient({
+            client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
+            scope: 'openid email profile',
+            callback: async (tokenResponse) => {
+                if (tokenResponse.error) {
+                    console.error('Notes: Sign-in failed:', tokenResponse.error);
+                    return;
+                }
+                try {
+                    const credential = firebase.auth.GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                    await this.auth.signInWithCredential(credential);
+                } catch (err) {
+                    console.error('Notes: Sign-in failed:', err);
+                }
+            }
+        });
+        client.requestAccessToken();
     }
 
     async signOut() {

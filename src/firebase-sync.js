@@ -70,9 +70,6 @@ class FirebaseSync {
             this.onRemoteVersions = callbacks.onRemoteVersions || null;
             this.onRemoteTodos = callbacks.onRemoteTodos || null;
 
-            // Process pending redirect sign-in result
-            this.auth.getRedirectResult().catch(() => {});
-
             // Listen for auth state changes
             this.auth.onAuthStateChanged(user => {
                 this.user = user;
@@ -94,19 +91,29 @@ class FirebaseSync {
         }
     }
 
-    /**
-     * Sign in with Google redirect (compatible with privacy-focused browsers)
-     */
-    static async signInWithGoogle() {
-        if (!this.auth) return;
-
-        const provider = new firebase.auth.GoogleAuthProvider();
-        try {
-            await this.auth.signInWithRedirect(provider);
-        } catch (error) {
-            console.error('FirebaseSync: Sign-in failed:', error);
-            throw error;
-        }
+    static signInWithGoogle() {
+        if (!this.auth) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: '899987293812-hl8rr4l02pl0ssgpiet60onst7iemr7p.apps.googleusercontent.com',
+                scope: 'openid email profile',
+                callback: async (tokenResponse) => {
+                    if (tokenResponse.error) {
+                        reject(new Error(tokenResponse.error));
+                        return;
+                    }
+                    try {
+                        const credential = firebase.auth.GoogleAuthProvider.credential(null, tokenResponse.access_token);
+                        await this.auth.signInWithCredential(credential);
+                        resolve();
+                    } catch (error) {
+                        console.error('FirebaseSync: Sign-in failed:', error);
+                        reject(error);
+                    }
+                }
+            });
+            client.requestAccessToken();
+        });
     }
 
     /**
