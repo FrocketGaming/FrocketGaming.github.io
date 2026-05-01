@@ -866,7 +866,7 @@ class NotesApp {
                 }
             }
         });
-        client.requestAccessToken();
+        client.requestAccessToken({ prompt: 'select_account' });
     }
 
     async signOut() {
