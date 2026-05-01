@@ -70,6 +70,9 @@ class FirebaseSync {
             this.onRemoteVersions = callbacks.onRemoteVersions || null;
             this.onRemoteTodos = callbacks.onRemoteTodos || null;
 
+            // Process pending redirect sign-in result
+            this.auth.getRedirectResult().catch(() => {});
+
             // Listen for auth state changes
             this.auth.onAuthStateChanged(user => {
                 this.user = user;
@@ -92,26 +95,17 @@ class FirebaseSync {
     }
 
     /**
-     * Sign in with Google popup (falls back to redirect on mobile)
+     * Sign in with Google redirect (compatible with privacy-focused browsers)
      */
     static async signInWithGoogle() {
         if (!this.auth) return;
 
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
-            await this.auth.signInWithPopup(provider);
+            await this.auth.signInWithRedirect(provider);
         } catch (error) {
-            if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-                // Fallback to redirect for mobile / popup blockers
-                try {
-                    await this.auth.signInWithRedirect(provider);
-                } catch (redirectError) {
-                    console.error('FirebaseSync: Sign-in redirect failed:', redirectError);
-                }
-            } else {
-                console.error('FirebaseSync: Sign-in failed:', error);
-                throw error;
-            }
+            console.error('FirebaseSync: Sign-in failed:', error);
+            throw error;
         }
     }
 

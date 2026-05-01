@@ -852,11 +852,9 @@ class NotesApp {
         if (!this.auth) return;
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
-            await this.auth.signInWithPopup(provider);
+            await this.auth.signInWithRedirect(provider);
         } catch (err) {
-            if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-                try { await this.auth.signInWithRedirect(provider); } catch (e) { console.error('Notes: Sign-in failed:', e); }
-            }
+            console.error('Notes: Sign-in failed:', err);
         }
     }
 
