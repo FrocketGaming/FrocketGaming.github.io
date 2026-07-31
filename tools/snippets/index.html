@@ -31,25 +31,25 @@
 
     <body class="raleway-fnt">
         <div class="header">
-            <div class="header-top">
+            <div class="header-icon-row">
                 <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+                <nav class="nav-icon-rail">
+                    <a href="../txt-formatter/index.html" title="Txt Formatter"><i class="fa-solid fa-font"></i></a>
+                    <a href="../snippets/index.html" class="active" title="Snippets"><i class="fa-solid fa-code"></i></a>
+                    <a href="../todo/index.html" title="To-Do List"><i class="fa-solid fa-list-check"></i></a>
+                    <a href="../csv-viewer/index.html" title="CSV Viewer"><i class="fa-solid fa-table"></i></a>
+                    <a href="../regex-tester/index.html" title="Regex Tester"><i class="fa-solid fa-asterisk"></i></a>
+                    <a href="../image-editor/index.html" title="Image Editor"><i class="fa-solid fa-image"></i></a>
+                    <a href="../cron-builder/index.html" title="Cron Builder"><i class="fa-solid fa-calendar-days"></i></a>
+                    <a href="../timezone/index.html" title="Timezone"><i class="fa-solid fa-globe"></i></a>
+                    <a href="../text-diff/index.html" title="Text Diff"><i class="fa-solid fa-code-compare"></i></a>
+                    <a href="../json-viewer/index.html" title="JSON Viewer"><i class="fa-solid fa-file-code"></i></a>
+                </nav>
                 <div class="theme-selector">
                     <label for="themeSelect">Theme:</label>
                     <select id="themeSelect" class="theme-select"></select>
                 </div>
             </div>
-            <nav class="tool-nav">
-                <a href="../txt-formatter/index.html" class="tool-btn">txt formatter</a>
-                <a href="../snippets/index.html" class="tool-btn active">snippets</a>
-                <a href="../todo/index.html" class="tool-btn">to-do list</a>
-                <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
-                <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
-                <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-                <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
-                <a href="../timezone/index.html" class="tool-btn">timezone</a>
-                <a href="../text-diff/index.html" class="tool-btn">text diff</a>
-            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
-            </nav>
         </div>
 
         <div class="header-section">
@@ -125,6 +125,7 @@
 
         <div class="snippets-container">
             <!-- Toolbar -->
+
             <div class="toolbar">
                 <button id="newSnippetBtn" class="format-btn">
                     <i class="fa-solid fa-plus"></i> New Snippet
@@ -171,12 +172,13 @@
                 </button>
             </div>
 
+
             <!-- Main Layout - Three Panel -->
             <div class="main-layout">
                 <!-- Left Panel - Categories -->
                 <div class="categories-panel" id="categoriesPanel">
                     <div class="panel-header">
-                        <h3><i class="fa-solid fa-folder"></i> Categories</h3>
+                        <h3><span class="panel-prompt" aria-hidden="true">&gt;</span><i class="fa-solid fa-folder"></i> Categories</h3>
                     </div>
                     <div class="panel-content">
                         <ul id="categoryList" class="category-list"></ul>
@@ -190,7 +192,7 @@
                 <div class="snippets-panel" id="snippetsPanel">
                     <div class="panel-header">
                         <h3>
-                            <i class="fa-solid fa-code"></i> Snippets
+                            <span class="panel-prompt" aria-hidden="true">&gt;</span><i class="fa-solid fa-code"></i> Snippets
                             <span id="snippetsCount" class="count-badge"
                                 >(0)</span
                             >
@@ -206,7 +208,7 @@
                 <div class="content-panel" id="contentPanel">
                     <div class="empty-state" id="emptyState">
                         <i class="fa-solid fa-code"></i>
-                        <p>Select a snippet or create a new one</p>
+                        <p><span class="panel-prompt" aria-hidden="true">&gt;</span> Select a snippet or create a new one<span class="blink-cursor" aria-hidden="true">_</span></p>
                     </div>
 
                     <div
@@ -227,44 +229,64 @@
                                     class="action-btn favorite-btn"
                                     id="favoriteBtn"
                                     title="Toggle favorite"
+                                    aria-label="Toggle favorite"
                                 >
-                                    <i class="fa-regular fa-star"></i>
+                                    <i class="fa-regular fa-star" aria-hidden="true"></i>
                                 </button>
                                 <button
                                     class="action-btn"
                                     id="copyBtn"
                                     title="Copy to clipboard"
+                                    aria-label="Copy to clipboard"
                                 >
-                                    <i class="fa-solid fa-copy"></i>
-                                </button>
-                                <button
-                                    class="action-btn"
-                                    id="shareSnippetBtn"
-                                    title="Share snippet"
-                                >
-                                    <i class="fa-solid fa-share-nodes"></i>
-                                </button>
-                                <button
-                                    class="action-btn"
-                                    id="historyBtn"
-                                    title="Version history"
-                                >
-                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                    <i class="fa-solid fa-copy" aria-hidden="true"></i>
                                 </button>
                                 <button
                                     class="action-btn"
                                     id="editBtn"
                                     title="Edit snippet"
+                                    aria-label="Edit snippet"
                                 >
-                                    <i class="fa-solid fa-edit"></i>
+                                    <i class="fa-solid fa-edit" aria-hidden="true"></i>
                                 </button>
                                 <button
                                     class="action-btn delete"
                                     id="deleteBtn"
                                     title="Delete snippet"
+                                    aria-label="Delete snippet"
                                 >
-                                    <i class="fa-solid fa-trash"></i>
+                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
                                 </button>
+                                <div class="snippet-actions-overflow">
+                                    <button
+                                        class="action-btn"
+                                        id="moreActionsBtn"
+                                        title="More actions"
+                                        aria-label="More actions"
+                                        aria-haspopup="true"
+                                        aria-expanded="false"
+                                    >
+                                        <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="snippet-actions-menu" id="snippetActionsMenu" role="menu">
+                                        <button
+                                            class="snippet-actions-menu-item"
+                                            id="shareSnippetBtn"
+                                            role="menuitem"
+                                            aria-label="Share snippet"
+                                        >
+                                            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share
+                                        </button>
+                                        <button
+                                            class="snippet-actions-menu-item"
+                                            id="historyBtn"
+                                            role="menuitem"
+                                            aria-label="Version history"
+                                        >
+                                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> History
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <p
@@ -286,9 +308,10 @@
                 </div>
             </div>
         </div>
+        </div>
 
         <!-- Snippet Modal (Create/Edit) -->
-        <div id="snippetModal" class="modal">
+        <div id="snippetModal" class="modal" role="dialog" aria-modal="true" aria-label="Snippet editor">
             <div class="modal-content modal-large">
                 <div class="modal-header">
                     <div class="modal-header-actions">
@@ -302,8 +325,8 @@
                             Cancel
                         </button>
                     </div>
-                    <span class="modal-close" onclick="snippetsApp.closeModal()"
-                        >&times;</span
+                    <button class="modal-close" onclick="snippetsApp.closeModal()" aria-label="Close"
+                        >&times;</button
                     >
                 </div>
                 <div class="modal-body">
@@ -408,7 +431,7 @@
                                 <button type="button" class="md-btn md-btn-math" data-md-action="latex-display" title="Display math  $$...$$">$$x$$</button>
                                 <div class="md-palette-wrapper" id="latexPaletteWrapper">
                                     <button type="button" class="md-btn md-btn-math" id="latexPaletteBtn" title="LaTeX symbol palette">
-                                        Σ <i class="fa-solid fa-chevron-down" style="font-size:9px;margin-left:2px;"></i>
+                                        Σ <i class="fa-solid fa-chevron-down" style="font-size:11px;margin-left:2px;"></i>
                                     </button>
                                     <div class="md-latex-palette" id="latexPalette" style="display:none">
                                         <div class="md-palette-tabs" id="latexPaletteTabs"></div>
@@ -437,14 +460,15 @@
         </div>
 
         <!-- Category Modal -->
-        <div id="categoryModal" class="modal">
+        <div id="categoryModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 id="categoryModalTitle">Add Category</h3>
-                    <span
+                    <button
                         class="modal-close"
                         onclick="snippetsApp.closeCategoryModal()"
-                        >&times;</span
+                        aria-label="Close"
+                        >&times;</button
                     >
                 </div>
                 <div class="modal-body">
@@ -473,14 +497,15 @@
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <div id="deleteModal" class="modal">
+        <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3>Confirm Delete</h3>
-                    <span
+                    <h3 id="deleteModalTitle">Confirm Delete</h3>
+                    <button
                         class="modal-close"
                         onclick="snippetsApp.closeDeleteModal()"
-                        >&times;</span
+                        aria-label="Close"
+                        >&times;</button
                     >
                 </div>
                 <div class="modal-body">
@@ -503,14 +528,15 @@
         </div>
 
         <!-- Merge Modal -->
-        <div id="mergeModal" class="modal">
+        <div id="mergeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mergeModalTitle">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3>Sync Snippets</h3>
-                    <span
+                    <h3 id="mergeModalTitle">Sync Snippets</h3>
+                    <button
                         class="modal-close"
                         onclick="snippetsApp.closeMergeModal()"
-                        >&times;</span
+                        aria-label="Close"
+                        >&times;</button
                     >
                 </div>
                 <div class="modal-body merge-modal-body">
@@ -544,11 +570,11 @@
         </div>
 
         <!-- Share Modal -->
-        <div id="shareModal" class="modal">
+        <div id="shareModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3>Share Snippet</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeShareModal()">&times;</span>
+                    <h3 id="shareModalTitle">Share Snippet</h3>
+                    <button class="modal-close" onclick="snippetsApp.closeShareModal()" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -583,11 +609,11 @@
         </div>
 
         <!-- Shared Snippet Viewer Modal -->
-        <div id="sharedSnippetModal" class="modal">
+        <div id="sharedSnippetModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sharedSnippetTitle">
             <div class="modal-content modal-large">
                 <div class="modal-header">
                     <h3 id="sharedSnippetTitle">Shared Snippet</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeSharedSnippetModal()">&times;</span>
+                    <button class="modal-close" onclick="snippetsApp.closeSharedSnippetModal()" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body" id="sharedSnippetBody">
                     <div id="sharedSnippetContent">
@@ -626,11 +652,11 @@
         </div>
 
         <!-- Variable Substitution Modal -->
-        <div id="variableModal" class="modal">
+        <div id="variableModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="variableModalTitle">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3><i class="fa-solid fa-fill-drip"></i> Fill Variables</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeVariableModal()">&times;</span>
+                    <h3 id="variableModalTitle"><i class="fa-solid fa-fill-drip" aria-hidden="true"></i> Fill Variables</h3>
+                    <button class="modal-close" onclick="snippetsApp.closeVariableModal()" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p style="font-size:13px; margin-bottom:15px;">Enter values for each placeholder found in this snippet.</p>
@@ -646,11 +672,11 @@
         </div>
 
         <!-- Version History Modal -->
-        <div id="historyModal" class="modal">
+        <div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3>Version History</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeHistoryModal()">&times;</span>
+                    <h3 id="historyModalTitle">Version History</h3>
+                    <button class="modal-close" onclick="snippetsApp.closeHistoryModal()" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body history-modal-body">
                     <div class="history-layout">
@@ -691,11 +717,11 @@
         </div>
 
         <!-- Templates Modal -->
-        <div id="templatesModal" class="modal">
+        <div id="templatesModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="templatesModalTitle">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3><i class="fa-solid fa-file-code"></i> Code Templates</h3>
-                    <span class="modal-close" onclick="snippetsApp.closeTemplatesModal()">&times;</span>
+                    <h3 id="templatesModalTitle"><i class="fa-solid fa-file-code" aria-hidden="true"></i> Code Templates</h3>
+                    <button class="modal-close" onclick="snippetsApp.closeTemplatesModal()" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body templates-modal-body">
                     <div class="templates-tabs" id="templatesTabs"></div>
@@ -721,5 +747,8 @@
         <script src="../../src/firebase-config.js"></script>
         <script src="../../src/firebase-sync.js"></script>
         <script src="snippets-app.js"></script>
-    </body>
+    <!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=518680a5-2220-4948-abb0-bc81219946ad"></script>
+<!-- impeccable-live-end -->
+</body>
 </html>

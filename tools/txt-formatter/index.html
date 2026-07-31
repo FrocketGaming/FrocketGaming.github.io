@@ -18,6 +18,7 @@
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
         />
         <link rel="stylesheet" href="../../src/stylesheet.css" />
+        <link rel="stylesheet" href="txt-formatter-styles.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -27,285 +28,296 @@
     </head>
 
     <body class="raleway-fnt">
-        <div class="header">
-            <div class="header-top">
-                <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
-                <div class="theme-selector">
-                    <label for="themeSelect">Theme:</label>
-                    <select id="themeSelect" class="theme-select"></select>
-                </div>
-            </div>
-            <nav class="tool-nav">
-                <a href="../txt-formatter/index.html" class="tool-btn active">txt formatter</a>
-                <a href="../snippets/index.html" class="tool-btn">snippets</a>
-                <a href="../todo/index.html" class="tool-btn">to-do list</a>
-                <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
-                <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
-                <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-                <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
-                <a href="../timezone/index.html" class="tool-btn">timezone</a>
-                <a href="../text-diff/index.html" class="tool-btn">text diff</a>
-            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
-            </nav>
+
+<div class="header">
+    <div class="header-icon-row">
+        <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+        <nav class="nav-icon-rail">
+            <a href="../txt-formatter/index.html" class="active" title="Txt Formatter"><i class="fa-solid fa-font"></i></a>
+            <a href="../snippets/index.html" title="Snippets"><i class="fa-solid fa-code"></i></a>
+            <a href="../todo/index.html" title="To-Do List"><i class="fa-solid fa-list-check"></i></a>
+            <a href="../csv-viewer/index.html" title="CSV Viewer"><i class="fa-solid fa-table"></i></a>
+            <a href="../regex-tester/index.html" title="Regex Tester"><i class="fa-solid fa-asterisk"></i></a>
+            <a href="../image-editor/index.html" title="Image Editor"><i class="fa-solid fa-image"></i></a>
+            <a href="../cron-builder/index.html" title="Cron Builder"><i class="fa-solid fa-calendar-days"></i></a>
+            <a href="../timezone/index.html" title="Timezone"><i class="fa-solid fa-globe"></i></a>
+            <a href="../text-diff/index.html" title="Text Diff"><i class="fa-solid fa-code-compare"></i></a>
+            <a href="../json-viewer/index.html" title="JSON Viewer"><i class="fa-solid fa-file-code"></i></a>
+        </nav>
+        <div class="theme-selector">
+            <label for="themeSelect">Theme:</label>
+            <select id="themeSelect" class="theme-select"></select>
         </div>
+    </div>
+</div>
+
         <p>Transform, format, and manipulate text with the tools below.</p>
         <div class="formatter-layout">
             <div class="toolbar">
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('listDropdown')"
-                    >
-                        List Format <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="listDropdown" class="toolbar-dropdown">
-                        <div class="dropdown-form">
-                            <label>Separator</label>
-                            <select id="separatorSelect">
-                                <option value=", ">Comma</option>
-                                <option value="\n">Newline</option>
-                                <option value=" | ">Pipe</option>
-                                <option value="\t">Tab</option>
-                                <option value="; ">Semicolon</option>
-                                <option value="custom">Custom...</option>
-                            </select>
-                            <input
-                                type="text"
-                                id="customSeparator"
-                                class="custom-sep-input hidden"
-                                placeholder="Enter separator"
-                            />
-                            <label>Quote Style</label>
-                            <select id="quoteStyleSelect">
-                                <option value="none">None</option>
-                                <option value="single">Single quotes</option>
-                                <option value="double">Double quotes</option>
-                                <option value="backtick">Backticks</option>
-                            </select>
-                            <div class="dropdown-toggle-row">
-                                <label for="parenToggle"
-                                    >Wrap in parentheses</label
-                                >
-                                <input type="checkbox" id="parenToggle" />
-                            </div>
-                            <button
-                                class="dropdown-apply-btn"
-                                onclick="formatList()"
-                            >
-                                Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('caseDropdown')"
-                    >
-                        Case <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="caseDropdown" class="toolbar-dropdown">
+                <div class="toolbar-cluster">
+                    <span class="toolbar-cluster-label">Structure</span>
+                    <div class="toolbar-group dropdown">
                         <button
-                            class="dropdown-item"
-                            onclick="convertCase('upper')"
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('listDropdown')"
                         >
-                            UPPERCASE
+                            List Format <i class="fa-solid fa-caret-down"></i>
                         </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('lower')"
-                        >
-                            lowercase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('title')"
-                        >
-                            Title Case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('camel')"
-                        >
-                            camelCase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('snake')"
-                        >
-                            snake_case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('kebab')"
-                        >
-                            kebab-case
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('pascal')"
-                        >
-                            PascalCase
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="convertCase('constant')"
-                        >
-                            CONSTANT_CASE
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('sortDropdown')"
-                    >
-                        Sort <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="sortDropdown" class="toolbar-dropdown">
-                        <button
-                            class="dropdown-item"
-                            onclick="sortLines('asc')"
-                        >
-                            Sort A-Z
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="sortLines('desc')"
-                        >
-                            Sort Z-A
-                        </button>
-                        <button class="dropdown-item" onclick="sortNumeric()">
-                            Sort Numeric
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(false)"
-                        >
-                            Remove Duplicates
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(true)"
-                        >
-                            Remove Duplicates + Sort
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('jsonDropdown')"
-                    >
-                        JSON <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="jsonDropdown" class="toolbar-dropdown">
-                        <button class="dropdown-item" onclick="prettifyJSON()">
-                            Prettify JSON
-                        </button>
-                        <button class="dropdown-item" onclick="minifyJSON()">
-                            Minify JSON
-                        </button>
-                    </div>
-                </div>
-
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('findReplaceDropdown')"
-                    >
-                        Find & Replace <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="findReplaceDropdown" class="toolbar-dropdown">
-                        <div class="dropdown-form">
-                            <label>Find</label>
-                            <input
-                                type="text"
-                                id="findInput"
-                                placeholder="Search text..."
-                            />
-                            <label>Replace</label>
-                            <input
-                                type="text"
-                                id="replaceInput"
-                                placeholder="Replace with..."
-                            />
-                            <div class="dropdown-toggle-row">
-                                <label for="regexToggle">Regex</label>
-                                <input type="checkbox" id="regexToggle" />
-                            </div>
-                            <div class="dropdown-toggle-row">
-                                <label for="caseSensitiveToggle"
-                                    >Case sensitive</label
-                                >
+                        <div id="listDropdown" class="toolbar-dropdown">
+                            <div class="dropdown-form">
+                                <label>Separator</label>
+                                <select id="separatorSelect">
+                                    <option value=", ">Comma</option>
+                                    <option value="\n">Newline</option>
+                                    <option value=" | ">Pipe</option>
+                                    <option value="\t">Tab</option>
+                                    <option value="; ">Semicolon</option>
+                                    <option value="custom">Custom...</option>
+                                </select>
                                 <input
-                                    type="checkbox"
-                                    id="caseSensitiveToggle"
+                                    type="text"
+                                    id="customSeparator"
+                                    class="custom-sep-input hidden"
+                                    placeholder="Enter separator"
                                 />
+                                <label>Quote Style</label>
+                                <select id="quoteStyleSelect">
+                                    <option value="none">None</option>
+                                    <option value="single">Single quotes</option>
+                                    <option value="double">Double quotes</option>
+                                    <option value="backtick">Backticks</option>
+                                </select>
+                                <div class="dropdown-toggle-row">
+                                    <label for="parenToggle"
+                                        >Wrap in parentheses</label
+                                    >
+                                    <input type="checkbox" id="parenToggle" />
+                                </div>
                             </div>
-                            <button
-                                class="dropdown-apply-btn"
-                                onclick="findAndReplace()"
-                            >
-                                Replace All
+                        </div>
+                    </div>
+                    <button
+                        class="list-format-apply-btn"
+                        onclick="formatList()"
+                        title="Apply list formatting"
+                    >
+                        <i class="fa-solid fa-check"></i> Apply
+                    </button>
+                    <div class="toolbar-group dropdown">
+                        <button
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('jsonDropdown')"
+                        >
+                            JSON <i class="fa-solid fa-caret-down"></i>
+                        </button>
+                        <div id="jsonDropdown" class="toolbar-dropdown">
+                            <button class="dropdown-item" onclick="prettifyJSON()">
+                                Prettify JSON
+                            </button>
+                            <button class="dropdown-item" onclick="minifyJSON()">
+                                Minify JSON
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="toolbar-group dropdown">
-                    <button
-                        class="toolbar-btn"
-                        onclick="toggleDropdown('trimCleanDropdown')"
-                    >
-                        Trim/Clean <i class="fa-solid fa-caret-down"></i>
-                    </button>
-                    <div id="trimCleanDropdown" class="toolbar-dropdown">
+                <div class="toolbar-cluster">
+                    <span class="toolbar-cluster-label">Text</span>
+                    <div class="toolbar-group dropdown">
                         <button
-                            class="dropdown-item"
-                            onclick="trimWhitespace()"
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('caseDropdown')"
                         >
-                            Trim Whitespace
+                            Case <i class="fa-solid fa-caret-down"></i>
                         </button>
+                        <div id="caseDropdown" class="toolbar-dropdown">
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('upper')"
+                            >
+                                UPPERCASE
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('lower')"
+                            >
+                                lowercase
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('title')"
+                            >
+                                Title Case
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('camel')"
+                            >
+                                camelCase
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('snake')"
+                            >
+                                snake_case
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('kebab')"
+                            >
+                                kebab-case
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('pascal')"
+                            >
+                                PascalCase
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="convertCase('constant')"
+                            >
+                                CONSTANT_CASE
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-group dropdown">
                         <button
-                            class="dropdown-item"
-                            onclick="removeEmptyLines()"
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('sortDropdown')"
                         >
-                            Remove Empty Lines
+                            Sort <i class="fa-solid fa-caret-down"></i>
                         </button>
+                        <div id="sortDropdown" class="toolbar-dropdown">
+                            <button
+                                class="dropdown-item"
+                                onclick="sortLines('asc')"
+                            >
+                                Sort A-Z
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="sortLines('desc')"
+                            >
+                                Sort Z-A
+                            </button>
+                            <button class="dropdown-item" onclick="sortNumeric()">
+                                Sort Numeric
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeDuplicates(false)"
+                            >
+                                Remove Duplicates
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeDuplicates(true)"
+                            >
+                                Remove Duplicates + Sort
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-group dropdown">
                         <button
-                            class="dropdown-item"
-                            onclick="removeExtraSpaces()"
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('trimCleanDropdown')"
                         >
-                            Remove Extra Spaces
+                            Trim/Clean <i class="fa-solid fa-caret-down"></i>
                         </button>
+                        <div id="trimCleanDropdown" class="toolbar-dropdown">
+                            <button
+                                class="dropdown-item"
+                                onclick="trimWhitespace()"
+                            >
+                                Trim Whitespace
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeEmptyLines()"
+                            >
+                                Remove Empty Lines
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeExtraSpaces()"
+                            >
+                                Remove Extra Spaces
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeDuplicates(false)"
+                            >
+                                Remove Duplicate Lines
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="stripHtmlTags()"
+                            >
+                                Strip HTML Tags
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="addLineNumbers()"
+                            >
+                                Add Line Numbers
+                            </button>
+                            <button
+                                class="dropdown-item"
+                                onclick="removeLineNumbers()"
+                            >
+                                Remove Line Numbers
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toolbar-cluster">
+                    <span class="toolbar-cluster-label">Search</span>
+                    <div class="toolbar-group dropdown">
                         <button
-                            class="dropdown-item"
-                            onclick="removeDuplicates(false)"
+                            class="toolbar-btn"
+                            onclick="toggleDropdown('findReplaceDropdown')"
                         >
-                            Remove Duplicate Lines
+                            Find &amp; Replace <i class="fa-solid fa-caret-down"></i>
                         </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="stripHtmlTags()"
-                        >
-                            Strip HTML Tags
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="addLineNumbers()"
-                        >
-                            Add Line Numbers
-                        </button>
-                        <button
-                            class="dropdown-item"
-                            onclick="removeLineNumbers()"
-                        >
-                            Remove Line Numbers
-                        </button>
+                        <div id="findReplaceDropdown" class="toolbar-dropdown">
+                            <div class="dropdown-form">
+                                <label>Find</label>
+                                <input
+                                    type="text"
+                                    id="findInput"
+                                    placeholder="Search text..."
+                                />
+                                <label>Replace</label>
+                                <input
+                                    type="text"
+                                    id="replaceInput"
+                                    placeholder="Replace with..."
+                                />
+                                <div class="dropdown-toggle-row">
+                                    <label for="regexToggle">Regex</label>
+                                    <input type="checkbox" id="regexToggle" />
+                                </div>
+                                <div class="dropdown-toggle-row">
+                                    <label for="caseSensitiveToggle"
+                                        >Case sensitive</label
+                                    >
+                                    <input
+                                        type="checkbox"
+                                        id="caseSensitiveToggle"
+                                    />
+                                </div>
+                                <button
+                                    class="dropdown-apply-btn"
+                                    onclick="findAndReplace()"
+                                >
+                                    Replace All
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -313,10 +325,7 @@
                 <button class="toolbar-btn" onclick="copyToClipboard()">
                     <i class="fa-solid fa-copy"></i> Copy
                 </button>
-                <button
-                    class="toolbar-btn toolbar-btn-clear"
-                    onclick="clearOutput()"
-                >
+                <button class="toolbar-btn toolbar-btn-clear" onclick="clearOutput()">
                     Clear
                 </button>
             </div>
@@ -344,5 +353,8 @@
         </div>
         <script src="../../src/theme-manager.js"></script>
         <script src="../../src/funcs.js"></script>
-    </body>
+    <!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=518680a5-2220-4948-abb0-bc81219946ad"></script>
+<!-- impeccable-live-end -->
+</body>
 </html>

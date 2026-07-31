@@ -25,26 +25,26 @@
 
 <body class="raleway-fnt">
     <div class="header">
-        <div class="header-top">
+        <div class="header-icon-row">
             <a href="/" class="logo" style="text-decoration:none;color:inherit;">QoL Tools</a>
+            <nav class="nav-icon-rail">
+                <a href="../txt-formatter/index.html" title="Txt Formatter"><i class="fa-solid fa-font"></i></a>
+                <a href="../snippets/index.html" title="Snippets"><i class="fa-solid fa-code"></i></a>
+                <a href="../todo/index.html" title="To-Do List"><i class="fa-solid fa-list-check"></i></a>
+                <a href="../csv-viewer/index.html" title="CSV Viewer"><i class="fa-solid fa-table"></i></a>
+                <a href="../regex-tester/index.html" title="Regex Tester"><i class="fa-solid fa-asterisk"></i></a>
+                <a href="../image-editor/index.html" title="Image Editor"><i class="fa-solid fa-image"></i></a>
+                <a href="../chart-builder/index.html" class="active" title="Chart Builder"><i class="fa-solid fa-chart-column"></i></a>
+                <a href="../cron-builder/index.html" title="Cron Builder"><i class="fa-solid fa-calendar-days"></i></a>
+                <a href="../timezone/index.html" title="Timezone"><i class="fa-solid fa-globe"></i></a>
+                <a href="../text-diff/index.html" title="Text Diff"><i class="fa-solid fa-code-compare"></i></a>
+                <a href="../json-viewer/index.html" title="JSON Viewer"><i class="fa-solid fa-file-code"></i></a>
+            </nav>
             <div class="theme-selector">
                 <label for="themeSelect">Theme:</label>
                 <select id="themeSelect" class="theme-select"></select>
             </div>
         </div>
-        <nav class="tool-nav">
-            <a href="../txt-formatter/index.html" class="tool-btn">txt formatter</a>
-            <a href="../snippets/index.html" class="tool-btn">snippets</a>
-            <a href="../todo/index.html" class="tool-btn">to-do list</a>
-            <a href="../csv-viewer/index.html" class="tool-btn">csv viewer</a>
-            <a href="../regex-tester/index.html" class="tool-btn">regex tester</a>
-            <a href="../image-editor/index.html" class="tool-btn">image editor</a>
-            <a href="../chart-builder/index.html" class="tool-btn active">chart builder</a>
-            <a href="../cron-builder/index.html" class="tool-btn">cron builder</a>
-            <a href="../timezone/index.html" class="tool-btn">timezone</a>
-            <a href="../text-diff/index.html" class="tool-btn">text diff</a>
-            <a href="../json-viewer/index.html" class="tool-btn">json viewer</a>
-        </nav>
     </div>
 
     <p>Build interactive charts from CSV or JSON data. All processing is done locally in your browser.</p>
@@ -283,6 +283,9 @@
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="chart-builder-app.js"></script>
+<!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=518680a5-2220-4948-abb0-bc81219946ad"></script>
+<!-- impeccable-live-end -->
 </body>
 
 </html>
