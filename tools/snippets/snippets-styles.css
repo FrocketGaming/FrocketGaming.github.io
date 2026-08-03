@@ -111,6 +111,31 @@
     white-space: nowrap;
 }
 
+#exportBtn,
+#importBtn,
+#newSnippetBtn,
+#templatesBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 5px;
+}
+
+#exportBtn:hover,
+#importBtn:hover,
+#newSnippetBtn:hover,
+#templatesBtn:hover {
+    box-shadow: 0 0 10px var(--accent-primary);
+}
+
+#exportBtn:focus-visible,
+#importBtn:focus-visible,
+#newSnippetBtn:focus-visible,
+#templatesBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 15px var(--accent-primary);
+}
+
 .snippets-container {
     width: 100%;
     max-width: 1600px;
@@ -159,7 +184,8 @@
     box-shadow: 0 0 15px var(--accent-primary);
 }
 
-#newSnippetBtn {
+#newSnippetBtn,
+#templatesBtn {
     margin-top: 0;
     padding: 12px 20px;
     white-space: nowrap;
