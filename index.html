@@ -30,144 +30,42 @@
 
     <body class="raleway-fnt">
         <div class="header">
-            <div class="header-top">
-                <a
-                    href="/"
-                    class="logo"
-                    style="text-decoration: none; color: inherit"
-                    >QoL Tools</a
-                >
+            <div class="header-icon-row">
+                <nav class="nav-pill-rail">
+                    <a class="nav-pill-item" href="./tools/txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label">Txt Formatter</span></a>
+                    <a class="nav-pill-item" href="./tools/snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label">Snippets</span></a>
+                    <a class="nav-pill-item" href="./tools/todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label">To-Do List</span></a>
+                    <a class="nav-pill-item" href="./tools/csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label">CSV Viewer</span></a>
+                    <a class="nav-pill-item" href="./tools/regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label">Regex Tester</span></a>
+                    <a class="nav-pill-item" href="./tools/image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label">Image Editor</span></a>
+                    <a class="nav-pill-item" href="./tools/cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label">Cron Builder</span></a>
+                    <a class="nav-pill-item" href="./tools/timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label">Timezone</span></a>
+                    <a class="nav-pill-item" href="./tools/text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label">Text Diff</span></a>
+                    <a class="nav-pill-item" href="./tools/json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label">JSON Viewer</span></a>
+                </nav>
                 <div class="theme-selector">
                     <label for="themeSelect">Theme:</label>
                     <select id="themeSelect" class="theme-select"></select>
                 </div>
             </div>
-            <nav class="tool-nav">
-                <a href="./tools/txt-formatter/index.html" class="tool-btn"
-                    >txt formatter</a
-                >
-                <a href="./tools/snippets/index.html" class="tool-btn"
-                    >snippets</a
-                >
-                <a href="./tools/todo/index.html" class="tool-btn"
-                    >to-do list</a
-                >
-                <a href="./tools/csv-viewer/index.html" class="tool-btn"
-                    >csv viewer</a
-                >
-                <a href="./tools/regex-tester/index.html" class="tool-btn"
-                    >regex tester</a
-                >
-                <a href="./tools/image-editor/index.html" class="tool-btn"
-                    >image editor</a
-                >
-                <a href="./tools/cron-builder/index.html" class="tool-btn"
-                    >cron builder</a
-                >
-                <a href="./tools/timezone/index.html" class="tool-btn"
-                    >timezone</a
-                >
-                <a href="./tools/text-diff/index.html" class="tool-btn"
-                    >text diff</a
-                >
-                <a href="./tools/json-viewer/index.html" class="tool-btn"
-                    >json viewer</a
-                >
-            </nav>
         </div>
 
-        <div class="landing-hero">
-            <h1>Quality-of-Life Developer Tools</h1>
-            <p>
-                A collection of browser-based utilities for everyday development
-                tasks. Everything runs locally in your browser — no sign-ups
-                required.
-            </p>
-        </div>
         <div class="landing-divider"></div>
 
-        <div class="tool-cards">
-            <a href="./tools/txt-formatter/index.html" class="tool-card">
-                <i class="fa-solid fa-font card-icon"></i>
-                <div class="card-title">Txt Formatter</div>
-                <div class="card-desc">
-                    Transform, format, and manipulate text — lists, case
-                    conversion, JSON, find & replace, and more.
-                </div>
-            </a>
-            <a href="./tools/snippets/index.html" class="tool-card">
-                <i class="fa-solid fa-code card-icon"></i>
-                <div class="card-title">Snippets</div>
-                <div class="card-desc">
-                    Store and organize code snippets locally. Sync across
-                    devices with Google sign-in.
-                </div>
-            </a>
-            <a href="./tools/todo/index.html" class="tool-card">
-                <i class="fa-solid fa-list-check card-icon"></i>
-                <div class="card-title">To-Do List</div>
-                <div class="card-desc">
-                    Manage tasks with categories, priorities, and local storage
-                    persistence.
-                </div>
-            </a>
-            <a href="./tools/csv-viewer/index.html" class="tool-card">
-                <i class="fa-solid fa-table card-icon"></i>
-                <div class="card-title">CSV Viewer</div>
-                <div class="card-desc">
-                    View, sort, and filter CSV data in an interactive table with
-                    SQL query support.
-                </div>
-            </a>
-            <a href="./tools/regex-tester/index.html" class="tool-card">
-                <i class="fa-solid fa-asterisk card-icon"></i>
-                <div class="card-title">Regex Tester</div>
-                <div class="card-desc">
-                    Test regular expressions in real time with match
-                    highlighting and group capture details.
-                </div>
-            </a>
-            <a href="./tools/image-editor/index.html" class="tool-card">
-                <i class="fa-solid fa-image card-icon"></i>
-                <div class="card-title">Image Editor</div>
-                <div class="card-desc">
-                    Annotate, crop, resize, and export images with blur/redact
-                    support.
-                </div>
-            </a>
-            <a href="./tools/cron-builder/index.html" class="tool-card">
-                <i class="fa-solid fa-calendar-days card-icon"></i>
-                <div class="card-title">Cron Builder</div>
-                <div class="card-desc">
-                    Build and validate cron expressions with a visual editor and
-                    next-run preview.
-                </div>
-            </a>
-            <a href="./tools/timezone/index.html" class="tool-card">
-                <i class="fa-solid fa-globe card-icon"></i>
-                <div class="card-title">Timezone</div>
-                <div class="card-desc">
-                    Compare times across multiple timezones and convert between
-                    them.
-                </div>
-            </a>
-            <a href="./tools/text-diff/index.html" class="tool-card">
-                <i class="fa-solid fa-code-compare card-icon"></i>
-                <div class="card-title">Text Diff</div>
-                <div class="card-desc">
-                    Compare two texts and see additions, deletions, and
-                    modifications with word-level highlighting.
-                </div>
-            </a>
-            <a href="./tools/json-viewer/index.html" class="tool-card">
-                <i class="fa-solid fa-file-code card-icon"></i>
-                <div class="card-title">JSON Viewer</div>
-                <div class="card-desc">
-                    Validate, format, and explore JSON as an interactive tree.
-                    Click any key to copy its path.
-                </div>
-            </a>
-        </div>
+
+    <div class="tool-ledger">
+      <a href="./tools/txt-formatter/index.html" class="ledger-row"><span class="ledger-index">01</span><i class="fa-solid fa-font ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Txt Formatter</span><span class="ledger-desc">Transform, format, and manipulate text — lists, case conversion, JSON, find &amp; replace, and more.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/snippets/index.html" class="ledger-row"><span class="ledger-index">02</span><i class="fa-solid fa-code ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Snippets</span><span class="ledger-desc">Store and organize code snippets locally. Sync across devices with Google sign-in.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/todo/index.html" class="ledger-row"><span class="ledger-index">03</span><i class="fa-solid fa-list-check ledger-icon"></i><span class="ledger-main"><span class="ledger-name">To-Do List</span><span class="ledger-desc">Manage tasks with categories, priorities, and local storage persistence.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/csv-viewer/index.html" class="ledger-row"><span class="ledger-index">04</span><i class="fa-solid fa-table ledger-icon"></i><span class="ledger-main"><span class="ledger-name">CSV Viewer</span><span class="ledger-desc">View, sort, and filter CSV data in an interactive table with SQL query support.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/regex-tester/index.html" class="ledger-row"><span class="ledger-index">05</span><i class="fa-solid fa-asterisk ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Regex Tester</span><span class="ledger-desc">Test regular expressions in real time with match highlighting and group capture details.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/image-editor/index.html" class="ledger-row"><span class="ledger-index">06</span><i class="fa-solid fa-image ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Image Editor</span><span class="ledger-desc">Annotate, crop, resize, and export images with blur/redact support.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/cron-builder/index.html" class="ledger-row"><span class="ledger-index">07</span><i class="fa-solid fa-calendar-days ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Cron Builder</span><span class="ledger-desc">Build and validate cron expressions with a visual editor and next-run preview.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/timezone/index.html" class="ledger-row"><span class="ledger-index">08</span><i class="fa-solid fa-globe ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Timezone</span><span class="ledger-desc">Compare times across multiple timezones and convert between them.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/text-diff/index.html" class="ledger-row"><span class="ledger-index">09</span><i class="fa-solid fa-code-compare ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Text Diff</span><span class="ledger-desc">Compare two texts and see additions, deletions, and modifications with word-level highlighting.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/json-viewer/index.html" class="ledger-row"><span class="ledger-index">10</span><i class="fa-solid fa-file-code ledger-icon"></i><span class="ledger-main"><span class="ledger-name">JSON Viewer</span><span class="ledger-desc">Validate, format, and explore JSON as an interactive tree. Click any key to copy its path.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+    </div>
+
 
         <script src="./src/theme-manager.js"></script>
         <script>
@@ -181,5 +79,8 @@
                 new ResizeObserver(syncPadding).observe(header);
             })();
         </script>
-    </body>
+    <!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=dbd5cff5-6edf-47fd-894a-ac61dc4d3c27"></script>
+<!-- impeccable-live-end -->
+</body>
 </html>

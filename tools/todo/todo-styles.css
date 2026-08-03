@@ -28,6 +28,15 @@
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* The one deliberate delight moment: completing a task should read as a
+   quick, precise click of satisfaction, not a celebration — a brief accent
+   settle, then the row cedes its place before the lane reflows around it. */
+@keyframes taskComplete {
+    0% { opacity: 1; transform: scale(1); background-color: var(--bg-secondary); }
+    35% { opacity: 1; transform: scale(1.01); background-color: color-mix(in srgb, var(--accent-primary) 20%, var(--bg-secondary)); }
+    100% { opacity: 0; transform: scale(0.97) translateX(8px); background-color: var(--bg-secondary); }
+}
+
 .todo-item.anim-add {
     animation: fadeSlideIn 0.25s ease-out;
 }
@@ -36,12 +45,27 @@
     animation: fadeSlideOut 0.2s ease-in forwards;
 }
 
+.todo-item.completing {
+    animation: taskComplete 0.32s ease forwards;
+    pointer-events: none;
+}
+
 .todo-item .anim-check-bounce {
     animation: checkBounce 0.2s ease;
 }
 
 .priority-badge.anim-pulse {
     animation: priorityPulse 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .todo-item.anim-add,
+    .todo-item.anim-delete,
+    .todo-item.completing,
+    .todo-item .anim-check-bounce,
+    .priority-badge.anim-pulse {
+        animation: none;
+    }
 }
 
 /* ===== Header Section ===== */
@@ -86,11 +110,12 @@
     border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 16px;
-    transition: box-shadow 0.3s;
+    box-shadow: 0 0 4px var(--shadow-color);
+    transition: box-shadow 0.3s, border-color 0.3s;
 }
 
 .composer.expanded {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 15px var(--accent-primary);
     border-color: var(--accent-primary);
 }
 
@@ -101,11 +126,11 @@
 
 #todoInput {
     flex: 1;
-    padding: 14px 16px;
+    padding: 18px 20px;
     background: transparent;
     border: none;
     color: var(--text-primary);
-    font-size: 15px;
+    font-size: 16px;
     font-family: 'Raleway', sans-serif;
     outline: none;
 }
@@ -115,7 +140,7 @@
 }
 
 .composer-add-btn {
-    padding: 14px 20px;
+    padding: 18px 24px;
     background: var(--accent-primary);
     color: var(--bg-primary);
     border: none;
@@ -158,12 +183,12 @@
 
 .preview-tag-deadline {
     background: var(--warning-color);
-    color: #1a1a1a;
+    color: var(--bg-primary);
 }
 
 .preview-tag-project {
     background: var(--info-color);
-    color: #1a1a1a;
+    color: var(--bg-primary);
 }
 
 .preview-tag-recurrence {
@@ -240,21 +265,21 @@
 }
 
 .priority-chip-low.active {
-    background: #6ba3ff;
-    color: #fff;
-    border-color: #6ba3ff;
+    background: var(--info-color);
+    color: var(--text-primary);
+    border-color: var(--info-color);
 }
 
 .priority-chip-med.active {
-    background: #ffa500;
-    color: #1a1a1a;
-    border-color: #ffa500;
+    background: var(--warning-color);
+    color: var(--bg-primary);
+    border-color: var(--warning-color);
 }
 
 .priority-chip-high.active {
-    background: #ff6b6b;
-    color: #1a1a1a;
-    border-color: #ff6b6b;
+    background: var(--error-color);
+    color: var(--bg-primary);
+    border-color: var(--error-color);
 }
 
 /* Composer Inputs */
@@ -537,13 +562,18 @@
     margin-left: 2px;
 }
 
+.filter-btn-more {
+    background: none;
+    border-style: dashed;
+    color: var(--text-secondary);
+}
+
 /* ===== Task List ===== */
-.todo-list-wrapper {
+.agenda-wrapper {
     margin-bottom: 16px;
     min-height: 100px;
 }
 
-#todoList,
 #completedList {
     list-style: none;
     padding: 0;
@@ -560,76 +590,178 @@
     gap: 8px;
 }
 
-/* ===== Date Group Headers ===== */
-.date-group-header {
+/* ===== Agenda: Today dominates, everything else recedes =====
+   One real hierarchy decision instead of five equal boxes: Today gets a
+   large, tinted, dominant zone; Overdue is an urgent strip above it;
+   Upcoming/Later/No Deadline stack below as plain, quiet sections. Hierarchy
+   comes from emphasis (glow, tint, a big number) and position, never from
+   shrinking task rows into a narrow column — every row stays full width and
+   full size so a long title is always fully readable. */
+.agenda-lane-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.agenda-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* --- Overdue banner --- */
+.agenda-overdue-banner {
+    background: color-mix(in srgb, var(--error-color) 10%, var(--bg-secondary));
+    border: 1px solid var(--error-color);
+    border-radius: 5px;
+    padding: 14px 18px;
+}
+
+.agenda-overdue-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 4px 6px 4px;
-    margin: 8px 0 4px 0;
-    border-top: 1px solid var(--border-color);
+    color: var(--error-color);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+}
+
+/* --- Main zone: Today --- */
+.agenda-main {
+    background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-secondary));
+    border: 1px solid var(--accent-primary);
+    border-radius: 8px;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+    padding: 24px 26px;
+    min-height: 200px;
+}
+
+.agenda-main-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
+}
+
+.agenda-main-stat {
+    font-family: 'Raleway', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent-secondary);
+    text-shadow: 0 0 12px var(--accent-primary);
+    line-height: 1;
+}
+
+.agenda-main-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.agenda-main-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.agenda-main-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* --- Upcoming / Later / No Deadline: plain, quiet, full-width sections ---
+   Quieter means less visual weight (no glow/tint, small header, muted
+   label), never a smaller or truncated task row. Task cards inside use the
+   exact same size as Today's — readability doesn't get traded for hierarchy. */
+.rail-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.rail-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
     cursor: pointer;
     user-select: none;
 }
 
-.date-group-header:first-child {
-    border-top: none;
-    margin-top: 0;
-    padding-top: 4px;
-}
-
-.date-group-chevron {
-    font-size: 9px;
+.rail-section-icon {
+    font-size: 11px;
     color: var(--text-secondary);
-    transition: transform 0.2s;
+    flex-shrink: 0;
 }
 
-.date-group-chevron.collapsed {
-    transform: rotate(-90deg);
-}
-
-.date-group-label {
+.rail-section-label {
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.6px;
     color: var(--text-secondary);
 }
 
-.date-group-label.overdue {
-    color: #ff6b6b;
-}
-
-.date-group-label.today {
-    color: #ffa500;
-}
-
-.date-group-count {
+.rail-section-count {
     font-size: 10px;
     color: var(--text-secondary);
     opacity: 0.7;
+    background: var(--bg-tertiary);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+
+.rail-section-chevron {
+    font-size: 9px;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.rail-section-chevron.collapsed {
+    transform: rotate(-90deg);
+}
+
+.rail-section-list {
+    padding: 0 12px 12px 12px;
+}
+
+.rail-section.collapsed .rail-section-list {
+    display: none;
 }
 
 /* ===== Task Card ===== */
 .todo-item {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 12px;
+    padding: 14px 16px;
     background: var(--bg-secondary);
-    border-radius: 6px;
-    margin-bottom: 6px;
+    border-radius: 5px;
+    margin-bottom: 8px;
     border: 1px solid transparent;
-    transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+    transition: border-color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s;
     position: relative;
 }
 
 .todo-item:hover {
-    border-color: var(--border-color);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 8px var(--shadow-color);
 }
 
 .todo-item.completed {
     opacity: 0.55;
+}
+
+.todo-item.expanded-row {
+    border-color: var(--accent-secondary);
+    background: var(--bg-hover);
 }
 
 /* Drag Handle */
@@ -673,30 +805,35 @@
 
 /* Three-zone layout: Status | Content | Actions */
 .todo-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
+    width: 21px;
+    height: 21px;
+    min-width: 21px;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     border: 2px solid var(--accent-primary);
-    border-radius: 4px;
+    border-radius: 999px;
     outline: none;
-    transition: background 0.2s;
+    transition: background 0.2s, box-shadow 0.2s;
     margin-top: 2px;
     flex-shrink: 0;
 }
 
+.todo-item input[type="checkbox"]:hover {
+    box-shadow: 0 0 6px var(--accent-primary);
+}
+
 .todo-item input[type="checkbox"]:checked {
     background: var(--accent-primary);
+    box-shadow: 0 0 8px var(--accent-primary);
     position: relative;
 }
 
 .todo-item input[type="checkbox"]:checked::after {
     content: '';
     position: absolute;
-    left: 4px;
-    top: 1px;
+    left: 6px;
+    top: 3px;
     width: 5px;
     height: 9px;
     border: solid var(--bg-primary);
@@ -714,7 +851,7 @@
 }
 
 .todo-text {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-primary);
     word-break: break-word;
     line-height: 1.4;
@@ -795,13 +932,13 @@
 }
 
 .deadline-overdue {
-    background: #ff6b6b;
-    color: #1a1a1a;
+    background: var(--error-color);
+    color: var(--bg-primary);
 }
 
 .deadline-today {
-    background: #ffa500;
-    color: #1a1a1a;
+    background: var(--warning-color);
+    color: var(--bg-primary);
 }
 
 .deadline-soon {
@@ -825,14 +962,14 @@
 
 /* Priority Badge (clickable, cycles) */
 .priority-badge {
-    padding: 3px 8px;
-    border-radius: 3px;
+    padding: 4px 10px;
+    border-radius: 999px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    transition: transform 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
     user-select: none;
 }
 
@@ -840,19 +977,27 @@
     transform: scale(1.1);
 }
 
+.priority-badge:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-primary);
+}
+
 .priority-high {
-    background: #ff6b6b;
-    color: #1a1a1a;
+    background: var(--error-color);
+    color: var(--bg-primary);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--error-color) 60%, transparent);
 }
 
 .priority-medium {
-    background: #ffa500;
-    color: #1a1a1a;
+    background: var(--warning-color);
+    color: var(--bg-primary);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--warning-color) 60%, transparent);
 }
 
 .priority-low {
-    background: #6ba3ff;
-    color: #fff;
+    background: var(--info-color);
+    color: var(--text-primary);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--info-color) 60%, transparent);
 }
 
 /* Expand chevron */
@@ -872,8 +1017,9 @@
 }
 
 .expand-btn.open {
-    transform: rotate(180deg);
     color: var(--accent-primary);
+    background: var(--bg-tertiary);
+    border-radius: 3px;
 }
 
 /* Delete button (hidden until hover) */
@@ -897,6 +1043,35 @@
     color: var(--error-color);
 }
 
+/* Move up/down buttons — keyboard alternative to drag-and-drop reordering.
+   Hidden until hover or keyboard focus, like the delete button above. */
+.move-btn {
+    padding: 4px 6px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    border-radius: 3px;
+}
+
+.todo-item:hover .move-btn,
+.todo-item:focus-within .move-btn {
+    opacity: 1;
+}
+
+.move-btn:hover {
+    color: var(--accent-primary);
+}
+
+.move-btn:focus-visible {
+    opacity: 1;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-primary);
+}
+
 /* ===== Inline Editing ===== */
 .inline-edit-input {
     flex: 1;
@@ -910,26 +1085,16 @@
     outline: none;
 }
 
-/* ===== Detail Panel (expands below task) ===== */
+/* ===== Detail Panel (renders inside the detail drawer) ===== */
 .detail-panel {
-    display: none;
-    padding: 12px 12px 12px 40px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    margin-top: -7px;
-    margin-bottom: 6px;
-}
-
-.detail-panel.open {
     display: block;
 }
 
 .detail-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
     align-items: flex-end;
 }
 
@@ -1010,31 +1175,118 @@
 }
 
 .detail-priority-chip.chip-low.active {
-    background: #6ba3ff;
-    color: #fff;
-    border-color: #6ba3ff;
+    background: var(--info-color);
+    color: var(--text-primary);
+    border-color: var(--info-color);
 }
 
 .detail-priority-chip.chip-med.active {
-    background: #ffa500;
-    color: #1a1a1a;
-    border-color: #ffa500;
+    background: var(--warning-color);
+    color: var(--bg-primary);
+    border-color: var(--warning-color);
 }
 
 .detail-priority-chip.chip-high.active {
-    background: #ff6b6b;
-    color: #1a1a1a;
-    border-color: #ff6b6b;
+    background: var(--error-color);
+    color: var(--bg-primary);
+    border-color: var(--error-color);
 }
 
 .detail-project-select {
     width: 100%;
 }
 
+/* ===== Detail Drawer ===== */
+.detail-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: none;
+}
+
+.detail-drawer.open {
+    display: block;
+}
+
+.detail-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--scrim, rgba(0, 0, 0, 0.4));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.detail-drawer.open .detail-drawer-backdrop {
+    opacity: 1;
+}
+
+.detail-drawer-panel-wrap {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 380px;
+    max-width: 90vw;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+}
+
+.detail-drawer.open .detail-drawer-panel-wrap {
+    transform: translateX(0);
+}
+
+.detail-drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 16px 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.detail-drawer-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.detail-drawer-close {
+    padding: 4px 6px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: color 0.2s, background 0.2s;
+}
+
+.detail-drawer-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.detail-drawer-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
 /* ===== Project Items ===== */
 .project-item {
-    border-left: 3px solid var(--accent-primary) !important;
     background: var(--bg-hover) !important;
+}
+
+.project-item .todo-text {
+    font-weight: 600;
 }
 
 .project-icon {
@@ -1139,19 +1391,6 @@
     white-space: nowrap;
 }
 
-/* ===== Section Divider ===== */
-.section-divider {
-    padding: 12px 0 6px 0;
-    margin: 8px 0 4px 0;
-    color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-top: 1px solid var(--border-color);
-    list-style: none;
-}
-
 /* ===== Completed Section ===== */
 .completed-section {
     background: var(--bg-secondary);
@@ -1220,6 +1459,10 @@
     padding: 40px 20px;
     color: var(--text-secondary);
     font-size: 14px;
+}
+
+.agenda-layout .empty-state {
+    width: 100%;
 }
 
 .empty-state-icon {
@@ -1291,6 +1534,99 @@
 
 .undo-toast-dismiss:hover {
     color: var(--text-primary);
+}
+
+/* ===== Import Choice Dialog ===== */
+.import-choice-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.import-choice-overlay.visible {
+    display: flex;
+}
+
+.import-choice-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px 28px;
+    min-width: 320px;
+    max-width: 400px;
+}
+
+.import-choice-content h3 {
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    font-size: 18px;
+}
+
+.import-choice-content p {
+    color: var(--text-secondary);
+    margin: 0 0 20px 0;
+    font-size: 14px;
+}
+
+.import-choice-content p strong {
+    color: var(--text-primary);
+}
+
+.import-choice-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.import-choice-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Raleway', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.import-choice-btn-append {
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
+    border: none;
+}
+
+.import-choice-btn-append:hover {
+    background: var(--accent-secondary);
+    color: var(--bg-primary);
+}
+
+.import-choice-btn-replace {
+    background: transparent;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+}
+
+.import-choice-btn-replace:hover {
+    background: var(--error-color);
+    color: var(--bg-primary);
+}
+
+.import-choice-btn-cancel {
+    width: 100%;
+    margin-top: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: none;
+}
+
+.import-choice-btn-cancel:hover {
+    background: var(--bg-hover);
 }
 
 /* ===== Keyboard Shortcuts Overlay ===== */
@@ -1393,23 +1729,19 @@ kbd {
 }
 
 /* ===== Scrollbar ===== */
-.todo-list-wrapper::-webkit-scrollbar,
 .completed-list-wrapper::-webkit-scrollbar {
     width: 6px;
 }
 
-.todo-list-wrapper::-webkit-scrollbar-track,
 .completed-list-wrapper::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.todo-list-wrapper::-webkit-scrollbar-thumb,
 .completed-list-wrapper::-webkit-scrollbar-thumb {
     background: var(--border-color);
     border-radius: 3px;
 }
 
-.todo-list-wrapper::-webkit-scrollbar-thumb:hover,
 .completed-list-wrapper::-webkit-scrollbar-thumb:hover {
     background: var(--accent-primary);
 }
@@ -1452,6 +1784,19 @@ kbd {
     .drag-handle {
         display: none;
     }
+
+    .agenda-main {
+        padding: 18px;
+    }
+
+    .agenda-main-stat {
+        font-size: 36px;
+    }
+
+    .detail-drawer-panel-wrap {
+        width: 100vw;
+        max-width: 100vw;
+    }
 }
 
 @media (max-width: 540px) {
@@ -1474,7 +1819,7 @@ kbd {
     }
 
     .todo-text {
-        font-size: 13px;
+        font-size: 14px;
     }
 
     .header-actions {

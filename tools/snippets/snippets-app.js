@@ -62,7 +62,7 @@ class SnippetsApp {
       golang: "fa-brands fa-golang",
       markdown: "fa-brands fa-markdown",
       mathematics: "fa-solid fa-calculator",
-      math: "fa-solid fa calculator",
+      math: "fa-solid fa-calculator",
       docker: "fa-brands fa-docker",
       node: "fa-brands fa-node-js",
       "node.js": "fa-brands fa-node-js",
@@ -946,6 +946,25 @@ class SnippetsApp {
       ) {
         palette.style.display = "none";
       }
+      this.closeSnippetActionsMenu(e.target.closest(".snippet-actions-overflow"));
+    });
+
+    // Snippet viewer overflow menu (Share / History)
+    document.getElementById("moreActionsBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const expanded =
+        document.getElementById("moreActionsBtn").getAttribute("aria-expanded") ===
+        "true";
+      if (expanded) {
+        this.closeSnippetActionsMenu();
+      } else {
+        this.openSnippetActionsMenu();
+      }
+    });
+    document.getElementById("snippetActionsMenu").addEventListener("click", (e) => {
+      if (e.target.closest(".snippet-actions-menu-item")) {
+        this.closeSnippetActionsMenu();
+      }
     });
 
     // Category
@@ -1177,6 +1196,12 @@ class SnippetsApp {
 
     // Escape always works
     if (e.key === "Escape") {
+      const actionsMenu = document.getElementById("snippetActionsMenu");
+      if (actionsMenu.classList.contains("show")) {
+        this.closeSnippetActionsMenu();
+        document.getElementById("moreActionsBtn").focus();
+        return;
+      }
       if (anyModalOpen) {
         this.closeModal();
         this.closeCategoryModal();
@@ -1251,6 +1276,51 @@ class SnippetsApp {
       if (m.style.display === "flex") return true;
     }
     return false;
+  }
+
+  // ─── Modal Accessibility (focus trap + focus return) ───────
+
+  _getFocusableElements(container) {
+    const selector =
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.from(container.querySelectorAll(selector)).filter(
+      (el) => el.offsetParent !== null,
+    );
+  }
+
+  trapModalFocus(modal) {
+    this._modalReturnFocus = document.activeElement;
+
+    const handler = (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = this._getFocusableElements(modal);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    modal._focusTrapHandler = handler;
+    modal.addEventListener("keydown", handler);
+  }
+
+  releaseModalFocus(modal) {
+    if (modal._focusTrapHandler) {
+      modal.removeEventListener("keydown", modal._focusTrapHandler);
+      modal._focusTrapHandler = null;
+    }
+    if (
+      this._modalReturnFocus &&
+      typeof this._modalReturnFocus.focus === "function"
+    ) {
+      this._modalReturnFocus.focus();
+    }
+    this._modalReturnFocus = null;
   }
 
   navigateSnippetList(direction) {
@@ -1451,6 +1521,21 @@ class SnippetsApp {
       : '<i class="fa-regular fa-star"></i>';
   }
 
+  openSnippetActionsMenu() {
+    document.getElementById("snippetActionsMenu").classList.add("show");
+    document
+      .getElementById("moreActionsBtn")
+      .setAttribute("aria-expanded", "true");
+  }
+
+  closeSnippetActionsMenu(skipIfInside) {
+    if (skipIfInside) return;
+    document.getElementById("snippetActionsMenu").classList.remove("show");
+    document
+      .getElementById("moreActionsBtn")
+      .setAttribute("aria-expanded", "false");
+  }
+
   // ─── Line Numbers ──────────────────────────────────────────
 
   addLineNumbers(codeElement) {
@@ -1478,11 +1563,23 @@ class SnippetsApp {
     // Add "All" category
     const allItem = document.createElement("li");
     allItem.className = `category-item${this.activeCategory === null ? " active" : ""}`;
+    allItem.tabIndex = 0;
+    allItem.setAttribute("role", "button");
+    allItem.setAttribute(
+      "aria-label",
+      `All, ${this.snippets.length} snippet${this.snippets.length === 1 ? "" : "s"}${this.activeCategory === null ? ", selected" : ""}`,
+    );
     allItem.innerHTML = `
             <span class="category-name"><i class="fa-solid fa-layer-group"></i> All</span>
             <span class="category-count">${this.snippets.length}</span>
         `;
     allItem.addEventListener("click", () => this.selectCategory(null));
+    allItem.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        this.selectCategory(null);
+      }
+    });
     list.appendChild(allItem);
 
     // Add user categories
@@ -1492,6 +1589,12 @@ class SnippetsApp {
         const count = this.snippets.filter((s) => s.type === type.name).length;
         const item = document.createElement("li");
         item.className = `category-item${this.activeCategory === type.name ? " active" : ""}`;
+        item.tabIndex = 0;
+        item.setAttribute("role", "button");
+        item.setAttribute(
+          "aria-label",
+          `${type.name}, ${count} snippet${count === 1 ? "" : "s"}${this.activeCategory === type.name ? ", selected" : ""}`,
+        );
         item.innerHTML = `
                 <span class="category-name"><i class="${this.getCategoryIcon(type.name)}"></i> ${type.name}</span>
                 <span class="category-count">${count}</span>
@@ -1504,7 +1607,19 @@ class SnippetsApp {
                     </button>
                 </div>
             `;
+        item
+          .querySelector(".category-action-btn:not(.delete)")
+          .setAttribute("aria-label", `Edit category ${type.name}`);
+        item
+          .querySelector(".category-action-btn.delete")
+          .setAttribute("aria-label", `Delete category ${type.name}`);
         item.addEventListener("click", () => this.selectCategory(type.name));
+        item.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            this.selectCategory(type.name);
+          }
+        });
         list.appendChild(item);
       });
 
@@ -1541,6 +1656,7 @@ class SnippetsApp {
     }
 
     modal.style.display = "flex";
+    this.trapModalFocus(modal);
     input.focus();
   }
 
@@ -1549,7 +1665,10 @@ class SnippetsApp {
   }
 
   closeCategoryModal() {
-    document.getElementById("categoryModal").style.display = "none";
+    const modal = document.getElementById("categoryModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this.editingCategory = null;
   }
 
@@ -1558,7 +1677,8 @@ class SnippetsApp {
     const name = input.value.trim();
 
     if (!name) {
-      alert("Please enter a category name");
+      this.showNotification("Please enter a category name", "error");
+      input.focus();
       return;
     }
 
@@ -1594,12 +1714,19 @@ class SnippetsApp {
       this.renderSnippetsList();
     } catch (error) {
       console.error("Failed to save category:", error);
-      alert("Failed to save category. Please try again.");
+      this.showNotification("Failed to save category. Please try again.", "error");
     }
   }
 
   // Snippets List
   renderSnippetsList() {
+    // Rebuilding below destroys any hovered/focused item without firing
+    // mouseleave/blur — dismiss any pending or visible code preview first
+    // so it can't get orphaned open or pop back up after the rebuild.
+    clearTimeout(this._templatePreviewTimer);
+    clearTimeout(this._templateHideTimer);
+    this.hideTemplatePreview();
+
     const list = document.getElementById("snippetsList");
     list.innerHTML = "";
 
@@ -1721,13 +1848,65 @@ class SnippetsApp {
       if (snippet.description) {
         item.title = snippet.description;
       }
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.setAttribute(
+        "aria-label",
+        `${snippet.name}, ${snippet.type}${item.classList.contains("active") ? ", selected" : ""}`,
+      );
       item.addEventListener("click", () => this.viewSnippet(snippet.id));
+      item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          this.viewSnippet(snippet.id);
+        }
+      });
 
       // Quick-copy button — stop propagation so it doesn't open the snippet
       const qcBtn = item.querySelector(".snippet-quick-copy");
+      qcBtn.setAttribute("aria-label", `Quick copy ${snippet.name}`);
       qcBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.quickCopySnippet(snippet, qcBtn);
+      });
+
+      // Hover/focus code preview — skip the already-selected item, its
+      // content is already shown in the detail panel
+      item.addEventListener("mouseenter", () => {
+        if (item.classList.contains("active")) return;
+        clearTimeout(this._templateHideTimer);
+        this._templatePreviewTimer = setTimeout(() => {
+          this.showCodePreview(
+            snippet.name,
+            snippet.extension,
+            snippet.content,
+            item,
+          );
+        }, 300);
+      });
+      item.addEventListener("mouseleave", () => {
+        clearTimeout(this._templatePreviewTimer);
+        this._templateHideTimer = setTimeout(
+          () => this.hideTemplatePreview(),
+          150,
+        );
+      });
+      item.addEventListener("focus", () => {
+        if (item.classList.contains("active")) return;
+        clearTimeout(this._templateHideTimer);
+        this.showCodePreview(
+          snippet.name,
+          snippet.extension,
+          snippet.content,
+          item,
+        );
+      });
+      item.addEventListener("blur", () => {
+        clearTimeout(this._templatePreviewTimer);
+        this._templateHideTimer = setTimeout(
+          () => this.hideTemplatePreview(),
+          150,
+        );
       });
 
       list.appendChild(item);
@@ -1814,6 +1993,7 @@ class SnippetsApp {
     if (!snippet) return;
 
     this.currentSnippet = snippet;
+    this.closeSnippetActionsMenu();
 
     document.getElementById("emptyState").style.display = "none";
     document.getElementById("snippetView").style.display = "flex";
@@ -1875,7 +2055,10 @@ class SnippetsApp {
       const lastCopied = snippet.lastCopiedAt
         ? ` | Last: ${this.formatDate(snippet.lastCopiedAt)}`
         : "";
-      copyCountEl.textContent = `Copied: ${copyCount} time${copyCount !== 1 ? "s" : ""}${lastCopied}`;
+      const today = snippet.copiesToday
+        ? ` · ${snippet.copiesToday}× today`
+        : "";
+      copyCountEl.textContent = `Copied: ${copyCount} time${copyCount !== 1 ? "s" : ""}${lastCopied}${today}`;
     } else {
       copyCountEl.textContent = "";
     }
@@ -2104,7 +2287,9 @@ class SnippetsApp {
       this.getMostUsedExtension(category);
     this.clearTagChips();
     this.updateMdToolbarVisibility();
-    document.getElementById("snippetModal").style.display = "flex";
+    const modal = document.getElementById("snippetModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
     document.getElementById("snippetNameInput").focus();
   }
 
@@ -2127,19 +2312,26 @@ class SnippetsApp {
       this.currentSnippet.extension;
     this.setTagChips(this.currentSnippet.tags || []);
     this.updateMdToolbarVisibility();
-    document.getElementById("snippetModal").style.display = "flex";
+    const modal = document.getElementById("snippetModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
     document.getElementById("snippetNameInput").focus();
   }
 
   closeModal() {
-    document.getElementById("snippetModal").style.display = "none";
+    const modal = document.getElementById("snippetModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this.editingSnippet = null;
     if (this._openedFromTemplate) {
       this._openedFromTemplate = false;
       setTimeout(() => {
         this.renderTemplatesTabs();
         this.renderTemplatesGrid();
-        document.getElementById("templatesModal").style.display = "flex";
+        const templatesModal = document.getElementById("templatesModal");
+        templatesModal.style.display = "flex";
+        this.trapModalFocus(templatesModal);
       }, 0);
     }
   }
@@ -2156,12 +2348,14 @@ class SnippetsApp {
     const tags = this.getTagChips();
 
     if (!name) {
-      alert("Please enter a snippet name");
+      this.showNotification("Please enter a snippet name", "error");
+      document.getElementById("snippetNameInput").focus();
       return;
     }
 
     if (!content) {
-      alert("Please enter snippet content");
+      this.showNotification("Please enter snippet content", "error");
+      document.getElementById("snippetContentInput").focus();
       return;
     }
 
@@ -2219,7 +2413,7 @@ class SnippetsApp {
       }
     } catch (error) {
       console.error("Failed to save snippet:", error);
-      alert("Failed to save snippet. Please try again.");
+      this.showNotification("Failed to save snippet. Please try again.", "error");
     }
   }
 
@@ -2240,11 +2434,16 @@ class SnippetsApp {
       message.textContent = `Are you sure you want to delete the "${category?.name}" category? ${snippetCount} snippet(s) will be moved to "Other".`;
     }
 
-    document.getElementById("deleteModal").style.display = "flex";
+    const modal = document.getElementById("deleteModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
   }
 
   closeDeleteModal() {
-    document.getElementById("deleteModal").style.display = "none";
+    const modal = document.getElementById("deleteModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this.deleteType = null;
     this.deleteTarget = null;
   }
@@ -2295,7 +2494,7 @@ class SnippetsApp {
       this.updateSnippetsCount();
     } catch (error) {
       console.error("Failed to delete:", error);
-      alert("Failed to delete. Please try again.");
+      this.showNotification("Failed to delete. Please try again.", "error");
     }
   }
 
@@ -2335,23 +2534,89 @@ class SnippetsApp {
     if (!this.currentSnippet) return;
     await this.trackCopyForSnippet(this.currentSnippet);
 
+    const codeContainer = document.getElementById("snippetCodeContainer");
+    const mdPreview = document.getElementById("markdownPreview");
+    this.pulseCopyFeedback(
+      mdPreview.style.display !== "none" ? mdPreview : codeContainer,
+    );
+
     // Update the detail-view copy count display
     const copyCount = this.currentSnippet.copyCount;
     const copyCountEl = document.getElementById("snippetCopyCount");
     const lastCopied = this.currentSnippet.lastCopiedAt
       ? ` | Last: ${this.formatDate(this.currentSnippet.lastCopiedAt)}`
       : "";
-    copyCountEl.textContent = `Copied: ${copyCount} time${copyCount !== 1 ? "s" : ""}${lastCopied}`;
+    const today = this.currentSnippet.copiesToday
+      ? ` · ${this.currentSnippet.copiesToday}× today`
+      : "";
+    copyCountEl.textContent = `Copied: ${copyCount} time${copyCount !== 1 ? "s" : ""}${lastCopied}${today}`;
+  }
+
+  pulseCopyFeedback(el) {
+    if (!el) return;
+    el.classList.remove("copy-pulse");
+    void el.offsetWidth; // restart the animation if it's already mid-flight
+    el.classList.add("copy-pulse");
+    el.addEventListener(
+      "animationend",
+      () => el.classList.remove("copy-pulse"),
+      { once: true },
+    );
   }
 
   async trackCopyForSnippet(snippet) {
     // Update copyCount and lastCopiedAt WITHOUT touching updatedAt
+    const todayStr = new Date().toISOString().slice(0, 10);
     snippet.copyCount = (snippet.copyCount || 0) + 1;
     snippet.lastCopiedAt = new Date().toISOString();
+    snippet.copiesToday =
+      snippet.lastCopyDate === todayStr ? (snippet.copiesToday || 0) + 1 : 1;
+    snippet.lastCopyDate = todayStr;
     await StorageManager.put("snippets", snippet);
     this._syncSnippet(snippet);
-    // Re-render the list to update badge (lightweight since DOM is small)
-    this.renderSnippetsList();
+
+    // A full re-render is only needed when the active sort depends on copy
+    // stats (it would otherwise reorder the list); everywhere else, update
+    // this item's badge in place so its checkmark/pulse feedback isn't cut
+    // short by the list being torn down mid-animation.
+    if (
+      this.sortPreference === "most-used" ||
+      this.sortPreference === "recent-copy"
+    ) {
+      this.renderSnippetsList();
+    } else {
+      this.updateSnippetCopyBadge(snippet);
+    }
+
+    const freshBtn = document.querySelector(
+      `.snippet-quick-copy[data-id="${snippet.id}"]`,
+    );
+    if (freshBtn) this.pulseCopyFeedback(freshBtn.closest(".snippet-item"));
+  }
+
+  updateSnippetCopyBadge(snippet) {
+    const btn = document.querySelector(
+      `.snippet-quick-copy[data-id="${snippet.id}"]`,
+    );
+    const item = btn ? btn.closest(".snippet-item") : null;
+    if (!item) return;
+
+    const header = item.querySelector(".snippet-item-header");
+    const actions = header.querySelector(".snippet-item-actions");
+    let badge = header.querySelector(".snippet-copy-badge");
+    const copyCount = snippet.copyCount || 0;
+
+    if (copyCount > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "snippet-copy-badge";
+        header.insertBefore(badge, actions);
+      }
+      badge.title = `${copyCount} cop${copyCount !== 1 ? "ies" : "y"}`;
+      badge.textContent = copyCount;
+    } else if (badge) {
+      badge.remove();
+    }
   }
 
   // ── Snippet Variables ───────────────────────────────────────────────────
@@ -2395,7 +2660,9 @@ class SnippetsApp {
       )
       .join("");
 
-    document.getElementById("variableModal").style.display = "flex";
+    const modal = document.getElementById("variableModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
 
     // Focus first input
     const first = fieldsEl.querySelector("input");
@@ -2417,22 +2684,25 @@ class SnippetsApp {
   }
 
   closeVariableModal() {
-    document.getElementById("variableModal").style.display = "none";
+    const modal = document.getElementById("variableModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this._variableCallback = null;
   }
 
-  showNotification(message) {
+  showNotification(message, type = "success") {
     const notification = document.getElementById("copyNotification");
-    if (message) {
-      notification.innerHTML = `<i class="fa-solid fa-check"></i> ${message}`;
-    } else {
-      notification.innerHTML =
-        '<i class="fa-solid fa-check"></i> Copied to clipboard';
-    }
+    const icon = type === "error" ? "fa-circle-exclamation" : "fa-check";
+    notification.innerHTML = `<i class="fa-solid ${icon}"></i> ${message || "Copied to clipboard"}`;
+    notification.classList.toggle("error", type === "error");
     notification.classList.add("show");
-    setTimeout(() => {
-      notification.classList.remove("show");
-    }, 2000);
+    setTimeout(
+      () => {
+        notification.classList.remove("show");
+      },
+      type === "error" ? 3500 : 2000,
+    );
   }
 
   // ─── Version History ───────────────────────────────────────
@@ -2504,11 +2774,16 @@ class SnippetsApp {
       this.currentSnippet.id,
     );
     this.renderHistoryList(versions);
-    document.getElementById("historyModal").style.display = "flex";
+    const modal = document.getElementById("historyModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
   }
 
   closeHistoryModal() {
-    document.getElementById("historyModal").style.display = "none";
+    const modal = document.getElementById("historyModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this.selectedVersion = null;
   }
 
@@ -2700,11 +2975,16 @@ class SnippetsApp {
     this.activeTemplateTab = Object.keys(this.templates)[0];
     this.renderTemplatesTabs();
     this.renderTemplatesGrid();
-    document.getElementById("templatesModal").style.display = "flex";
+    const modal = document.getElementById("templatesModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
   }
 
   closeTemplatesModal() {
-    document.getElementById("templatesModal").style.display = "none";
+    const modal = document.getElementById("templatesModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this.hideTemplatePreview();
   }
 
@@ -2767,6 +3047,15 @@ class SnippetsApp {
   }
 
   showTemplatePreview(template, cardEl) {
+    this.showCodePreview(
+      template.name,
+      template.extension,
+      template.content,
+      cardEl,
+    );
+  }
+
+  showCodePreview(name, extension, content, anchorEl) {
     let panel = document.getElementById("templateCodePreview");
     if (!panel) {
       panel = document.createElement("div");
@@ -2784,13 +3073,13 @@ class SnippetsApp {
       document.body.appendChild(panel);
     }
 
-    panel.innerHTML = `<div class="tcp-header"><span>${this.escapeHtml(template.name)}</span><span class="tcp-ext">.${template.extension}</span></div>`;
+    panel.innerHTML = `<div class="tcp-header"><span>${this.escapeHtml(name)}</span><span class="tcp-ext">.${extension}</span></div>`;
 
-    if (template.extension === "tex" && typeof katex !== "undefined") {
+    if (extension === "tex" && typeof katex !== "undefined") {
       const container = document.createElement("div");
       container.className = "tcp-latex";
 
-      const lines = template.content.split("\n");
+      const lines = content.split("\n");
       let currentLines = [];
 
       const flushBlock = () => {
@@ -2831,10 +3120,10 @@ class SnippetsApp {
 
       panel.appendChild(container);
     } else {
-      const lang = this.extensionToLanguage[template.extension] || "plaintext";
+      const lang = this.extensionToLanguage[extension] || "plaintext";
       const code = document.createElement("code");
       code.className = `language-${lang}`;
-      code.textContent = template.content;
+      code.textContent = content;
       const pre = document.createElement("pre");
       pre.appendChild(code);
       panel.appendChild(pre);
@@ -2842,7 +3131,7 @@ class SnippetsApp {
     }
 
     // Robust positioning — prefer right, fall back to left, clamp to viewport
-    const rect = cardEl.getBoundingClientRect();
+    const rect = anchorEl.getBoundingClientRect();
     const margin = 12;
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
@@ -2904,7 +3193,9 @@ class SnippetsApp {
     document.getElementById("snippetExtSelect").value = template.extension;
     this.clearTagChips();
     this.updateMdToolbarVisibility();
-    document.getElementById("snippetModal").style.display = "flex";
+    const modal = document.getElementById("snippetModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
     document.getElementById("snippetNameInput").focus();
     document.getElementById("snippetNameInput").select();
   }
@@ -2988,12 +3279,15 @@ class SnippetsApp {
 
         this.renderCategories();
         this.renderSnippetsList();
-        alert(
+        this.showNotification(
           `Import successful! Added ${data.snippets?.length || 0} snippets.`,
         );
       } catch (err) {
         console.error("Import error:", err);
-        alert("Failed to import data. Please check the file format.");
+        this.showNotification(
+          "Failed to import data. Please check the file format.",
+          "error",
+        );
       }
     };
     reader.readAsText(file);
@@ -3236,12 +3530,17 @@ class SnippetsApp {
     const cloudCount = document.getElementById("mergeCloudCount");
     if (localCount) localCount.textContent = this.snippets.length;
     if (cloudCount) cloudCount.textContent = "?";
-    document.getElementById("mergeModal").style.display = "flex";
+    const modal = document.getElementById("mergeModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
   }
 
   closeMergeModal() {
     const modal = document.getElementById("mergeModal");
-    if (modal) modal.style.display = "none";
+    if (!modal) return;
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
   }
 
   async handleMergeConfirm() {
@@ -3299,7 +3598,10 @@ class SnippetsApp {
       }
     } catch (error) {
       console.error("Merge failed:", error);
-      alert("Failed to merge data. Your local data is unchanged.");
+      this.showNotification(
+        "Failed to merge data. Your local data is unchanged.",
+        "error",
+      );
     }
   }
 
@@ -3362,7 +3664,9 @@ class SnippetsApp {
         hljs.highlightElement(codeEl);
       }
 
-      document.getElementById("sharedSnippetModal").style.display = "flex";
+      const modal = document.getElementById("sharedSnippetModal");
+      modal.style.display = "flex";
+      this.trapModalFocus(modal);
     } catch (error) {
       console.error("Failed to load shared snippet:", error);
     }
@@ -3379,11 +3683,16 @@ class SnippetsApp {
     document.getElementById("shareResult").style.display = "none";
     document.getElementById("generateShareBtn").disabled = false;
     document.getElementById("shareExpirySelect").value = "48";
-    document.getElementById("shareModal").style.display = "flex";
+    const modal = document.getElementById("shareModal");
+    modal.style.display = "flex";
+    this.trapModalFocus(modal);
   }
 
   closeShareModal() {
-    document.getElementById("shareModal").style.display = "none";
+    const modal = document.getElementById("shareModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
   }
 
   async generateShareLink() {
@@ -3441,7 +3750,10 @@ class SnippetsApp {
   }
 
   closeSharedSnippetModal() {
-    document.getElementById("sharedSnippetModal").style.display = "none";
+    const modal = document.getElementById("sharedSnippetModal");
+    const wasOpen = modal.style.display === "flex";
+    modal.style.display = "none";
+    if (wasOpen) this.releaseModalFocus(modal);
     this._sharedSnippetData = null;
   }
 

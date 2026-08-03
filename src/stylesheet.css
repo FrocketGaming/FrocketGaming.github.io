@@ -193,7 +193,7 @@ body {
     margin: 0;
     padding: 0 20px 20px 20px;
     box-sizing: border-box;
-    padding-top: 140px;
+    padding-top: 100px;
 }
 
 .raleway-fnt {
@@ -638,22 +638,90 @@ input[type="checkbox"]:checked {
     position: relative;
 }
 
-.logo {
-    font-family: "Raleway", sans-serif;
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: var(--accent-secondary);
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 5px var(--accent-primary);
-}
-
 .theme-selector {
     display: flex;
     align-items: center;
     gap: 8px;
     position: absolute;
     right: 0;
+    padding-right: 12px;
+}
+
+/* Header: icon-rail nav layout */
+.header-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 7.5px 0;
+}
+
+/* Nav icon rail — hover-expand pills. Icons stay compact at rest; hovering,
+   focusing, or landing on a page widens that item to reveal the tool's
+   name, so nothing has to be memorized from the icon alone. */
+.nav-pill-rail {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.nav-pill-item {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    text-decoration: none;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.nav-pill-item i {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.nav-pill-label {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0;
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+}
+
+.nav-pill-item:hover,
+.nav-pill-item:focus-visible {
+    background-color: var(--accent-primary);
+    color: var(--bg-primary);
+    box-shadow: 0 0 10px var(--accent-primary);
+}
+
+.nav-pill-item:hover .nav-pill-label,
+.nav-pill-item:focus-visible .nav-pill-label {
+    max-width: 140px;
+    opacity: 1;
+    margin-left: 8px;
+}
+
+/* The current page's pill stays expanded — always-visible orientation,
+   not just a hover reveal — using the site's static "active" accent. */
+.nav-pill-item.active {
+    background-color: var(--accent-secondary);
+    color: var(--bg-primary);
+    padding-right: 12px;
+}
+
+.nav-pill-item.active .nav-pill-label {
+    max-width: 140px;
+    opacity: 1;
+    margin-left: 8px;
 }
 
 .theme-selector label {
@@ -731,11 +799,6 @@ input[type="checkbox"]:checked {
         justify-content: center;
     }
 
-    .logo {
-        font-size: 1.5rem;
-        letter-spacing: 2px;
-    }
-
     .theme-selector {
         position: absolute;
         right: 0;
@@ -758,11 +821,6 @@ input[type="checkbox"]:checked {
 @media screen and (max-width: 480px) {
     .header {
         padding: 12px 8px;
-    }
-
-    .logo {
-        font-size: 1.2rem;
-        letter-spacing: 1px;
     }
 
     .theme-select {

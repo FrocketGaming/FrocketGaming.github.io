@@ -9,9 +9,13 @@ class TodoApp {
         this.expandedTaskId = null;
         this.inlineEditId = null;
         this.inlineSubtaskProjectId = null;
+        this._contentClickTimer = null; // pending click-to-expand, cancelled by a following dblclick
 
         // Undo system
         this.pendingDelete = null; // { todos: [...], timer: timeoutId, message: string }
+        this.pendingImportReplace = null; // { previousTodos: [...], importedCount, timer: timeoutId }
+        this._infoToastTimer = null;
+        this._filtersExpanded = false; // project filter chips beyond the cap, shown on demand
 
         // Drag-and-drop
         this.draggedId = null;
@@ -202,9 +206,15 @@ class TodoApp {
             this.render();
         });
 
-        // Undo toast
-        undoToastBtn.addEventListener('click', () => this.undoDelete());
-        undoToastDismiss.addEventListener('click', () => this.finalizeDelete());
+        // Undo toast (shared between delete-undo and import-replace-undo)
+        undoToastBtn.addEventListener('click', () => {
+            if (this.pendingImportReplace) this.undoImportReplace();
+            else this.undoDelete();
+        });
+        undoToastDismiss.addEventListener('click', () => {
+            if (this.pendingImportReplace) this.finalizeImportReplace();
+            else this.finalizeDelete();
+        });
 
         // Auth buttons (optional — only present when Firebase scripts are loaded)
         const signInBtn = document.getElementById('signInBtn');
@@ -215,18 +225,33 @@ class TodoApp {
         // Event delegation for task list interactions
         document.getElementById('todoList').addEventListener('click', (e) => this.handleTaskClick(e));
         document.getElementById('completedList').addEventListener('click', (e) => this.handleTaskClick(e));
+        document.getElementById('todoList').addEventListener('keydown', (e) => this.handleTaskKeydown(e));
+        document.getElementById('completedList').addEventListener('keydown', (e) => this.handleTaskKeydown(e));
 
         // Double-click for inline edit
         document.getElementById('todoList').addEventListener('dblclick', (e) => this.handleDoubleClick(e));
 
-        // Date group header clicks
+        // Rail section header clicks (collapse/expand a rail section)
         document.getElementById('todoList').addEventListener('click', (e) => {
-            const header = e.target.closest('.date-group-header');
+            const header = e.target.closest('.rail-section-header');
             if (header) {
                 const group = header.dataset.group;
                 this.toggleDateGroupCollapse(group);
             }
         });
+
+        // Detail drawer close affordances
+        const detailDrawer = document.getElementById('detailDrawer');
+        const detailDrawerBackdrop = document.getElementById('detailDrawerBackdrop');
+        const detailDrawerClose = document.getElementById('detailDrawerClose');
+        if (detailDrawer && detailDrawerBackdrop && detailDrawerClose) {
+            const closeDrawer = () => {
+                this.expandedTaskId = null;
+                this.render();
+            };
+            detailDrawerBackdrop.addEventListener('click', closeDrawer);
+            detailDrawerClose.addEventListener('click', closeDrawer);
+        }
     }
 
     setupKeyboardShortcuts() {
@@ -479,6 +504,7 @@ class TodoApp {
         const todo = this.todos.find(t => t.id === id);
         if (!todo) return;
 
+        const wasIncomplete = !todo.completed;
         todo.completed = !todo.completed;
         await StorageManager.put('todos', todo);
         this._syncTodo(todo);
@@ -506,6 +532,19 @@ class TodoApp {
 
         // Trigger checkbox bounce animation
         this._animCheckId = id;
+
+        // Let a freshly-completed row settle out in place before the list
+        // reflows around it, instead of vanishing instantly mid-streak.
+        if (wasIncomplete && todo.completed) {
+            const row = document.querySelector(`.todo-item[data-id="${id}"]`);
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (row && !reduceMotion) {
+                row.classList.add('completing');
+                setTimeout(() => this.render(), 320);
+                return;
+            }
+        }
+
         this.render();
     }
 
@@ -584,23 +623,11 @@ class TodoApp {
             }
         }
 
-        // Finalize any previous pending delete
-        if (this.pendingDelete) {
-            this.finalizeDelete();
-        }
-
         // Remove from array but don't delete from DB yet
         this.todos = this.todos.filter(t => t.id !== id);
         if (this.expandedTaskId === id) this.expandedTaskId = null;
 
-        // Show undo toast
-        this.pendingDelete = {
-            todos: tasksToDelete,
-            message: `"${todo.text}" deleted`,
-            timer: setTimeout(() => this.finalizeDelete(), 5000)
-        };
-
-        this.showUndoToast(this.pendingDelete.message);
+        this.queuePendingDelete(tasksToDelete, `"${todo.text}" deleted`);
         this.render();
     }
 
@@ -619,32 +646,47 @@ class TodoApp {
         const completedTodos = this.todos.filter(t => t.completed);
         if (completedTodos.length === 0) return;
 
-        // Finalize any previous pending delete
-        if (this.pendingDelete) {
-            this.finalizeDelete();
-        }
-
         this.todos = this.todos.filter(t => !t.completed);
 
-        this.pendingDelete = {
-            todos: completedTodos,
-            message: `${completedTodos.length} completed task(s) cleared`,
-            timer: setTimeout(() => this.finalizeDelete(), 5000)
-        };
-
-        this.showUndoToast(this.pendingDelete.message);
+        this.queuePendingDelete(completedTodos, `${completedTodos.length} completed task(s) cleared`);
         this.render();
     }
 
     // ===== Undo Toast System =====
-    showUndoToast(message) {
+    queuePendingDelete(todos, message) {
+        if (this.pendingDelete) {
+            // Accumulate into the same batch instead of finalizing the previous
+            // one, so a quick streak of deletes stays fully undoable together.
+            clearTimeout(this.pendingDelete.timer);
+            this.pendingDelete.todos.push(...todos);
+        } else {
+            this.pendingDelete = { todos: [...todos] };
+        }
+
+        const count = this.pendingDelete.todos.length;
+        this.pendingDelete.message = count > 1 ? `${count} tasks deleted` : message;
+        this.pendingDelete.timer = setTimeout(() => this.finalizeDelete(), 5000);
+
+        this.showUndoToast(this.pendingDelete.message);
+    }
+
+    // undoable=false renders a plain info/error toast (no Undo button,
+    // auto-dismisses) — used for import feedback instead of alert().
+    showUndoToast(message, undoable = true) {
         const toast = document.getElementById('undoToast');
         const msg = document.getElementById('undoToastMsg');
+        const undoBtn = document.getElementById('undoToastBtn');
         msg.textContent = message;
+        undoBtn.style.display = undoable ? '' : 'none';
         toast.classList.remove('visible');
         // Force reflow for re-animation
         void toast.offsetWidth;
         toast.classList.add('visible');
+
+        clearTimeout(this._infoToastTimer);
+        if (!undoable) {
+            this._infoToastTimer = setTimeout(() => this.hideUndoToast(), 3500);
+        }
     }
 
     hideUndoToast() {
@@ -675,6 +717,55 @@ class TodoApp {
         }
 
         this.pendingDelete = null;
+        this.hideUndoToast();
+    }
+
+    // ===== Import Replace (shares the undo-toast pattern above) =====
+    queuePendingImportReplace(imported) {
+        // A replace supersedes any in-flight delete undo entirely.
+        if (this.pendingDelete) {
+            clearTimeout(this.pendingDelete.timer);
+            this.pendingDelete = null;
+        }
+        if (this.pendingImportReplace) {
+            clearTimeout(this.pendingImportReplace.timer);
+        }
+
+        imported.forEach((todo, i) => {
+            if (todo.order === undefined) todo.order = todo.id ?? i;
+            if (todo.recurrence === undefined) todo.recurrence = null;
+        });
+
+        this.pendingImportReplace = {
+            previousTodos: this.todos,
+            importedCount: imported.length,
+            timer: setTimeout(() => this.finalizeImportReplace(), 5000)
+        };
+        this.todos = imported;
+
+        this.showUndoToast(`Replaced all tasks with ${imported.length} imported`);
+        this.render();
+    }
+
+    async undoImportReplace() {
+        if (!this.pendingImportReplace) return;
+        clearTimeout(this.pendingImportReplace.timer);
+
+        this.todos = this.pendingImportReplace.previousTodos;
+
+        this.pendingImportReplace = null;
+        this.hideUndoToast();
+        this.render();
+    }
+
+    async finalizeImportReplace() {
+        if (!this.pendingImportReplace) return;
+        clearTimeout(this.pendingImportReplace.timer);
+
+        await StorageManager.clear('todos');
+        await this.saveTodos();
+
+        this.pendingImportReplace = null;
         this.hideUndoToast();
     }
 
@@ -806,6 +897,27 @@ class TodoApp {
         });
     }
 
+    // Keyboard-reachable alternative to drag-and-drop reordering.
+    async moveTodo(id, direction) {
+        const todo = this.todos.find(t => t.id === id);
+        if (!todo || todo.completed) return;
+
+        const siblings = this.todos
+            .filter(t => t.parentId === todo.parentId && !t.completed)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        const idx = siblings.findIndex(t => t.id === id);
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= siblings.length) return;
+
+        [siblings[idx], siblings[swapIdx]] = [siblings[swapIdx], siblings[idx]];
+        siblings.forEach((t, i) => { t.order = i; });
+
+        await this.saveTodos();
+        siblings.forEach(t => this._syncTodo(t));
+        this.render();
+    }
+
     // ===== Project Helpers =====
     getSubtasks(projectId) {
         return this.todos.filter(t => t.parentId === projectId);
@@ -851,6 +963,10 @@ class TodoApp {
         const id = parseInt(item.dataset.id);
         const todo = this.todos.find(t => t.id === id);
         if (!todo || todo.completed) return;
+
+        // Cancel the pending click-to-expand from the two clicks that make up
+        // this dblclick, so renaming doesn't flicker the detail panel first.
+        clearTimeout(this._contentClickTimer);
 
         this.inlineEditId = id;
         const content = item.querySelector('.todo-content');
@@ -1121,6 +1237,18 @@ class TodoApp {
             return;
         }
 
+        // Move up/down (keyboard-reachable alternative to drag-and-drop)
+        if (e.target.closest('.move-up-btn')) {
+            e.stopPropagation();
+            this.moveTodo(id, 'up');
+            return;
+        }
+        if (e.target.closest('.move-down-btn')) {
+            e.stopPropagation();
+            this.moveTodo(id, 'down');
+            return;
+        }
+
         // Collapse chevron (project)
         if (e.target.closest('.collapse-chevron')) {
             e.stopPropagation();
@@ -1135,11 +1263,28 @@ class TodoApp {
             return;
         }
 
-        // Click on content area → toggle detail panel
+        // Click on content area → toggle detail panel, delayed just long
+        // enough that a following dblclick (rename) can cancel it instead
         if (e.target.closest('.todo-content')) {
-            this.toggleDetailPanel(id);
+            clearTimeout(this._contentClickTimer);
+            this._contentClickTimer = setTimeout(() => {
+                this.toggleDetailPanel(id);
+            }, 250);
             return;
         }
+    }
+
+    // Enter/Space activation for elements that aren't native buttons
+    // (the priority badge is a <span role="button"> so it needs this manually).
+    handleTaskKeydown(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const badge = e.target.closest('.priority-badge');
+        if (!badge) return;
+
+        e.preventDefault();
+        const item = badge.closest('.todo-item');
+        if (!item) return;
+        this.cyclePriority(parseInt(item.dataset.id));
     }
 
     // ===== Close Everything =====
@@ -1163,6 +1308,9 @@ class TodoApp {
         if (composer.classList.contains('expanded')) {
             document.getElementById('todoInput').blur();
             composer.classList.remove('expanded');
+            // Escape means abandon the entry, not just hide it — otherwise a
+            // stray deadline/priority/project silently carries into the next task.
+            this.resetComposer();
             return;
         }
 
@@ -1242,7 +1390,25 @@ class TodoApp {
             html += `<button class="filter-btn ${this.uiState.activeFilter === 'ungrouped' ? 'active' : ''}" data-filter="ungrouped">Ungrouped <span class="filter-count">(${ungroupedCount})</span></button>`;
         }
 
-        projects.forEach(p => {
+        // Cap visible project chips so this row can't grow unbounded — beyond
+        // the cap it becomes an unscannable wall of options (>4 choices).
+        // The active filter is always kept visible even past the cap.
+        const FILTER_CAP = 6;
+        let visibleProjects = projects;
+        let hiddenCount = 0;
+        if (!this._filtersExpanded && projects.length > FILTER_CAP) {
+            visibleProjects = projects.slice(0, FILTER_CAP);
+            const activeId = this.uiState.activeFilter;
+            if (typeof activeId === 'number' && !visibleProjects.some(p => p.id === activeId)) {
+                const activeProject = projects.find(p => p.id === activeId);
+                if (activeProject) {
+                    visibleProjects = visibleProjects.slice(0, FILTER_CAP - 1).concat(activeProject);
+                }
+            }
+            hiddenCount = projects.length - visibleProjects.length;
+        }
+
+        visibleProjects.forEach(p => {
             const isActive = this.uiState.activeFilter === p.id;
             const projectTaskCount = this.getSubtasks(p.id).filter(t => !t.completed).length;
             html += `<button class="filter-btn ${isActive ? 'active' : ''}" data-filter="${p.id}">
@@ -1250,14 +1416,28 @@ class TodoApp {
             </button>`;
         });
 
+        if (hiddenCount > 0) {
+            html += `<button class="filter-btn filter-btn-more" id="filterMoreBtn">+${hiddenCount} more</button>`;
+        } else if (this._filtersExpanded && projects.length > FILTER_CAP) {
+            html += `<button class="filter-btn filter-btn-more" id="filterMoreBtn">Show less</button>`;
+        }
+
         filterSection.innerHTML = html;
 
-        filterSection.querySelectorAll('.filter-btn').forEach(btn => {
+        filterSection.querySelectorAll('.filter-btn:not(.filter-btn-more)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const f = btn.dataset.filter;
                 this.setFilter(f === 'all' || f === 'ungrouped' ? f : parseInt(f));
             });
         });
+
+        const moreBtn = document.getElementById('filterMoreBtn');
+        if (moreBtn) {
+            moreBtn.addEventListener('click', () => {
+                this._filtersExpanded = !this._filtersExpanded;
+                this.renderFilterButtons();
+            });
+        }
     }
 
     // ===== Search Helpers =====
@@ -1339,6 +1519,7 @@ class TodoApp {
         if (isProject) classes += ' project-item';
         if (isSubtask) classes += ' subtask-item';
         if (isNewlyAdded) classes += ' anim-add';
+        if (isExpanded) classes += ' expanded-row';
 
         // Content zone
         let contentHtml = '';
@@ -1379,10 +1560,19 @@ class TodoApp {
         const priorityAnimClass = this._animPriorityId === todo.id ? ' anim-pulse' : '';
 
         // Actions zone
-        let actionsHtml = `
-            <span class="priority-badge priority-${priority}${priorityAnimClass}" title="Click to cycle priority">${priority}</span>
-            <button class="expand-btn ${isExpanded ? 'open' : ''}" title="Details">
+        const moveButtons = todo.completed ? '' : `
+            <button class="move-btn move-up-btn" title="Move up" aria-label="Move task up">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <button class="move-btn move-down-btn" title="Move down" aria-label="Move task down">
                 <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        `;
+        let actionsHtml = `
+            ${moveButtons}
+            <span class="priority-badge priority-${priority}${priorityAnimClass}" tabindex="0" role="button" aria-label="Priority: ${priority}. Press Enter to cycle." title="Click to cycle priority">${priority}</span>
+            <button class="expand-btn ${isExpanded ? 'open' : ''}" title="Details" aria-label="Task details">
+                <i class="fa-solid fa-ellipsis"></i>
             </button>
             <button class="delete-btn" title="Delete">
                 <i class="fa-solid fa-trash"></i>
@@ -1421,11 +1611,8 @@ class TodoApp {
             </li>
         `;
 
-        // Detail panel
-        if (isExpanded) {
-            html += this.renderDetailPanel(todo);
-        }
-
+        // The detail panel now renders into the side drawer (see
+        // renderDetailDrawer) instead of expanding inline below the row.
         return html;
     }
 
@@ -1575,14 +1762,20 @@ class TodoApp {
         };
     }
 
-    // ===== Due Date Grouping Render =====
-    renderDateGrouped(tasks) {
+    // ===== Agenda Render: Today dominates, everything else is a rail =====
+    // Rather than five equal-weight buckets side by side, this commits to a
+    // real hierarchy: Today is the page's one dominant zone (large scale,
+    // tinted surface), Overdue is an urgent banner above it, and
+    // Upcoming/Later/No Deadline recede into a narrow reference rail at a
+    // visibly smaller scale. nestSubtasks preserves project/subtask nesting
+    // for the normal view; search results render flat.
+    renderDateGrouped(tasks, nestSubtasks = true) {
         const groups = {
-            overdue: { label: 'Overdue', tasks: [], cssClass: 'overdue' },
-            today: { label: 'Today', tasks: [], cssClass: 'today' },
-            upcoming: { label: 'Upcoming', tasks: [], cssClass: '' },
-            later: { label: 'Later', tasks: [], cssClass: '' },
-            nodeadline: { label: 'No Deadline', tasks: [], cssClass: '' }
+            overdue: { label: 'Overdue', tasks: [], icon: 'fa-triangle-exclamation' },
+            today: { label: 'Today', tasks: [], icon: 'fa-star' },
+            upcoming: { label: 'Upcoming', tasks: [], icon: 'fa-calendar-week' },
+            later: { label: 'Later', tasks: [], icon: 'fa-calendar' },
+            nodeadline: { label: 'No Deadline', tasks: [], icon: 'fa-inbox' }
         };
 
         const sortFn = this.getSortFn();
@@ -1590,52 +1783,97 @@ class TodoApp {
             const group = this.getDeadlineGroup(t.deadline);
             groups[group].tasks.push(t);
         });
+        Object.values(groups).forEach(g => g.tasks.sort(sortFn));
 
-        let html = '';
-        const groupOrder = ['overdue', 'today', 'upcoming', 'later', 'nodeadline'];
-
-        for (const key of groupOrder) {
-            const g = groups[key];
-            if (g.tasks.length === 0) continue;
-
-            g.tasks.sort(sortFn);
-            const collapsed = this.isDateGroupCollapsed(key);
-
-            html += `<div class="date-group-header" data-group="${key}">
-                <i class="fa-solid fa-chevron-down date-group-chevron ${collapsed ? 'collapsed' : ''}"></i>
-                <span class="date-group-label ${g.cssClass}">${g.label}</span>
-                <span class="date-group-count">(${g.tasks.length})</span>
-            </div>`;
-
-            if (!collapsed) {
-                g.tasks.forEach(todo => {
-                    if (todo.isProject) {
-                        html += this.renderTask(todo);
-                        if (!this.isProjectCollapsed(todo.id)) {
-                            const subs = this.getSubtasks(todo.id).sort(sortFn);
-                            if (subs.length > 0 || this.inlineSubtaskProjectId === todo.id) {
-                                html += '<div class="subtask-group">';
-                                subs.forEach(sub => {
-                                    html += this.renderTask(sub, { isSubtask: true });
-                                });
-                                if (this.inlineSubtaskProjectId === todo.id) {
-                                    html += `
-                                        <div class="inline-subtask-row">
-                                            <input type="text" class="inline-subtask-input" placeholder="Add subtask..." data-project-id="${todo.id}">
-                                            <span class="inline-subtask-hint">Enter to add, Esc to cancel</span>
-                                        </div>
-                                    `;
-                                }
-                                html += '</div>';
+        const renderTaskRows = (list) => {
+            let rows = '';
+            list.forEach(todo => {
+                if (nestSubtasks && todo.isProject) {
+                    rows += this.renderTask(todo);
+                    if (!this.isProjectCollapsed(todo.id)) {
+                        const subs = this.getSubtasks(todo.id).sort(sortFn);
+                        if (subs.length > 0 || this.inlineSubtaskProjectId === todo.id) {
+                            rows += '<div class="subtask-group">';
+                            subs.forEach(sub => {
+                                rows += this.renderTask(sub, { isSubtask: true });
+                            });
+                            if (this.inlineSubtaskProjectId === todo.id) {
+                                rows += `
+                                    <div class="inline-subtask-row">
+                                        <input type="text" class="inline-subtask-input" placeholder="Add subtask..." data-project-id="${todo.id}">
+                                        <span class="inline-subtask-hint">Enter to add, Esc to cancel</span>
+                                    </div>
+                                `;
                             }
+                            rows += '</div>';
                         }
-                    } else {
-                        html += this.renderTask(todo);
                     }
-                });
-            }
+                } else {
+                    rows += this.renderTask(todo);
+                }
+            });
+            return rows;
+        };
+
+        const totalCount = tasks.length;
+        let html = '';
+
+        // Overdue: an urgent strip above everything, never buried in the rail.
+        if (groups.overdue.tasks.length > 0) {
+            html += `
+                <div class="agenda-overdue-banner">
+                    <div class="agenda-overdue-header">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>${groups.overdue.tasks.length} overdue</span>
+                    </div>
+                    <ul class="agenda-lane-list">${renderTaskRows(groups.overdue.tasks)}</ul>
+                </div>
+            `;
         }
 
+        // Today: the one dominant zone — only when there's actually
+        // something due today. An empty hero would just be dead space above
+        // the rest of the list, so it's skipped entirely rather than shown
+        // as a placeholder.
+        if (groups.today.tasks.length > 0) {
+            html += `
+                <div class="agenda-main">
+                    <div class="agenda-main-header">
+                        <span class="agenda-main-stat">${groups.today.tasks.length}</span>
+                        <div class="agenda-main-heading">
+                            <span class="agenda-main-title">Today</span>
+                            <span class="agenda-main-sub">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                        </div>
+                    </div>
+                    <ul class="agenda-lane-list agenda-main-list">${renderTaskRows(groups.today.tasks)}</ul>
+                </div>
+            `;
+        }
+
+        // Everything else: plain, quiet sections stacked below Today — full
+        // width, full-size rows, exactly like Today's own task cards. Quieter
+        // means less visual weight (no glow, no tint, small header), never a
+        // narrower column or smaller type: a long task title has to stay
+        // fully readable regardless of which bucket it happens to be in.
+        const railKeys = ['upcoming', 'later', 'nodeadline'];
+        railKeys.forEach(key => {
+            const g = groups[key];
+            if (g.tasks.length === 0) return;
+            const collapsed = this.isDateGroupCollapsed(key);
+            html += `
+                <div class="rail-section ${collapsed ? 'collapsed' : ''}" data-group="${key}">
+                    <div class="rail-section-header" data-group="${key}">
+                        <i class="fa-solid ${g.icon} rail-section-icon"></i>
+                        <span class="rail-section-label">${g.label}</span>
+                        <span class="rail-section-count">${g.tasks.length}</span>
+                        <i class="fa-solid fa-chevron-down rail-section-chevron ${collapsed ? 'collapsed' : ''}"></i>
+                    </div>
+                    <ul class="agenda-lane-list rail-section-list">${renderTaskRows(g.tasks)}</ul>
+                </div>
+            `;
+        });
+
+        if (totalCount === 0) return '';
         return html;
     }
 
@@ -1649,40 +1887,29 @@ class TodoApp {
         this.populateParentProjectDropdown();
 
         const sortFn = this.getSortFn();
-
-        // Determine if search is active
         const isSearchActive = this.searchTerm.length > 0;
 
-        // All active (non-completed) tasks
-        let activeTasks = this.todos.filter(t => !t.completed);
+        const activeTasks = this.todos.filter(t => !t.completed);
         let completedTodos = this.todos.filter(t => t.completed && !t.parentId);
-
-        // Apply search filter
         if (isSearchActive) {
-            activeTasks = activeTasks.filter(t => this.matchesSearch(t));
             completedTodos = completedTodos.filter(t => this.matchesSearch(t));
         }
 
-        // Render filters
         this.renderFilterButtons();
 
-        let activeHtml = '';
+        // Every view (default, project-filtered, ungrouped, search) renders
+        // through the same agenda lanes now, instead of switching between a
+        // date-grouped view and a separate flat list depending on filter —
+        // one consistent structure regardless of how you're slicing tasks.
+        let topLevel;
+        let nestSubtasks;
 
         if (isSearchActive) {
-            // Flat list when searching
-            const filtered = activeTasks.filter(t => !t.parentId || this.matchesSearch(t)).sort(sortFn);
-            filtered.forEach(todo => {
-                activeHtml += this.renderTask(todo);
-            });
-        } else if (this.uiState.activeFilter === 'all' && !isSearchActive) {
-            // Due date grouping mode
-            // Collect all top-level active tasks (projects + standalone)
-            const topLevel = activeTasks.filter(t => !t.parentId);
-            activeHtml = this.renderDateGrouped(topLevel);
+            topLevel = activeTasks.filter(t => this.matchesSearch(t)).sort(sortFn);
+            nestSubtasks = false;
         } else {
-            // Project/ungrouped filter mode - original behavior
-            const projects = this.todos.filter(t => t.isProject && !t.completed).sort(sortFn);
-            const standalone = this.todos.filter(t => !t.isProject && !t.parentId && !t.completed).sort(sortFn);
+            const projects = activeTasks.filter(t => t.isProject).sort(sortFn);
+            const standalone = activeTasks.filter(t => !t.isProject && !t.parentId).sort(sortFn);
 
             let filteredProjects = projects;
             let filteredStandalone = standalone;
@@ -1693,54 +1920,19 @@ class TodoApp {
                 filteredStandalone = [];
             }
 
-            filteredProjects.forEach(project => {
-                activeHtml += this.renderTask(project);
-
-                if (!this.isProjectCollapsed(project.id)) {
-                    const subs = this.getSubtasks(project.id).sort(sortFn);
-                    if (subs.length > 0 || this.inlineSubtaskProjectId === project.id) {
-                        activeHtml += '<div class="subtask-group">';
-                        subs.forEach(sub => {
-                            activeHtml += this.renderTask(sub, { isSubtask: true });
-                        });
-                        if (this.inlineSubtaskProjectId === project.id) {
-                            activeHtml += `
-                                <div class="inline-subtask-row">
-                                    <input type="text" class="inline-subtask-input" placeholder="Add subtask..." data-project-id="${project.id}">
-                                    <span class="inline-subtask-hint">Enter to add, Esc to cancel</span>
-                                </div>
-                            `;
-                        }
-                        activeHtml += '</div>';
-                    }
-                }
-            });
-
-            if (filteredStandalone.length > 0) {
-                if (filteredProjects.length > 0) {
-                    activeHtml += '<li class="section-divider">Ungrouped Tasks</li>';
-                }
-                filteredStandalone.forEach(todo => {
-                    activeHtml += this.renderTask(todo);
-                });
-            }
+            topLevel = filteredProjects.concat(filteredStandalone);
+            nestSubtasks = true;
         }
 
-        if (!activeHtml) {
-            todoList.innerHTML = this.renderEmptyState();
-        } else {
-            todoList.innerHTML = activeHtml;
-        }
+        const activeHtml = this.renderDateGrouped(topLevel, nestSubtasks);
+        todoList.innerHTML = activeHtml || this.renderEmptyState();
 
         // Render completed
         completedCount.textContent = `(${completedTodos.length})`;
         completedSection.style.display = completedTodos.length > 0 ? 'block' : 'none';
-
-        if (completedTodos.length === 0) {
-            completedList.innerHTML = '';
-        } else {
-            completedList.innerHTML = completedTodos.map(t => this.renderTask(t)).join('');
-        }
+        completedList.innerHTML = completedTodos.length === 0
+            ? ''
+            : completedTodos.map(t => this.renderTask(t)).join('');
 
         // Update stats
         this.updateStats();
@@ -1749,11 +1941,8 @@ class TodoApp {
         this.applyStatsState();
         this.applyCompletedState();
 
-        // Wire up detail panels
-        document.querySelectorAll('.detail-panel[data-detail-id]').forEach(panel => {
-            const detailId = parseInt(panel.dataset.detailId);
-            this.setupDetailPanel(panel, detailId);
-        });
+        // Detail drawer (side panel, replaces the old inline expansion)
+        this.renderDetailDrawer();
 
         // Wire up inline subtask inputs
         document.querySelectorAll('.inline-subtask-input').forEach(input => {
@@ -1768,6 +1957,29 @@ class TodoApp {
         this.lastAddedId = null;
         this._animCheckId = null;
         this._animPriorityId = null;
+    }
+
+    // ===== Detail Drawer =====
+    renderDetailDrawer() {
+        const drawer = document.getElementById('detailDrawer');
+        const body = document.getElementById('detailDrawerBody');
+        const title = document.getElementById('detailDrawerTitle');
+        if (!drawer || !body || !title) return;
+
+        const todo = this.expandedTaskId !== null ? this.todos.find(t => t.id === this.expandedTaskId) : null;
+
+        if (!todo) {
+            drawer.classList.remove('open');
+            body.innerHTML = '';
+            return;
+        }
+
+        title.textContent = todo.text;
+        body.innerHTML = this.renderDetailPanel(todo);
+        drawer.classList.add('open');
+
+        const panel = body.querySelector('.detail-panel[data-detail-id]');
+        if (panel) this.setupDetailPanel(panel, todo.id);
     }
 
     // ===== Firebase Sync Helpers =====
@@ -1832,12 +2044,26 @@ class TodoApp {
             userInfo.style.display = 'flex';
             const avatar = document.getElementById('userAvatar');
             const name = document.getElementById('userName');
-            if (avatar) avatar.src = user.photoURL || '';
+            if (avatar) avatar.src = user.photoURL || this.generateFallbackAvatar(user);
             if (name) name.textContent = user.displayName || user.email || '';
         } else {
             signInBtn.style.display = '';
             userInfo.style.display = 'none';
         }
+    }
+
+    // Accounts without a Google profile photo would otherwise render a
+    // broken-image box (an empty <img src>) once #userInfo becomes visible.
+    generateFallbackAvatar(user) {
+        const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
+        const styles = getComputedStyle(document.documentElement);
+        const accent = styles.getPropertyValue('--accent-primary').trim() || '#74a12e';
+        const bg = styles.getPropertyValue('--bg-primary').trim() || '#1a1a1a';
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">`
+            + `<rect width="28" height="28" rx="14" fill="${accent}"/>`
+            + `<text x="14" y="19" font-family="Raleway, sans-serif" font-size="13" font-weight="700" `
+            + `fill="${bg}" text-anchor="middle">${initial}</text></svg>`;
+        return 'data:image/svg+xml,' + encodeURIComponent(svg);
     }
 
     updateSyncStatusUI(status) {
@@ -1888,6 +2114,41 @@ class TodoApp {
         URL.revokeObjectURL(url);
     }
 
+    // Returns a Promise resolving to 'append' | 'replace' | 'cancel'.
+    showImportChoice(count) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('importChoiceOverlay');
+            document.getElementById('importChoiceCount').textContent = count;
+
+            const appendBtn = document.getElementById('importChoiceAppend');
+            const replaceBtn = document.getElementById('importChoiceReplace');
+            const cancelBtn = document.getElementById('importChoiceCancel');
+
+            const cleanup = (result) => {
+                overlay.classList.remove('visible');
+                appendBtn.removeEventListener('click', onAppend);
+                replaceBtn.removeEventListener('click', onReplace);
+                cancelBtn.removeEventListener('click', onCancel);
+                document.removeEventListener('keydown', onKeydown);
+                resolve(result);
+            };
+
+            const onAppend = () => cleanup('append');
+            const onReplace = () => cleanup('replace');
+            const onCancel = () => cleanup('cancel');
+            const onKeydown = (e) => {
+                if (e.key === 'Escape') cleanup('cancel');
+            };
+
+            appendBtn.addEventListener('click', onAppend);
+            replaceBtn.addEventListener('click', onReplace);
+            cancelBtn.addEventListener('click', onCancel);
+            document.addEventListener('keydown', onKeydown);
+
+            overlay.classList.add('visible');
+        });
+    }
+
     async importTodos(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1897,33 +2158,33 @@ class TodoApp {
             try {
                 const imported = JSON.parse(e.target.result);
                 if (!Array.isArray(imported)) {
-                    alert('Invalid file format. Expected an array of todos.');
+                    this.showUndoToast('Invalid file — expected a JSON array of tasks.', false);
                     return;
                 }
 
-                const replace = confirm('Replace existing todos? (Cancel to append instead)');
-                if (replace) {
-                    await StorageManager.clear('todos');
-                    this.todos = imported;
-                } else {
-                    const maxId = this.todos.length > 0 ? Math.max(...this.todos.map(t => t.id)) : 0;
-                    imported.forEach((todo, i) => {
-                        todo.id = maxId + i + 1;
-                        this.todos.push(todo);
-                    });
+                const choice = await this.showImportChoice(imported.length);
+                if (choice === 'cancel') return;
+
+                if (choice === 'replace') {
+                    // Deferred: queues an undo-toast window before anything
+                    // is actually cleared from storage, same as task deletes.
+                    this.queuePendingImportReplace(imported);
+                    return;
                 }
 
-                // Ensure new fields
-                this.todos.forEach(todo => {
+                const maxId = this.todos.length > 0 ? Math.max(...this.todos.map(t => t.id)) : 0;
+                imported.forEach((todo, i) => {
+                    todo.id = maxId + i + 1;
                     if (todo.order === undefined) todo.order = todo.id;
                     if (todo.recurrence === undefined) todo.recurrence = null;
+                    this.todos.push(todo);
                 });
 
                 await this.saveTodos();
                 this.render();
-                alert(`Successfully imported ${imported.length} todos!`);
+                this.showUndoToast(`${imported.length} task(s) imported`, false);
             } catch (error) {
-                alert('Error reading file. Please make sure it\'s a valid JSON file.');
+                this.showUndoToast("Couldn't read that file — make sure it's valid JSON.", false);
                 console.error(error);
             }
         };

@@ -1,0 +1,44 @@
+/* Toolbar clusters (Structure / Text / Search) */
+.toolbar-cluster {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 6px 8px;
+}
+
+.toolbar-cluster-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: 0 6px 0 2px;
+}
+
+/* Standalone List Format apply button (moved out of its dropdown) */
+.list-format-apply-btn {
+    background-color: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 3px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.list-format-apply-btn:hover {
+    background-color: var(--accent-secondary);
+}
+
+@media (max-width: 768px) {
+    .toolbar-cluster {
+        flex-wrap: wrap;
+    }
+}
