@@ -150,6 +150,27 @@ class StorageManager {
     }
 
     /**
+     * Delete multiple records by ID in a single transaction
+     * @param {string} storeName - Name of the object store
+     * @param {Array} ids - Array of record IDs to delete
+     * @returns {Promise<void>}
+     */
+    static async deleteAll(storeName, ids) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+
+            ids.forEach(id => {
+                store.delete(id);
+            });
+        });
+    }
+
+    /**
      * Get all records matching a value on an index
      * @param {string} storeName - Name of the object store
      * @param {string} indexName - Name of the index

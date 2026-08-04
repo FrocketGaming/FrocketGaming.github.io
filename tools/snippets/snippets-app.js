@@ -3420,23 +3420,25 @@ class SnippetsApp {
       remoteMap.set(clean.id, clean);
     }
 
-    // Update local data: add new, update changed
-    let changed = false;
+    // Diff against local data in memory first, then apply IndexedDB writes
+    // as a single batched transaction instead of one transaction per row —
+    // onSnapshot delivers the *entire* collection on every sign-in, so a
+    // per-item await here turns a library of a few hundred snippets into a
+    // few hundred serialized IndexedDB round trips.
+    const toPut = [];
     for (const [id, remote] of remoteMap) {
       const localIdx = this.snippets.findIndex((s) => s.id === id);
       if (localIdx === -1) {
         // New snippet from another device
         this.snippets.push(remote);
-        await StorageManager.put("snippets", remote);
-        changed = true;
+        toPut.push(remote);
       } else {
         const local = this.snippets[localIdx];
         const remoteTime = new Date(remote.updatedAt || 0).getTime();
         const localTime = new Date(local.updatedAt || 0).getTime();
         if (remoteTime > localTime) {
           this.snippets[localIdx] = remote;
-          await StorageManager.put("snippets", remote);
-          changed = true;
+          toPut.push(remote);
         }
       }
     }
@@ -3444,14 +3446,21 @@ class SnippetsApp {
     // Remove local snippets not in remote (deleted on other device)
     const remoteIds = new Set(remoteMap.keys());
     const toRemove = this.snippets.filter((s) => !remoteIds.has(s.id));
-    for (const s of toRemove) {
-      await StorageManager.delete("snippets", s.id);
-      changed = true;
-    }
     if (toRemove.length > 0) {
       this.snippets = this.snippets.filter((s) => remoteIds.has(s.id));
     }
 
+    if (toPut.length > 0) {
+      await StorageManager.putAll("snippets", toPut);
+    }
+    if (toRemove.length > 0) {
+      await StorageManager.deleteAll(
+        "snippets",
+        toRemove.map((s) => s.id),
+      );
+    }
+
+    const changed = toPut.length > 0 || toRemove.length > 0;
     if (changed) {
       this.renderCategories();
       this.renderSnippetsList();
@@ -3477,31 +3486,36 @@ class SnippetsApp {
       remoteMap.set(clean.id, clean);
     }
 
-    let changed = false;
+    const toPut = [];
     for (const [id, remote] of remoteMap) {
       const localIdx = this.types.findIndex((t) => t.id === id);
       if (localIdx === -1) {
         this.types.push(remote);
-        await StorageManager.put("snippetTypes", remote);
-        changed = true;
+        toPut.push(remote);
       } else if (this.types[localIdx].name !== remote.name) {
         this.types[localIdx] = remote;
-        await StorageManager.put("snippetTypes", remote);
-        changed = true;
+        toPut.push(remote);
       }
     }
 
     // Remove local types not in remote
     const remoteIds = new Set(remoteMap.keys());
     const toRemove = this.types.filter((t) => !remoteIds.has(t.id));
-    for (const t of toRemove) {
-      await StorageManager.delete("snippetTypes", t.id);
-      changed = true;
-    }
     if (toRemove.length > 0) {
       this.types = this.types.filter((t) => remoteIds.has(t.id));
     }
 
+    if (toPut.length > 0) {
+      await StorageManager.putAll("snippetTypes", toPut);
+    }
+    if (toRemove.length > 0) {
+      await StorageManager.deleteAll(
+        "snippetTypes",
+        toRemove.map((t) => t.id),
+      );
+    }
+
+    const changed = toPut.length > 0 || toRemove.length > 0;
     if (changed) {
       this.renderCategories();
       this.renderSnippetsList();
@@ -3509,17 +3523,26 @@ class SnippetsApp {
   }
 
   async handleRemoteVersions(remoteVersions) {
-    // Simple union merge — add any remote versions we don't have locally
-    for (const v of remoteVersions) {
-      const { _syncedAt, _firestoreId, ...clean } = v;
-      try {
-        const existing = await StorageManager.get("snippetVersions", clean.id);
-        if (!existing) {
-          await StorageManager.put("snippetVersions", clean);
-        }
-      } catch (e) {
-        // Ignore
+    // Simple union merge — add any remote versions we don't have locally.
+    // Version history is usually the largest of the three synced
+    // collections, so this was the worst offender for the old get-then-put
+    // per-item loop (two serialized IndexedDB transactions per version).
+    // Fetch existing IDs once, then batch-write only what's missing.
+    try {
+      const existingIds = new Set(
+        (await StorageManager.getAll("snippetVersions")).map((v) => v.id),
+      );
+      const toPut = remoteVersions
+        .map((v) => {
+          const { _syncedAt, _firestoreId, ...clean } = v;
+          return clean;
+        })
+        .filter((v) => !existingIds.has(v.id));
+      if (toPut.length > 0) {
+        await StorageManager.putAll("snippetVersions", toPut);
       }
+    } catch (e) {
+      // Ignore
     }
   }
 

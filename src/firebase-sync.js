@@ -614,13 +614,14 @@ class FirebaseSync {
         try {
             const userId = this.user.uid;
 
-            // Fetch cloud data
-            const cloudSnippetsSnap = await this.db
-                .collection('users').doc(userId)
-                .collection('snippets').get();
-            const cloudTypesSnap = await this.db
-                .collection('users').doc(userId)
-                .collection('snippetTypes').get();
+            // Fetch cloud data in parallel — these are three independent
+            // reads and were previously awaited one after another, adding
+            // two extra network round trips to every first-login merge.
+            const [cloudSnippetsSnap, cloudTypesSnap, cloudVersionsSnap] = await Promise.all([
+                this.db.collection('users').doc(userId).collection('snippets').get(),
+                this.db.collection('users').doc(userId).collection('snippetTypes').get(),
+                this.db.collection('users').doc(userId).collection('snippetVersions').get(),
+            ]);
 
             const cloudSnippets = [];
             cloudSnippetsSnap.forEach(doc => cloudSnippets.push(doc.data()));
@@ -661,9 +662,6 @@ class FirebaseSync {
             }
 
             // Merge versions: union by id
-            const cloudVersionsSnap = await this.db
-                .collection('users').doc(userId)
-                .collection('snippetVersions').get();
             const cloudVersions = [];
             cloudVersionsSnap.forEach(doc => cloudVersions.push(doc.data()));
 

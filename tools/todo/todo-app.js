@@ -2003,25 +2003,29 @@ class TodoApp {
             remoteMap.set(clean.id, clean);
         }
 
-        let changed = false;
-
+        // Diff in memory, then write as a single batched transaction —
+        // onSnapshot delivers the whole collection on every sign-in, so a
+        // per-item await here serialized one IndexedDB transaction per todo.
+        const toPut = [];
         for (const [id, remote] of remoteMap) {
             const localIdx = this.todos.findIndex(t => t.id === id);
             if (localIdx === -1) {
                 this.todos.push(remote);
-                await StorageManager.put('todos', remote);
-                changed = true;
+                toPut.push(remote);
             } else {
                 const local = this.todos[localIdx];
                 if (JSON.stringify(local) !== JSON.stringify(remote)) {
                     this.todos[localIdx] = remote;
-                    await StorageManager.put('todos', remote);
-                    changed = true;
+                    toPut.push(remote);
                 }
             }
         }
 
-        if (changed) this.render();
+        if (toPut.length > 0) {
+            await StorageManager.putAll('todos', toPut);
+        }
+
+        if (toPut.length > 0) this.render();
     }
 
     async handleAuthChange(user) {
