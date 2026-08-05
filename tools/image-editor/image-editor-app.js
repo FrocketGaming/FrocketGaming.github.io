@@ -41,6 +41,8 @@ class ImageEditorApp {
         this.strokeWidth = 3;
         this.filled = false;
         this.fontSize = 20;
+        this.blurStyle = 'pixelate';
+        this.blurStrength = 12;
 
         // DOM refs
         this.uploadSection = document.getElementById('uploadSection');
@@ -217,6 +219,8 @@ class ImageEditorApp {
             tool === 'text' ? '' : 'none';
         document.getElementById('cropRatioOption').style.display =
             tool === 'crop' ? '' : 'none';
+        document.getElementById('blurOptions').style.display =
+            tool === 'blur' ? '' : 'none';
 
         // Cursor
         this.overlayCanvas.style.cursor =
@@ -261,6 +265,26 @@ class ImageEditorApp {
             if (this.selectedAnnotation >= 0 && this.annotations[this.selectedAnnotation].type === 'text') {
                 this.pushUndo();
                 this.annotations[this.selectedAnnotation].fontSize = this.fontSize;
+                this.renderOverlay();
+            }
+        });
+
+        document.getElementById('blurStyle').addEventListener('change', (e) => {
+            this.blurStyle = e.target.value;
+            if (this.selectedAnnotation >= 0 && this.annotations[this.selectedAnnotation].type === 'blur') {
+                this.pushUndo();
+                this.annotations[this.selectedAnnotation].blurStyle = this.blurStyle;
+                this.renderOverlay();
+            }
+        });
+
+        const blurStrengthInput = document.getElementById('blurStrength');
+        blurStrengthInput.addEventListener('input', (e) => {
+            this.blurStrength = parseInt(e.target.value);
+            document.getElementById('blurStrengthVal').textContent = this.blurStrength;
+            if (this.selectedAnnotation >= 0 && this.annotations[this.selectedAnnotation].type === 'blur') {
+                this.pushUndo();
+                this.annotations[this.selectedAnnotation].blurStrength = this.blurStrength;
                 this.renderOverlay();
             }
         });
@@ -337,6 +361,7 @@ class ImageEditorApp {
                 this.pushUndo();
             } else {
                 this.selectedAnnotation = -1;
+                document.getElementById('blurOptions').style.display = 'none';
                 this.renderOverlay();
             }
             return;
@@ -453,7 +478,9 @@ class ImageEditorApp {
             color: this.strokeColor,
             strokeWidth: this.strokeWidth,
             filled: this.filled,
-            fontSize: this.fontSize
+            fontSize: this.fontSize,
+            blurStyle: this.blurStyle,
+            blurStrength: this.blurStrength
         };
     }
 
@@ -593,25 +620,19 @@ class ImageEditorApp {
                 ann.height = ann.fontSize * 1.2;
                 break;
 
-            case 'blur':
-                // Draw crosshatch pattern during editing
+            case 'blur': {
+                // Live preview: render the real effect sampled from the source image
+                const region = this.getBlurredRegion(this.bgCanvas, ann);
+                if (region) {
+                    ctx.drawImage(region.canvas, region.x, region.y);
+                }
                 ctx.strokeStyle = ann.color;
                 ctx.lineWidth = 1;
-                ctx.globalAlpha = 0.4;
+                ctx.globalAlpha = 0.6;
                 ctx.strokeRect(ann.x, ann.y, ann.width, ann.height);
-                const step = 8;
-                ctx.beginPath();
-                for (let i = 0; i < ann.width + ann.height; i += step) {
-                    const x1 = ann.x + Math.min(i, ann.width);
-                    const y1 = ann.y + Math.max(0, i - ann.width);
-                    const x2 = ann.x + Math.max(0, i - ann.height);
-                    const y2 = ann.y + Math.min(i, ann.height);
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                }
-                ctx.stroke();
                 ctx.globalAlpha = 1;
                 break;
+            }
         }
         ctx.restore();
     }
@@ -839,6 +860,14 @@ class ImageEditorApp {
             if (ann.type === 'text') {
                 document.getElementById('fontSize').value = ann.fontSize;
             }
+            document.getElementById('blurOptions').style.display = ann.type === 'blur' ? '' : 'none';
+            if (ann.type === 'blur') {
+                this.blurStyle = ann.blurStyle;
+                this.blurStrength = ann.blurStrength;
+                document.getElementById('blurStyle').value = ann.blurStyle;
+                document.getElementById('blurStrength').value = ann.blurStrength;
+                document.getElementById('blurStrengthVal').textContent = ann.blurStrength;
+            }
         }
         this.renderOverlay();
     }
@@ -941,27 +970,60 @@ class ImageEditorApp {
         this.debouncedExportSize();
     }
 
-    /* ========== Blur Pixelation (Export) ========== */
-    applyPixelation(ctx, ann) {
-        const blockSize = 10;
+    /* ========== Blur/Redact Effects ========== */
+    // Renders the annotation's effect (sampled from sourceCanvas) onto a same-sized
+    // scratch canvas. Used both for the live overlay preview (source = pristine bgCanvas)
+    // and for export (source = the in-progress composite canvas).
+    getBlurredRegion(sourceCanvas, ann) {
+        const cw = sourceCanvas.width, ch = sourceCanvas.height;
         const x = Math.max(0, Math.round(ann.x));
         const y = Math.max(0, Math.round(ann.y));
-        const w = Math.min(Math.round(ann.width), ctx.canvas.width - x);
-        const h = Math.min(Math.round(ann.height), ctx.canvas.height - y);
-        if (w <= 0 || h <= 0) return;
+        const w = Math.min(Math.round(ann.width), cw - x);
+        const h = Math.min(Math.round(ann.height), ch - y);
+        if (w <= 0 || h <= 0) return null;
 
-        const imageData = ctx.getImageData(x, y, w, h);
+        const strength = ann.blurStrength || 12;
+
+        if (ann.blurStyle === 'blur') {
+            // Sample a padded region so the blur has real neighboring pixels to draw
+            // from instead of fading to transparent at the edges, then crop back down.
+            const pad = Math.ceil(strength * 2);
+            const sx = Math.max(0, x - pad);
+            const sy = Math.max(0, y - pad);
+            const sw = Math.min(cw, x + w + pad) - sx;
+            const sh = Math.min(ch, y + h + pad) - sy;
+
+            const padded = document.createElement('canvas');
+            padded.width = sw;
+            padded.height = sh;
+            const pctx = padded.getContext('2d');
+            pctx.filter = `blur(${strength}px)`;
+            pctx.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            const out = document.createElement('canvas');
+            out.width = w;
+            out.height = h;
+            out.getContext('2d').drawImage(padded, x - sx, y - sy, w, h, 0, 0, w, h);
+            return { canvas: out, x, y, w, h };
+        }
+
+        // Pixelate: sample the center pixel of each block and flood-fill the block with it
+        const blockSize = Math.max(2, Math.round(strength));
+        const out = document.createElement('canvas');
+        out.width = w;
+        out.height = h;
+        const octx = out.getContext('2d');
+        octx.drawImage(sourceCanvas, x, y, w, h, 0, 0, w, h);
+
+        const imageData = octx.getImageData(0, 0, w, h);
         const data = imageData.data;
-
         for (let by = 0; by < h; by += blockSize) {
             for (let bx = 0; bx < w; bx += blockSize) {
-                // Sample center of block
                 const sx = Math.min(bx + Math.floor(blockSize / 2), w - 1);
                 const sy = Math.min(by + Math.floor(blockSize / 2), h - 1);
                 const si = (sy * w + sx) * 4;
                 const r = data[si], g = data[si + 1], b = data[si + 2], a = data[si + 3];
 
-                // Fill block
                 for (let py = by; py < Math.min(by + blockSize, h); py++) {
                     for (let px = bx; px < Math.min(bx + blockSize, w); px++) {
                         const pi = (py * w + px) * 4;
@@ -973,7 +1035,14 @@ class ImageEditorApp {
                 }
             }
         }
-        ctx.putImageData(imageData, x, y);
+        octx.putImageData(imageData, 0, 0);
+        return { canvas: out, x, y, w, h };
+    }
+
+    applyBlurAnnotation(ctx, ann) {
+        const region = this.getBlurredRegion(ctx.canvas, ann);
+        if (!region) return;
+        ctx.drawImage(region.canvas, region.x, region.y);
     }
 
     /* ========== Crop ========== */
@@ -1212,10 +1281,10 @@ class ImageEditorApp {
         // Draw background image
         ctx.drawImage(this.bgCanvas, 0, 0);
 
-        // Apply blur pixelation
+        // Apply blur/redact effects
         for (const ann of this.annotations) {
             if (ann.type === 'blur') {
-                this.applyPixelation(ctx, ann);
+                this.applyBlurAnnotation(ctx, ann);
             }
         }
 
