@@ -993,6 +993,13 @@ body {
     padding: 12px 20px;
 }
 
+#historyModal .modal-content {
+    height: 90vh;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
 #snippetNotesInput {
     min-height: 0;
     resize: none;
@@ -1273,11 +1280,17 @@ body {
 /* Version History Modal */
 .history-modal-body {
     padding: 0 !important;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
 }
 
 .history-layout {
     display: flex;
-    height: 450px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
 }
 
 .history-list-panel {
@@ -1326,10 +1339,18 @@ body {
 
 .history-preview-panel {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     padding: 15px;
-    overflow: auto;
+    overflow: hidden;
+}
+
+#historyPreview {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .history-preview-empty {
@@ -1348,6 +1369,7 @@ body {
 }
 
 .history-preview-header {
+    grid-row: 1;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1365,13 +1387,15 @@ body {
 }
 
 .history-code {
-    flex: 1;
-    min-height: 200px;
+    grid-row: 2;
+    min-height: 0;
+    max-height: none;
     margin-bottom: 10px;
+    overflow: auto;
 }
 
-.history-code pre {
-    min-height: 200px !important;
+#restoreVersionBtn {
+    grid-row: 3;
 }
 
 .history-empty-message {
