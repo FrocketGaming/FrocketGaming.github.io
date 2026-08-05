@@ -946,25 +946,6 @@ class SnippetsApp {
       ) {
         palette.style.display = "none";
       }
-      this.closeSnippetActionsMenu(e.target.closest(".snippet-actions-overflow"));
-    });
-
-    // Snippet viewer overflow menu (Share / History)
-    document.getElementById("moreActionsBtn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const expanded =
-        document.getElementById("moreActionsBtn").getAttribute("aria-expanded") ===
-        "true";
-      if (expanded) {
-        this.closeSnippetActionsMenu();
-      } else {
-        this.openSnippetActionsMenu();
-      }
-    });
-    document.getElementById("snippetActionsMenu").addEventListener("click", (e) => {
-      if (e.target.closest(".snippet-actions-menu-item")) {
-        this.closeSnippetActionsMenu();
-      }
     });
 
     // Category
@@ -1196,12 +1177,6 @@ class SnippetsApp {
 
     // Escape always works
     if (e.key === "Escape") {
-      const actionsMenu = document.getElementById("snippetActionsMenu");
-      if (actionsMenu.classList.contains("show")) {
-        this.closeSnippetActionsMenu();
-        document.getElementById("moreActionsBtn").focus();
-        return;
-      }
       if (anyModalOpen) {
         this.closeModal();
         this.closeCategoryModal();
@@ -1519,21 +1494,6 @@ class SnippetsApp {
     btn.innerHTML = isFav
       ? '<i class="fa-solid fa-star"></i>'
       : '<i class="fa-regular fa-star"></i>';
-  }
-
-  openSnippetActionsMenu() {
-    document.getElementById("snippetActionsMenu").classList.add("show");
-    document
-      .getElementById("moreActionsBtn")
-      .setAttribute("aria-expanded", "true");
-  }
-
-  closeSnippetActionsMenu(skipIfInside) {
-    if (skipIfInside) return;
-    document.getElementById("snippetActionsMenu").classList.remove("show");
-    document
-      .getElementById("moreActionsBtn")
-      .setAttribute("aria-expanded", "false");
   }
 
   // ─── Line Numbers ──────────────────────────────────────────
@@ -1993,7 +1953,6 @@ class SnippetsApp {
     if (!snippet) return;
 
     this.currentSnippet = snippet;
-    this.closeSnippetActionsMenu();
 
     document.getElementById("emptyState").style.display = "none";
     document.getElementById("snippetView").style.display = "flex";

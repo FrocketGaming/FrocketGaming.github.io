@@ -55,11 +55,15 @@ class NotesApp {
         this.auth = firebase.auth();
         this.db = firebase.firestore();
 
-        this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-            if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
-                console.warn('Notes: Persistence error:', err);
-            }
-        });
+        try {
+            this.db.settings({
+                cache: firebase.firestore.persistentLocalCache({
+                    tabManager: firebase.firestore.persistentMultipleTabManager(),
+                }),
+            });
+        } catch (err) {
+            console.warn('Notes: Persistence error:', err);
+        }
 
         this.auth.getRedirectResult().catch(() => {});
         this.auth.onAuthStateChanged(user => this.onAuthChange(user));

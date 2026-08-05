@@ -23,7 +23,7 @@ typography:
     fontSize: "16px"
     lineHeight: "normal"
   headline:
-    fontFamily: "Raleway, sans-serif"
+    fontFamily: "JetBrains Mono, monospace"
     fontWeight: 400
     fontSize: "2.5em"
   micro:
@@ -43,7 +43,7 @@ typography:
     fontWeight: 400
     fontSize: "14px"
   title:
-    fontFamily: "Raleway, sans-serif"
+    fontFamily: "JetBrains Mono, monospace"
     fontWeight: 600
     fontSize: "24px"
   stat-sm:
@@ -111,7 +111,7 @@ The system currently carries a few generic-AI-interface tells worth naming rathe
 **Key Characteristics:**
 - Flat at rest; every glow, border-color shift, or shadow is a response to hover/focus, never decoration
 - One accent color per theme carries nearly all interactive signal (buttons, focus rings, active nav, links)
-- A single typeface (Raleway) for the entire site — hierarchy comes from size, weight, and glow, not font pairing
+- Two typefaces: Raleway for body copy/controls, JetBrains Mono for all heading tags (`h1`–`h4`) — hierarchy within each voice still comes from size, weight, and glow
 - Non-directional "ambient glow" shadows (colored, centered) rather than physical drop shadows implying a light source
 
 ## Colors
@@ -144,16 +144,18 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 
 ## Typography
 
-**Body Font:** Raleway (with sans-serif fallback) — the only typeface on the site, used for headings, body copy, buttons, and labels alike.
+**Body Font:** Raleway (with sans-serif fallback) — used for body copy, buttons, labels, and all non-heading UI text.
 
-**Character:** One voice throughout — Raleway at varying size/weight carries all hierarchy. There is no display or label font pairing today; that's an honest gap, not a hidden pairing.
+**Display Font:** JetBrains Mono (with monospace fallback) — used for every heading tag (`h1`–`h4`) site-wide: page headline, panel headers, modal titles, and the item-title heading inside a panel/view. A deliberate, dedicated design-system addition (added to pair with Raleway and give heading text distinct weight from body copy), not per-page drift — every tool loads it from the same Google Fonts request as Raleway.
+
+**Character:** Two voices, cleanly split by role — JetBrains Mono marks "this is a heading" wherever an `h1`–`h4` tag is used; Raleway carries everything else, including non-heading text that happens to sit at a heading-adjacent size (e.g. list-row item names). Size, weight, and glow still carry hierarchy within each voice.
 
 ### Hierarchy
-- **Headline** (400 weight, 2.5em, centered, `text-shadow: 0 0 3px var(--accent-primary)`): page `<h1>` — the accent-colored glow is the only thing distinguishing it from body text at the same weight.
-- **Body** (400 weight, 1em / 16px): general copy, form labels, descriptions.
-- **Title** (600 weight, 24px): the second-tier heading used inside a panel or view for the current item's name (e.g. the Snippets viewer's title, `.snippet-title-section h2`). Sits between Body and Headline; used once per view, never for list rows.
-- **Micro** (400 weight, 11px): the smallest step — badges, tags, copy-count chips.
-- **Label** (400 weight, 12px): the most common meta size — panel headers, most row/meta text.
+- **Headline** (JetBrains Mono, 400 weight, 2.5em, centered, `text-shadow: 0 0 3px var(--accent-primary)`): page `<h1>` — the accent-colored glow is the only thing distinguishing it from body text at the same weight.
+- **Body** (Raleway, 400 weight, 1em / 16px): general copy, form labels, descriptions.
+- **Title** (JetBrains Mono, 600 weight, 24px): the second-tier heading used inside a panel or view for the current item's name (e.g. the Snippets viewer's title, `.snippet-title-section h2`, and modal `<h3>` titles). Sits between Body and Headline; used once per view, never for list rows.
+- **Micro** (Raleway, 400 weight, 11px): the smallest step — badges, tags, copy-count chips.
+- **Label** (400 weight, 12px): the most common meta size — most row/meta text is Raleway; the one exception is panel-header `<h3>` (e.g. "Categories", "Snippets"), which is a heading tag and so renders in JetBrains Mono per the pairing rule below.
 - **Small** (500 weight, 13px): item names and history-entry titles; slightly heavier than Label to carry a name over its metadata.
 - **Compact** (400 weight, 14px): the largest micro step — sort/shortcuts controls, slightly more prominent captions.
 - **Stat-sm / Stat** (400 weight, 28px / 48px): large numerals and icons used for modal close glyphs, empty-state icons, and similar one-off display moments. Not body-text sizes; reserved for a single dominant visual per view.
@@ -162,7 +164,7 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 - **Logo/Label** (bold, uppercase, 3px letter-spacing, accent-primary text-shadow): the site logo and nav-adjacent labels.
 
 ### Named Rules
-**The One-Voice Type Rule.** The entire site uses a single font family. Hierarchy is carried by size, weight, color, and glow — never by switching typefaces. Any future work that introduces a second font is a deliberate system change, not a drop-in. Two sanctioned exceptions exist, both functional rather than decorative: `Consolas, Monaco, monospace` for `<kbd>` keys and rendered code, and `Georgia, Times New Roman, serif` (italic) for math-notation buttons matching KaTeX's rendering convention.
+**The Heading/Body Pairing Rule.** Exactly two font families exist site-wide, split by role, never by ad hoc choice: JetBrains Mono for every `h1`–`h4` heading tag, Raleway for everything else. A given element's font is fully determined by whether it's a heading tag — hierarchy within each voice is still carried by size, weight, color, and glow, not by further font switching. Any future work that introduces a third font (beyond the two functional exceptions below) is a deliberate system change, not a drop-in. Two further sanctioned exceptions exist, both functional rather than decorative: `Consolas, Monaco, monospace` for `<kbd>` keys and rendered code, and `Georgia, Times New Roman, serif` (italic) for math-notation buttons matching KaTeX's rendering convention.
 
 **The Fixed-Step Rule.** Every font-size in the codebase snaps to one of: 11px (Micro), 12px (Label), 13px (Small), 14px (Compact), 16px (Body), 24px (Title), 28 / 48px (Stat), 2.5em (Headline). A one-off size outside this list is drift, not a new tier — either it belongs to an existing step or the step list needs a deliberate addition here first. (Markdown-rendered content is the sole exception: `.markdown-preview h1-h4`/`code` use `em` multipliers on the Body base so arbitrary user content keeps a proportional internal hierarchy — that ramp is relative by design, not an absolute step.)
 

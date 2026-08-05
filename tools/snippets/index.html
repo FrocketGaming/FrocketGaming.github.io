@@ -23,7 +23,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+            href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
             rel="stylesheet"
         />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
@@ -33,16 +33,16 @@
         <div class="header">
             <div class="header-icon-row">
                 <nav class="nav-pill-rail">
-                    <a class="nav-pill-item" href="../txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label">Txt Formatter</span></a>
-                    <a class="nav-pill-item active" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label">Snippets</span></a>
-                    <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label">To-Do List</span></a>
-                    <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label">CSV Viewer</span></a>
-                    <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label">Regex Tester</span></a>
-                    <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label">Image Editor</span></a>
-                    <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label">Cron Builder</span></a>
-                    <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label">Timezone</span></a>
-                    <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label">Text Diff</span></a>
-                    <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label">JSON Viewer</span></a>
+                    <a class="nav-pill-item" href="../txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Txt Formatter</span></span></a>
+                    <a class="nav-pill-item active" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Snippets</span></span></a>
+                    <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label"><span class="nav-pill-label-text">To-Do List</span></span></a>
+                    <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label"><span class="nav-pill-label-text">CSV Viewer</span></span></a>
+                    <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Regex Tester</span></span></a>
+                    <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Image Editor</span></span></a>
+                    <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Cron Builder</span></span></a>
+                    <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Timezone</span></span></a>
+                    <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Text Diff</span></span></a>
+                    <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a>
                 </nav>
                 <div class="theme-selector">
                     <label for="themeSelect">Theme:</label>
@@ -246,6 +246,22 @@
                                 </button>
                                 <button
                                     class="action-btn"
+                                    id="shareSnippetBtn"
+                                    title="Share snippet"
+                                    aria-label="Share snippet"
+                                >
+                                    <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                    class="action-btn"
+                                    id="historyBtn"
+                                    title="Version history"
+                                    aria-label="Version history"
+                                >
+                                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                    class="action-btn"
                                     id="editBtn"
                                     title="Edit snippet"
                                     aria-label="Edit snippet"
@@ -260,36 +276,6 @@
                                 >
                                     <i class="fa-solid fa-trash" aria-hidden="true"></i>
                                 </button>
-                                <div class="snippet-actions-overflow">
-                                    <button
-                                        class="action-btn"
-                                        id="moreActionsBtn"
-                                        title="More actions"
-                                        aria-label="More actions"
-                                        aria-haspopup="true"
-                                        aria-expanded="false"
-                                    >
-                                        <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
-                                    </button>
-                                    <div class="snippet-actions-menu" id="snippetActionsMenu" role="menu">
-                                        <button
-                                            class="snippet-actions-menu-item"
-                                            id="shareSnippetBtn"
-                                            role="menuitem"
-                                            aria-label="Share snippet"
-                                        >
-                                            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share
-                                        </button>
-                                        <button
-                                            class="snippet-actions-menu-item"
-                                            id="historyBtn"
-                                            role="menuitem"
-                                            aria-label="Version history"
-                                        >
-                                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> History
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                         <p
@@ -751,7 +737,6 @@
         <script src="../../src/firebase-sync.js"></script>
         <script src="snippets-app.js"></script>
     <!-- impeccable-live-start -->
-<script src="http://localhost:8400/live.js?token=dbd5cff5-6edf-47fd-894a-ac61dc4d3c27"></script>
 <!-- impeccable-live-end -->
 </body>
 </html>

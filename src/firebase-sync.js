@@ -54,14 +54,16 @@ class FirebaseSync {
             this.auth = firebase.auth();
             this.db = firebase.firestore();
 
-            // Enable offline persistence
-            this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-                if (err.code === 'failed-precondition') {
-                    console.warn('FirebaseSync: Multiple tabs open, persistence only works in one');
-                } else if (err.code === 'unimplemented') {
-                    console.warn('FirebaseSync: Browser does not support persistence');
-                }
-            });
+            // Enable offline persistence (multi-tab aware)
+            try {
+                this.db.settings({
+                    cache: firebase.firestore.persistentLocalCache({
+                        tabManager: firebase.firestore.persistentMultipleTabManager(),
+                    }),
+                });
+            } catch (err) {
+                console.warn('FirebaseSync: Browser does not support persistence', err);
+            }
 
             this.onAuthChange = callbacks.onAuthChange || null;
             this.onSyncStatus = callbacks.onSyncStatus || null;

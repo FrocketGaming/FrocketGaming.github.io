@@ -203,6 +203,13 @@ body {
     font-style: normal;
 }
 
+h1,
+h2,
+h3,
+h4 {
+    font-family: "JetBrains Mono", monospace;
+}
+
 h1 {
     font-size: 2.5em;
     margin-bottom: 1px;
@@ -304,7 +311,7 @@ textarea:focus {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 3px;
     font-size: 0.85rem;
     font-family: "Raleway", sans-serif;
     cursor: pointer;
@@ -395,7 +402,7 @@ textarea:focus {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 5px;
     font-family: "Raleway", sans-serif;
     font-size: 0.85rem;
     outline: none;
@@ -436,7 +443,7 @@ textarea:focus {
     background-color: var(--accent-primary);
     color: var(--bg-primary);
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     font-size: 0.85rem;
     font-family: "Raleway", sans-serif;
     cursor: pointer;
@@ -504,7 +511,7 @@ textarea:focus {
     background-color: var(--accent-secondary);
     color: var(--bg-primary);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
 .clear-bnt {
@@ -533,7 +540,7 @@ textarea:focus {
     border: none;
     color: var(--accent-primary);
     cursor: pointer;
-    font-size: 18px;
+    font-size: 16px;
     transition: color 0.3s;
 }
 
@@ -687,13 +694,20 @@ input[type="checkbox"]:checked {
 }
 
 .nav-pill-label {
-    max-width: 0;
+    display: inline-grid;
+    grid-template-columns: 0fr;
+    min-width: 0;
     opacity: 0;
     margin-left: 0;
     font-size: 12px;
     font-weight: 600;
+    transition: grid-template-columns 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+}
+
+.nav-pill-label-text {
+    display: block;
+    min-width: 0;
     overflow: hidden;
-    transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
 }
 
 .nav-pill-item:hover,
@@ -705,7 +719,7 @@ input[type="checkbox"]:checked {
 
 .nav-pill-item:hover .nav-pill-label,
 .nav-pill-item:focus-visible .nav-pill-label {
-    max-width: 140px;
+    grid-template-columns: 1fr;
     opacity: 1;
     margin-left: 8px;
 }
@@ -719,7 +733,7 @@ input[type="checkbox"]:checked {
 }
 
 .nav-pill-item.active .nav-pill-label {
-    max-width: 140px;
+    grid-template-columns: 1fr;
     opacity: 1;
     margin-left: 8px;
 }
@@ -767,7 +781,7 @@ input[type="checkbox"]:checked {
     text-decoration: none;
     border-radius: 5px;
     border: 1px solid var(--border-color);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 400;
     transition: all 0.3s ease;
     cursor: pointer;
