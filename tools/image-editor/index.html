@@ -45,7 +45,7 @@
         </div>
     </div>
 
-    <p>Annotate, crop, resize, and export images. Paste from clipboard or drag & drop â€” all processing runs locally.</p>
+    <p>Annotate, crop, resize, and export images. Paste from clipboard or drag & drop — all processing runs locally.</p>
 
     <div class="image-editor-container">
         <!-- Upload Section -->
@@ -77,6 +77,7 @@
                 <div class="toolbar-group">
                     <button class="tool-btn-editor" data-tool="crop" title="Crop (C)"><i class="fa-solid fa-crop-simple"></i></button>
                     <button class="tool-btn-editor" id="resizeBtn" title="Resize"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                    <button class="tool-btn-editor" id="recolorBtn" title="Replace Color"><i class="fa-solid fa-fill-drip"></i></button>
                 </div>
                 <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
@@ -160,6 +161,29 @@
                 <div class="resize-actions">
                     <button class="action-btn primary" id="applyResizeBtn"><i class="fa-solid fa-check"></i> Apply</button>
                     <button class="action-btn" id="cancelResizeBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                </div>
+            </div>
+
+            <!-- Recolor Panel -->
+            <div class="resize-panel" id="recolorPanel" style="display:none;">
+                <div class="resize-inputs">
+                    <div class="option-group">
+                        <label for="recolorFrom">From</label>
+                        <input type="color" id="recolorFrom" value="#000000">
+                        <button class="action-btn" id="recolorPickBtn" title="Pick color from image"><i class="fa-solid fa-eye-dropper"></i></button>
+                    </div>
+                    <div class="option-group">
+                        <label for="recolorTo">To</label>
+                        <input type="color" id="recolorTo" value="#ffffff">
+                    </div>
+                    <div class="option-group">
+                        <label for="recolorTolerance">Tolerance <span id="recolorToleranceVal">30</span></label>
+                        <input type="range" id="recolorTolerance" min="0" max="100" value="30">
+                    </div>
+                </div>
+                <div class="resize-actions">
+                    <button class="action-btn primary" id="applyRecolorBtn"><i class="fa-solid fa-check"></i> Apply</button>
+                    <button class="action-btn" id="cancelRecolorBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
                 </div>
             </div>
 

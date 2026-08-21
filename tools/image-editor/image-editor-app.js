@@ -36,6 +36,13 @@ class ImageEditorApp {
         this.isCropping = false;
         this.cropRect = null;
 
+        // Recolor state
+        this.isRecoloring = false;
+        this.recolorPreviewCanvas = null;
+        this.isPickingColor = false;
+        this._pickTarget = null;
+        this._recolorPreviewPending = false;
+
         // Tool options
         this.strokeColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary').trim();
         this.strokeWidth = 3;
@@ -60,6 +67,7 @@ class ImageEditorApp {
         this.bindCanvasEvents();
         this.bindResize();
         this.bindCrop();
+        this.bindRecolor();
         this.bindExport();
         this.bindKeyboard();
         this.buildColorSwatches();
@@ -128,6 +136,9 @@ class ImageEditorApp {
         this.redoStack = [];
         this.isCropping = false;
         this.cropRect = null;
+        this.isRecoloring = false;
+        this.recolorPreviewCanvas = null;
+        document.getElementById('recolorPanel').style.display = 'none';
 
         // Show editor first so wrapper has layout dimensions
         this.uploadSection.style.display = 'none';
@@ -189,6 +200,7 @@ class ImageEditorApp {
         toolBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
+                if (this.isRecoloring) this.closeRecolorPanel();
                 if (tool === 'crop') {
                     this.enterCropMode();
                     return;
@@ -330,6 +342,13 @@ class ImageEditorApp {
     onCanvasMouseDown(e) {
         if (e.button !== 0) return;
         const pt = this.getCanvasCoords(e);
+
+        if (this.isPickingColor) {
+            this.pickColorAt(pt);
+            return;
+        }
+
+        if (this.isRecoloring) return;
 
         if (this.isCropping) {
             this.isDrawing = true;
@@ -527,6 +546,11 @@ class ImageEditorApp {
     renderOverlay() {
         const ctx = this.overlayCtx;
         ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+
+        // Recolor live preview (drawn under annotations, over the real image)
+        if (this.isRecoloring && this.recolorPreviewCanvas) {
+            ctx.drawImage(this.recolorPreviewCanvas, 0, 0);
+        }
 
         // Draw all annotations
         for (let i = 0; i < this.annotations.length; i++) {
@@ -1045,6 +1069,180 @@ class ImageEditorApp {
         ctx.drawImage(region.canvas, region.x, region.y);
     }
 
+    /* ========== Color Replace ========== */
+    bindRecolor() {
+        const panel = document.getElementById('recolorPanel');
+        const fromInput = document.getElementById('recolorFrom');
+        const toInput = document.getElementById('recolorTo');
+        const toleranceInput = document.getElementById('recolorTolerance');
+
+        document.getElementById('recolorBtn').addEventListener('click', () => {
+            if (!this.originalImage) return;
+            if (this.isRecoloring) {
+                this.closeRecolorPanel();
+            } else {
+                this.openRecolorPanel();
+            }
+        });
+
+        fromInput.addEventListener('input', () => this.updateRecolorPreview());
+        toInput.addEventListener('input', () => this.updateRecolorPreview());
+        toleranceInput.addEventListener('input', (e) => {
+            document.getElementById('recolorToleranceVal').textContent = e.target.value;
+            this.updateRecolorPreview();
+        });
+
+        document.getElementById('recolorPickBtn').addEventListener('click', () => this.startColorPick('recolorFrom'));
+
+        document.getElementById('applyRecolorBtn').addEventListener('click', () => this.applyRecolor());
+        document.getElementById('cancelRecolorBtn').addEventListener('click', () => this.closeRecolorPanel());
+    }
+
+    openRecolorPanel() {
+        if (this.isCropping) this.exitCropMode();
+        document.getElementById('resizePanel').style.display = 'none';
+
+        this.isRecoloring = true;
+        this.selectedAnnotation = -1;
+        document.getElementById('recolorPanel').style.display = '';
+        this.updateRecolorPreview();
+    }
+
+    closeRecolorPanel() {
+        this.isRecoloring = false;
+        this.recolorPreviewCanvas = null;
+        document.getElementById('recolorPanel').style.display = 'none';
+        this.renderOverlay();
+    }
+
+    updateRecolorPreview() {
+        if (!this.isRecoloring) return;
+        // Full-image recompute is too heavy to run on every slider 'input' tick
+        // (fires many times/sec while dragging) — throttle to once per frame.
+        if (this._recolorPreviewPending) return;
+        this._recolorPreviewPending = true;
+        requestAnimationFrame(() => {
+            this._recolorPreviewPending = false;
+            if (!this.isRecoloring) return;
+            const fromHex = document.getElementById('recolorFrom').value;
+            const toHex = document.getElementById('recolorTo').value;
+            const tolerance = parseInt(document.getElementById('recolorTolerance').value);
+            this.recolorPreviewCanvas = this.computeRecoloredCanvas(this.bgCanvas, fromHex, toHex, tolerance);
+            this.renderOverlay();
+        });
+    }
+
+    // Returns a new canvas with pixels near `fromHex` (within `tolerance`, 0-100) blended
+    // toward `toHex`. Uses a smooth (not hard-cutoff) falloff so recolored edges don't look
+    // stairstepped, and relaxes the match for partially-transparent pixels — anti-aliased
+    // edge pixels in most PNGs are blended with whatever matte color sat behind them at
+    // export time, so their RGB often drifts from the "true" fill color even though they're
+    // visually part of the same shape.
+    computeRecoloredCanvas(sourceCanvas, fromHex, toHex, tolerance) {
+        const canvas = document.createElement('canvas');
+        canvas.width = sourceCanvas.width;
+        canvas.height = sourceCanvas.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const from = this.hexToRgb(fromHex);
+        const to = this.hexToRgb(toHex);
+        const maxDist = Math.sqrt(3 * 255 * 255);
+        const threshold = (tolerance / 100) * maxDist;
+        const feather = Math.max(16, threshold * 0.35);
+
+        for (let i = 0; i < data.length; i += 4) {
+            const alpha = data[i + 3];
+            if (alpha === 0) continue;
+
+            const dr = data[i] - from.r;
+            const dg = data[i + 1] - from.g;
+            const db = data[i + 2] - from.b;
+            const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+            const edgeLeniency = 1 - (alpha / 255);
+            const effectiveThreshold = threshold * (1 + edgeLeniency * 1.5);
+
+            const blend = 1 - this.smoothstep(effectiveThreshold, effectiveThreshold + feather, dist);
+            if (blend <= 0) continue;
+
+            data[i] += (to.r - data[i]) * blend;
+            data[i + 1] += (to.g - data[i + 1]) * blend;
+            data[i + 2] += (to.b - data[i + 2]) * blend;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
+    }
+
+    smoothstep(edge0, edge1, x) {
+        if (edge0 === edge1) return x < edge0 ? 0 : 1;
+        const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+        return t * t * (3 - 2 * t);
+    }
+
+    applyRecolor() {
+        if (!this.recolorPreviewCanvas) return;
+        this.pushUndo();
+
+        this.bgCtx.clearRect(0, 0, this.imageWidth, this.imageHeight);
+        this.bgCtx.drawImage(this.recolorPreviewCanvas, 0, 0);
+
+        const img = new Image();
+        img.onload = () => { this.originalImage = img; };
+        img.src = this.bgCanvas.toDataURL();
+
+        this.closeRecolorPanel();
+        this.updateInfo();
+        this.debouncedExportSize();
+        this.showToast('Color replaced');
+    }
+
+    startColorPick(targetInputId) {
+        this._pickTarget = targetInputId;
+
+        if (window.EyeDropper) {
+            const eyeDropper = new EyeDropper();
+            eyeDropper.open().then(result => {
+                document.getElementById(targetInputId).value = result.sRGBHex;
+                this.updateRecolorPreview();
+            }).catch(() => {}).finally(() => { this._pickTarget = null; });
+            return;
+        }
+
+        // Fallback: sample a pixel from the canvas on next click
+        this.isPickingColor = true;
+        this.overlayCanvas.style.cursor = 'crosshair';
+        this.showToast('Click the image to pick a color');
+    }
+
+    pickColorAt(pt) {
+        const x = Math.min(this.imageWidth - 1, Math.max(0, Math.round(pt.x)));
+        const y = Math.min(this.imageHeight - 1, Math.max(0, Math.round(pt.y)));
+        const data = this.bgCtx.getImageData(x, y, 1, 1).data;
+        const hex = this.rgbToHex(data[0], data[1], data[2]);
+
+        if (this._pickTarget) document.getElementById(this._pickTarget).value = hex;
+        this._pickTarget = null;
+        this.isPickingColor = false;
+        this.overlayCanvas.style.cursor = this.activeTool === 'select' ? 'default' : 'crosshair';
+        this.updateRecolorPreview();
+    }
+
+    hexToRgb(hex) {
+        const clean = hex.replace('#', '');
+        return {
+            r: parseInt(clean.substring(0, 2), 16),
+            g: parseInt(clean.substring(2, 4), 16),
+            b: parseInt(clean.substring(4, 6), 16)
+        };
+    }
+
+    rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
     /* ========== Crop ========== */
     bindCrop() {
         document.getElementById('applyCropBtn').addEventListener('click', () => this.applyCrop());
@@ -1052,6 +1250,7 @@ class ImageEditorApp {
     }
 
     enterCropMode() {
+        if (this.isRecoloring) this.closeRecolorPanel();
         this.isCropping = true;
         this.cropRect = null;
         this.selectedAnnotation = -1;
@@ -1166,6 +1365,7 @@ class ImageEditorApp {
             const showing = panel.style.display !== 'none';
             panel.style.display = showing ? 'none' : '';
             if (!showing) {
+                if (this.isRecoloring) this.closeRecolorPanel();
                 wInput.value = this.imageWidth;
                 hInput.value = this.imageHeight;
                 scaleInput.value = 100;
@@ -1418,6 +1618,8 @@ class ImageEditorApp {
             if (e.key === 'Escape') {
                 if (this.isCropping) {
                     this.exitCropMode();
+                } else if (this.isRecoloring) {
+                    this.closeRecolorPanel();
                 } else {
                     this.selectedAnnotation = -1;
                     this.renderOverlay();
