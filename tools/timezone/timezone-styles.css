@@ -389,7 +389,7 @@ input[type="datetime-local"]:focus {
     font-weight: 700;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
-    font-family: "Courier New", Consolas, monospace;
+    font-family: Consolas, Monaco, monospace;
 }
 
 .tz-tl-meta {
@@ -439,7 +439,7 @@ input[type="datetime-local"]:focus {
     justify-content: center;
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
-    font-family: "Courier New", Consolas, monospace;
+    font-family: Consolas, Monaco, monospace;
     transition: filter 0.1s;
     position: relative;
 }
