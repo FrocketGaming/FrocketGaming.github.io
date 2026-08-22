@@ -46,44 +46,44 @@
     </div>
 
     <div class="tz-container">
-        <!-- Left Column: Converter + World Clock -->
-        <div class="tz-left-col">
-            <!-- Converter Section -->
-            <div class="tz-converter">
-                <h3><i class="fa-solid fa-right-left"></i> Timezone Converter</h3>
-                <div class="tz-source">
-                    <div class="tz-row">
-                        <label>Source</label>
-                        <input type="datetime-local" id="sourceDateTime" step="60" aria-label="Source date and time">
-                        <div id="sourceTimezonePicker"></div>
-                    </div>
+        <!-- Converter Section -->
+        <div class="tz-converter">
+            <h3><i class="fa-solid fa-right-left"></i> Timezone Converter</h3>
+            <div class="tz-source">
+                <div class="tz-row">
+                    <label>Source</label>
+                    <input type="datetime-local" id="sourceDateTime" step="60" aria-label="Source date and time">
+                    <div id="sourceTimezonePicker"></div>
                 </div>
-                <div class="tz-targets" id="targetContainer"></div>
             </div>
-
-            <!-- World Clock Section -->
-            <div class="tz-world-clock">
-                <h3><i class="fa-solid fa-globe"></i> World Clock</h3>
-                <div class="tz-clock-grid" id="clockGrid"></div>
-            </div>
+            <div class="tz-targets" id="targetContainer"></div>
         </div>
 
-        <!-- Right Column: Meeting Planner -->
-        <div class="tz-meeting-planner">
-            <div class="tz-section-header">
-                <h3><i class="fa-solid fa-calendar-check"></i> Meeting Planner</h3>
-                <div class="tz-planner-controls">
-                    <label>Source Hour:</label>
-                    <select id="plannerHour" class="tz-select" aria-label="Source hour"></select>
-                    <label>in</label>
-                    <div id="plannerSourceTzPicker"></div>
+        <!-- Timeline Section -->
+        <div class="tz-timeline">
+            <div class="tz-timeline-header">
+                <h3><i class="fa-solid fa-timeline"></i> Timeline</h3>
+                <div class="tz-timeline-nav">
+                    <button id="tlPrevDay" class="tz-nav-btn" title="Previous day" aria-label="Previous day"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button id="tlToday" class="tz-nav-btn tz-nav-today">Today</button>
+                    <button id="tlNextDay" class="tz-nav-btn" title="Next day" aria-label="Next day"><i class="fa-solid fa-chevron-right"></i></button>
+                    <span class="tz-timeline-date" id="tlDateLabel"></span>
                 </div>
             </div>
-            <div class="tz-planner-grid" id="plannerGrid"></div>
+
+            <div class="tz-timeline-readout" id="tlReadout">Hover the timeline to scrub · click to pin a time</div>
+
+            <div class="tz-timeline-scroll">
+                <div class="tz-timeline-rows" id="tlRows"></div>
+            </div>
+
+            <div class="tz-section-add" id="tlAddRow"></div>
+
             <div class="tz-planner-legend">
                 <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-good"></span> Business hours (9-17)</span>
                 <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-ok"></span> Early/Late (7-9, 17-21)</span>
                 <span class="tz-legend-item"><span class="tz-legend-swatch tz-hour-bad"></span> Night (21-7)</span>
+                <span class="tz-legend-item"><span class="tz-legend-swatch tz-weekend-swatch"></span> Weekend</span>
             </div>
         </div>
     </div>
