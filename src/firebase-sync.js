@@ -547,7 +547,10 @@ class FirebaseSync {
             },
             sharedBy: this.user.uid,
             createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + expiryHours * 3600000).toISOString()
+            // Stored as a Firestore Timestamp (not a string) so security rules
+            // can compare it against request.time and deny reads server-side
+            // once a link expires, instead of relying on this client check.
+            expiresAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + expiryHours * 3600000))
         };
 
         await this.db.collection('shared').doc(shareId).set(doc);
@@ -564,18 +567,32 @@ class FirebaseSync {
             throw new Error('Firebase not initialized');
         }
 
-        const docSnap = await this.db.collection('shared').doc(shareId).get();
+        let docSnap;
+        try {
+            docSnap = await this.db.collection('shared').doc(shareId).get();
+        } catch (error) {
+            // Security rules deny `get` once expiresAt has passed, so a
+            // permission-denied here means the link expired, not a real error.
+            if (error.code === 'permission-denied') {
+                return { expired: true };
+            }
+            throw error;
+        }
         if (!docSnap.exists) return null;
 
         const data = docSnap.data();
-        if (new Date(data.expiresAt) < new Date()) {
+        const expiresAtDate = data.expiresAt && typeof data.expiresAt.toDate === 'function'
+            ? data.expiresAt.toDate()
+            : new Date(data.expiresAt);
+
+        if (expiresAtDate < new Date()) {
             return { expired: true };
         }
 
         return {
             snippet: data.snippet,
             createdAt: data.createdAt,
-            expiresAt: data.expiresAt
+            expiresAt: expiresAtDate.toISOString()
         };
     }
 
