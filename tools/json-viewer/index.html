@@ -73,7 +73,10 @@
             </div>
             <div class="json-output-panel">
                 <div class="json-panel-label">
-                    Tree
+                    <div class="json-view-toggle" id="viewToggle">
+                        <button class="json-view-toggle-btn active" data-view="tree" id="treeViewBtn"><i class="fa-solid fa-list-tree"></i> Tree</button>
+                        <button class="json-view-toggle-btn" data-view="graph" id="graphViewBtn"><i class="fa-solid fa-diagram-project"></i> Graph</button>
+                    </div>
                     <span class="json-path-hint" id="pathHint">click any key to copy its path</span>
                 </div>
                 <div class="json-search-bar" id="searchBar">
@@ -90,6 +93,7 @@
                         <p>Paste JSON on the left to explore it here</p>
                     </div>
                 </div>
+                <div id="jsonGraph" class="jg-root"></div>
             </div>
         </div>
 
@@ -101,6 +105,7 @@
 
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
+    <script src="json-viewer-graph.js"></script>
     <script src="json-viewer-app.js"></script>
 <!-- impeccable-live-start -->
 <!-- impeccable-live-end -->

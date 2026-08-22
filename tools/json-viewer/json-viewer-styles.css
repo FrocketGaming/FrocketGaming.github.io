@@ -116,6 +116,315 @@
     line-height: 1.6;
 }
 
+.json-tree.jg-hidden-view {
+    display: none;
+}
+
+/* ─── View Toggle (Tree / Graph) ─────────────────────────── */
+
+.json-view-toggle {
+    display: inline-flex;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+    margin-left: 8px;
+}
+
+.json-view-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-family: "Raleway", sans-serif;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.json-view-toggle-btn:hover {
+    color: var(--text-primary);
+}
+
+.json-view-toggle-btn.active {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+/* ─── Graph View ─────────────────────────────────────────── */
+
+.jg-root {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle, var(--border-color) 1.1px, transparent 1.1px);
+    display: none;
+}
+
+.jg-root.jg-active {
+    display: block;
+}
+
+.jg-viewport {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.jg-viewport.jg-dragging {
+    cursor: grabbing;
+}
+
+.jg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+}
+
+.jg-edges {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.jg-edge {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 1.5px;
+}
+
+.jg-edge-label {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    fill: var(--text-secondary);
+    paint-order: stroke;
+    stroke: var(--bg-primary);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.jg-nodes {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.jg-node {
+    position: absolute;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    box-shadow: 0 1px 3px var(--shadow-color);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    overflow: hidden;
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.jg-node:hover {
+    border-color: var(--accent-secondary);
+}
+
+.jg-node-leaf {
+    text-align: center;
+}
+
+.jg-row {
+    height: 26px;
+    line-height: 26px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.jg-node-leaf .jg-row {
+    justify-content: center;
+}
+
+.jg-row:last-child {
+    border-bottom: none;
+}
+
+.jg-row-link {
+    cursor: pointer;
+}
+
+.jg-row-link:hover {
+    background: var(--bg-hover);
+}
+
+.jg-row-toggle {
+    font-size: 9px;
+    color: var(--text-secondary);
+    width: 11px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.jg-key {
+    color: var(--accent-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jg-colon {
+    color: var(--text-secondary);
+    margin-right: 2px;
+    flex-shrink: 0;
+}
+
+.jg-val,
+.jg-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jg-bracket {
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.jg-type-string { color: var(--syntax-string); }
+.jg-type-number { color: var(--syntax-number); }
+.jg-type-boolean { color: var(--syntax-keyword); font-weight: 600; }
+.jg-type-null { color: var(--text-secondary); opacity: 0.65; font-style: italic; }
+.jg-type-object,
+.jg-type-array { color: var(--text-secondary); opacity: 0.85; }
+
+/* ─── Search highlight (graph) ──────────────────────────── */
+
+.jg-row.jg-match {
+    background: color-mix(in srgb, var(--warning-color) 25%, transparent);
+}
+
+.jg-row.jg-match-active {
+    background: color-mix(in srgb, var(--accent-primary) 35%, transparent) !important;
+    outline: 1px solid var(--accent-primary);
+    outline-offset: -1px;
+}
+
+/* ─── Graph controls ─────────────────────────────────────── */
+
+.jg-controls {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 4px 14px var(--shadow-color);
+    z-index: 20;
+}
+
+.jg-ctrl-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.jg-ctrl-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent-primary);
+}
+
+.jg-ctrl-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color);
+    margin: 0 3px;
+}
+
+/* ─── Minimap ────────────────────────────────────────────── */
+
+.jg-minimap {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 160px;
+    height: 110px;
+    background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px var(--shadow-color);
+    z-index: 20;
+}
+
+.jg-minimap-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.jg-mm-node {
+    fill: var(--accent-primary);
+    opacity: 0.4;
+}
+
+.jg-minimap-viewport {
+    position: absolute;
+    border: 1.5px solid var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+    pointer-events: none;
+}
+
+/* ─── Graph empty state ──────────────────────────────────── */
+
+.jg-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.jg-empty-state i {
+    font-size: 48px;
+    color: var(--border-color);
+}
+
+.jg-empty-state p {
+    font-size: 14px;
+    font-family: "Raleway", sans-serif;
+    margin: 0;
+}
+
 /* ─── Empty State ────────────────────────────────────────── */
 
 .json-empty-state {
