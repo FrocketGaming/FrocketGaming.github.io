@@ -23,6 +23,7 @@ class SnippetsApp {
     this.historyViewMode = "code";
     this._historyVersions = [];
     this._variableCallback = null;
+    this.graphView = new SnippetGraphView(this);
 
     this.extensionToLanguage = {
       js: "javascript",
@@ -918,6 +919,11 @@ class SnippetsApp {
     document
       .getElementById("templatesBtn")
       .addEventListener("click", () => this.openTemplatesModal());
+
+    // Graph view
+    document
+      .getElementById("graphViewBtn")
+      .addEventListener("click", () => this.graphView.open());
 
     // Sort select
     document.getElementById("sortSelect").addEventListener("change", (e) => {
