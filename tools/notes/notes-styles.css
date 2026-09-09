@@ -90,6 +90,40 @@
     min-height: 42px;
     cursor: text;
     box-sizing: border-box;
+    position: relative;
+}
+
+.tag-autocomplete {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    max-width: 280px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 200;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.tag-autocomplete.show {
+    display: block;
+}
+
+.tag-suggestion-item {
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.tag-suggestion-item.active,
+.tag-suggestion-item:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
 }
 
 .tag-chips {
@@ -458,12 +492,46 @@
 }
 
 .note-list-item {
+    position: relative;
     padding: 12px;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.15s ease;
     margin-bottom: 2px;
     border: 1px solid transparent;
+}
+
+.note-list-trash-btn {
+    /* Floats as a corner badge above the card's own top-right, clear of
+       the pin/unsaved indicators that live inside the title row. */
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    color: var(--text-secondary);
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    z-index: 2;
+}
+
+.note-list-item:hover .note-list-trash-btn {
+    opacity: 1;
+}
+
+.note-list-trash-btn:hover {
+    background: var(--error-color);
+    color: var(--bg-primary);
+    border-color: var(--error-color);
 }
 
 .note-list-item:hover {

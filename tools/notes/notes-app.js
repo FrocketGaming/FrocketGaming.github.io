@@ -14,7 +14,7 @@ class NotesApp {
         this.zenMode = false;
         this.sidebarCollapsed = false;
         this.moreMenuOpen = false;
-        this.pendingAction = null; // 'trash' | 'purge'
+        this.pendingAction = null; // 'purge' when the confirm modal is open
         this.activeFilter = 'all'; // 'all' | 'today' | 'untagged' | 'archive' | 'trash' | 'tag'
         this.activeTag = null;
 
@@ -30,6 +30,9 @@ class NotesApp {
         this.wikiLinkCandidates = null;
         this.wikiLinkMatchStart = null;
         this.wikiAutocompleteIndex = 0;
+
+        this.tagSuggestions = null;
+        this.tagSuggestionIndex = 0;
 
         this.previewRenderToken = 0;
     }
@@ -356,8 +359,14 @@ class NotesApp {
                 ? `<input type="checkbox" class="note-select-checkbox" ${this.selectedIds.has(note.id) ? 'checked' : ''} onclick="event.stopPropagation(); notesApp.toggleSelectNote('${note.id}')" />`
                 : '';
 
+            const canQuickTrash = !this.selectMode && this.activeFilter !== 'archive' && this.activeFilter !== 'trash';
+            const quickTrashBtn = canQuickTrash
+                ? `<button class="note-list-trash-btn" title="Move to Trash" onclick="event.stopPropagation(); notesApp.trashCurrentNote('${note.id}')"><i class="fa-solid fa-trash"></i></button>`
+                : '';
+
             return `
                 <div class="note-list-item ${isActive ? 'active' : ''}" data-id="${note.id}" onclick="notesApp.handleNoteClick('${note.id}')">
+                    ${quickTrashBtn}
                     <div class="note-list-item-header">
                         ${checkbox}
                         <span class="note-list-title">${this.escapeHtml(displayTitle)}</span>
@@ -447,6 +456,7 @@ class NotesApp {
         this.updateEditorChrome(note);
         this.renderLinkedMentions(note);
         this.closeWikiAutocomplete();
+        this.closeTagSuggestions();
 
         document.getElementById('noteMetaCreated').textContent =
             note.createdAt ? `Created ${this.formatDate(note.createdAt)}` : '';
@@ -796,22 +806,23 @@ class NotesApp {
         this.setNoteFlags(id, { archived: false, trashed: false });
     }
 
-    openDeleteModal(action = 'trash') {
-        this.pendingAction = action;
-        const title = document.getElementById('deleteModalTitle');
-        const body = document.getElementById('deleteModalBody');
-        const btn = document.getElementById('confirmDeleteBtn');
-
-        if (action === 'purge') {
-            if (title) title.textContent = 'Delete Forever';
-            if (body) body.textContent = 'This note will be permanently deleted and cannot be recovered.';
-            if (btn) btn.textContent = 'Delete Forever';
-        } else {
-            if (title) title.textContent = 'Move to Trash';
-            if (body) body.textContent = 'This note will be moved to Trash. You can restore it anytime before it is permanently deleted.';
-            if (btn) btn.textContent = 'Move to Trash';
+    // Trash is fully reversible (Restore is one click away in the Trash
+    // view), so this skips confirmation entirely — that's the "quicker"
+    // delete path. Works both for the open note and for a note picked
+    // straight from the list via the hover trash icon.
+    trashCurrentNote(id = this.currentNoteId) {
+        if (!id) return;
+        if (id === this.currentNoteId) {
+            this.currentNoteId = null;
+            this.showEmptyState();
         }
+        this.setNoteFlags(id, { trashed: true, pinned: false });
+    }
 
+    openDeleteModal() {
+        // Only permanent deletion (purge) is ever confirmed — it's the one
+        // action here that can't be undone.
+        this.pendingAction = 'purge';
         document.getElementById('deleteModal').style.display = 'flex';
     }
 
@@ -821,30 +832,25 @@ class NotesApp {
     }
 
     async confirmDelete() {
-        if (!this.currentNoteId || !this.db || !this.user) return;
-        const action = this.pendingAction;
+        if (!this.currentNoteId || !this.db || !this.user || this.pendingAction !== 'purge') return;
         const id = this.currentNoteId;
         this.closeDeleteModal();
 
         this.currentNoteId = null;
         this.showEmptyState();
 
-        if (action === 'purge') {
-            const idx = this.notes.findIndex(n => n.id === id);
-            const removed = idx !== -1 ? this.notes.splice(idx, 1)[0] : null;
-            this.refresh();
+        const idx = this.notes.findIndex(n => n.id === id);
+        const removed = idx !== -1 ? this.notes.splice(idx, 1)[0] : null;
+        this.refresh();
 
-            try {
-                await this.db.collection('users').doc(this.user.uid)
-                    .collection('notes').doc(id)
-                    .delete();
-            } catch (err) {
-                console.error('Notes: Failed to permanently delete:', err);
-                if (removed) this.notes.splice(idx, 0, removed);
-                this.refresh();
-            }
-        } else {
-            await this.setNoteFlags(id, { trashed: true, pinned: false });
+        try {
+            await this.db.collection('users').doc(this.user.uid)
+                .collection('notes').doc(id)
+                .delete();
+        } catch (err) {
+            console.error('Notes: Failed to permanently delete:', err);
+            if (removed) this.notes.splice(idx, 0, removed);
+            this.refresh();
         }
     }
 
@@ -1108,6 +1114,66 @@ class NotesApp {
         const note = this.notes.find(n => n.id === this.currentNoteId);
         if (!note || (note.tags || []).includes(tag)) return;
         await this.updateNoteTags([...(note.tags || []), tag]);
+    }
+
+    // ─── Tag autocomplete ───────────────────────────────────────
+
+    getAllUsedTags() {
+        const counts = new Map();
+        this.notes.forEach(n => {
+            if (n.trashed) return;
+            (n.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1));
+        });
+        return counts;
+    }
+
+    renderTagSuggestions(query) {
+        const dropdown = document.getElementById('tagAutocomplete');
+        if (!dropdown) return;
+
+        const note = this.notes.find(n => n.id === this.currentNoteId);
+        const currentTags = new Set((note?.tags || []).map(t => t.toLowerCase()));
+        const q = query.trim().toLowerCase();
+
+        const candidates = [...this.getAllUsedTags().entries()]
+            .filter(([tag]) => !currentTags.has(tag.toLowerCase()))
+            .filter(([tag]) => !q || tag.toLowerCase().includes(q))
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .slice(0, 8)
+            .map(([tag]) => tag);
+
+        if (!candidates.length) { this.closeTagSuggestions(); return; }
+
+        this.tagSuggestions = candidates;
+        this.tagSuggestionIndex = 0;
+
+        dropdown.innerHTML = candidates.map((t, i) => `
+            <div class="tag-suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}" onmousedown="notesApp.applyTagSuggestion(${i})">${this.escapeHtml(t)}</div>
+        `).join('');
+        dropdown.classList.add('show');
+    }
+
+    moveTagSuggestion(dir) {
+        if (!this.tagSuggestions) return;
+        this.tagSuggestionIndex = Math.max(0, Math.min(this.tagSuggestions.length - 1, this.tagSuggestionIndex + dir));
+        document.querySelectorAll('.tag-suggestion-item').forEach((el, i) => {
+            el.classList.toggle('active', i === this.tagSuggestionIndex);
+        });
+    }
+
+    applyTagSuggestion(idx) {
+        const tag = this.tagSuggestions?.[idx];
+        if (!tag) return;
+        this.addTag(tag);
+        const input = document.getElementById('tagInput');
+        if (input) input.value = '';
+        this.closeTagSuggestions();
+    }
+
+    closeTagSuggestions() {
+        document.getElementById('tagAutocomplete')?.classList.remove('show');
+        this.tagSuggestions = null;
+        this.tagSuggestionIndex = 0;
     }
 
     async removeTag(index) {
@@ -1814,10 +1880,10 @@ class NotesApp {
         document.getElementById('exportMdBtn')?.addEventListener('click', () => this.exportNote('md'));
         document.getElementById('exportTxtBtn')?.addEventListener('click', () => this.exportNote('txt'));
         document.getElementById('archiveNoteBtn')?.addEventListener('click', () => this.toggleArchive());
-        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => { this.closeMoreMenu(); this.openDeleteModal('trash'); });
+        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => { this.closeMoreMenu(); this.trashCurrentNote(); });
 
         document.getElementById('restoreBtn')?.addEventListener('click', () => this.restoreNote());
-        document.getElementById('purgeBtn')?.addEventListener('click', () => this.openDeleteModal('purge'));
+        document.getElementById('purgeBtn')?.addEventListener('click', () => this.openDeleteModal());
         document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.confirmDelete());
 
         // Version history modal
@@ -1873,11 +1939,35 @@ class NotesApp {
             if (btn) this.setFilter('tag', btn.dataset.tag);
         });
 
+        document.getElementById('tagInput')?.addEventListener('focus', e => {
+            this.renderTagSuggestions(e.target.value);
+        });
+
+        document.getElementById('tagInput')?.addEventListener('input', e => {
+            this.renderTagSuggestions(e.target.value);
+        });
+
+        document.getElementById('tagInput')?.addEventListener('blur', () => {
+            setTimeout(() => this.closeTagSuggestions(), 150);
+        });
+
         document.getElementById('tagInput')?.addEventListener('keydown', e => {
+            const dropdown = document.getElementById('tagAutocomplete');
+            const open = dropdown && dropdown.classList.contains('show');
+
+            if (open && e.key === 'ArrowDown') { e.preventDefault(); this.moveTagSuggestion(1); return; }
+            if (open && e.key === 'ArrowUp') { e.preventDefault(); this.moveTagSuggestion(-1); return; }
+            if (open && e.key === 'Escape') { e.preventDefault(); this.closeTagSuggestions(); return; }
+
             if (e.key === 'Enter') {
                 e.preventDefault();
+                if (open && this.tagSuggestions?.length) {
+                    this.applyTagSuggestion(this.tagSuggestionIndex);
+                    return;
+                }
                 const val = e.target.value.trim();
                 if (val) { this.addTag(val); e.target.value = ''; }
+                this.closeTagSuggestions();
             }
         });
 
@@ -1920,6 +2010,9 @@ class NotesApp {
                 !document.getElementById('wikiLinkAutocomplete')?.contains(e.target)) {
                 this.closeWikiAutocomplete();
             }
+            if (!document.getElementById('tagInputWrapper')?.contains(e.target)) {
+                this.closeTagSuggestions();
+            }
         });
 
         // Keyboard shortcuts
@@ -1936,6 +2029,14 @@ class NotesApp {
             if (e.ctrlKey && e.key === 'n' && !inInput) {
                 e.preventDefault();
                 this.newNote();
+            }
+
+            if (e.ctrlKey && (e.key === 'Backspace' || e.key === 'Delete') && !inInput && this.currentNoteId) {
+                const note = this.notes.find(n => n.id === this.currentNoteId);
+                if (note && !note.trashed) {
+                    e.preventDefault();
+                    this.trashCurrentNote();
+                }
             }
 
             if (e.ctrlKey && e.key === 'k') {

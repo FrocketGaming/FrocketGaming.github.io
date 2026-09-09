@@ -29,6 +29,7 @@
                     <a class="nav-pill-item" href="../txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Txt Formatter</span></span></a>
                     <a class="nav-pill-item" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Snippets</span></span></a>
                     <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label"><span class="nav-pill-label-text">To-Do List</span></span></a>
+                    <a class="nav-pill-item active" href="../notes/index.html"><i class="fa-solid fa-note-sticky"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Notes</span></span></a>
                     <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label"><span class="nav-pill-label-text">CSV Viewer</span></span></a>
                     <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Regex Tester</span></span></a>
                     <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Image Editor</span></span></a>
@@ -82,6 +83,7 @@
                         <div class="shortcut-row"><kbd>Ctrl+B</kbd> Bold</div>
                         <div class="shortcut-row"><kbd>Ctrl+I</kbd> Italic</div>
                         <div class="shortcut-row"><kbd>[[</kbd> Link to another note</div>
+                        <div class="shortcut-row"><kbd>Ctrl+Backspace</kbd> Move to Trash</div>
                         <div class="shortcut-row"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> Navigate notes</div>
                         <div class="shortcut-row"><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> Indent</div>
                         <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect / Exit zen</div>
@@ -227,7 +229,8 @@
 
                         <div class="tag-input-wrapper" id="tagInputWrapper">
                             <div class="tag-chips" id="tagChips"></div>
-                            <input type="text" id="tagInput" class="tag-input" placeholder="Add tag and press Enter..." />
+                            <input type="text" id="tagInput" class="tag-input" placeholder="Add tag and press Enter..." autocomplete="off" />
+                            <div class="tag-autocomplete" id="tagAutocomplete"></div>
                         </div>
 
                         <div class="editor-body" id="editorBody">
@@ -268,18 +271,18 @@
             </div>
         </div>
 
-        <!-- Archive / Trash / Delete-forever confirmation modal -->
+        <!-- Delete-forever confirmation modal (the only destructive, unrecoverable action) -->
         <div id="deleteModal" class="modal">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3 id="deleteModalTitle">Move to Trash</h3>
+                    <h3>Delete Forever</h3>
                     <span class="modal-close" onclick="notesApp.closeDeleteModal()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p id="deleteModalBody">This note will be moved to Trash. You can restore it later.</p>
+                    <p>This note will be permanently deleted and cannot be recovered.</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="clear-bnt" id="confirmDeleteBtn">Move to Trash</button>
+                    <button class="clear-bnt" id="confirmDeleteBtn">Delete Forever</button>
                     <button class="format-btn" onclick="notesApp.closeDeleteModal()">Cancel</button>
                 </div>
             </div>
