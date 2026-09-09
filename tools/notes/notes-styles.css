@@ -175,7 +175,7 @@
     padding: 40px;
 }
 
-.empty-state i {
+.empty-state > i {
     font-size: 64px;
     margin-bottom: 20px;
     color: var(--border-color);
