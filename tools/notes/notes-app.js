@@ -12,8 +12,10 @@ class NotesApp {
         this.searchQuery = '';
         this.zenMode = false;
         this.sidebarCollapsed = false;
-        this.exportDropdownOpen = false;
-        this.pendingAction = null; // 'archive' | 'delete'
+        this.moreMenuOpen = false;
+        this.pendingAction = null; // 'trash' | 'purge'
+        this.activeFilter = 'all'; // 'all' | 'today' | 'untagged' | 'archive' | 'trash' | 'tag'
+        this.activeTag = null;
     }
 
     init() {
@@ -110,14 +112,16 @@ class NotesApp {
                         this.notes.push({ ...doc.data(), _firestoreId: doc.id });
                     });
 
-                    this.renderNotesList();
+                    this.refresh();
                     this.setSyncStatus('synced');
 
                     if (this.currentNoteId) {
-                        const exists = this.notes.find(n => n.id === this.currentNoteId && !n.archived);
+                        const exists = this.notes.find(n => n.id === this.currentNoteId);
                         if (!exists) {
                             this.currentNoteId = null;
                             this.showEmptyState();
+                        } else {
+                            this.updateEditorChrome(exists);
                         }
                     }
                 },
@@ -151,30 +155,74 @@ class NotesApp {
         else if (status === 'error') { dot.classList.add('error'); label.textContent = 'Sync error'; }
     }
 
-    // ─── Notes List ───────────────────────────────────────────
+    // ─── Filtering / Navigation ─────────────────────────────────
+
+    refresh() {
+        this.renderNotesList();
+        this.renderNavPanel();
+    }
+
+    isToday(iso) {
+        if (!iso) return false;
+        const d = new Date(iso);
+        const now = new Date();
+        return d.getFullYear() === now.getFullYear() &&
+               d.getMonth() === now.getMonth() &&
+               d.getDate() === now.getDate();
+    }
+
+    setFilter(filter, tag = null) {
+        this.activeFilter = filter;
+        this.activeTag = tag;
+        this.refresh();
+    }
+
+    getViewTitle() {
+        switch (this.activeFilter) {
+            case 'today': return 'Today';
+            case 'untagged': return 'Untagged';
+            case 'archive': return 'Archive';
+            case 'trash': return 'Trash';
+            case 'tag': return `#${this.activeTag}`;
+            default: return 'All Notes';
+        }
+    }
 
     getSortedFiltered() {
         const query = this.searchQuery.toLowerCase();
+        let pool;
 
-        let filtered = this.notes.filter(n => !n.archived);
+        if (this.activeFilter === 'archive') {
+            pool = this.notes.filter(n => n.archived && !n.trashed);
+        } else if (this.activeFilter === 'trash') {
+            pool = this.notes.filter(n => n.trashed);
+        } else {
+            pool = this.notes.filter(n => !n.archived && !n.trashed);
+            if (this.activeFilter === 'today') {
+                pool = pool.filter(n => this.isToday(n.updatedAt));
+            } else if (this.activeFilter === 'untagged') {
+                pool = pool.filter(n => !(n.tags && n.tags.length));
+            } else if (this.activeFilter === 'tag' && this.activeTag) {
+                pool = pool.filter(n => (n.tags || []).includes(this.activeTag));
+            }
+        }
 
         if (query) {
-            filtered = filtered.filter(n =>
+            pool = pool.filter(n =>
                 (n.title || '').toLowerCase().includes(query) ||
                 (n.content || '').toLowerCase().includes(query) ||
                 (n.tags || []).some(t => t.toLowerCase().includes(query))
             );
         }
 
-        filtered.sort((a, b) => {
-            const aTitle = a.title || this.getAutoTitle(a.content) || 'Untitled';
-            const bTitle = b.title || this.getAutoTitle(b.content) || 'Untitled';
-            return aTitle.localeCompare(bTitle);
-        });
+        pool = [...pool].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 
-        const pinned = filtered.filter(n => n.pinned);
-        const unpinned = filtered.filter(n => !n.pinned);
-        return [...pinned, ...unpinned];
+        if (this.activeFilter !== 'archive' && this.activeFilter !== 'trash') {
+            const pinned = pool.filter(n => n.pinned);
+            const unpinned = pool.filter(n => !n.pinned);
+            return [...pinned, ...unpinned];
+        }
+        return pool;
     }
 
     getAutoTitle(content) {
@@ -185,20 +233,69 @@ class NotesApp {
             .slice(0, 50);
     }
 
+    renderNavPanel() {
+        const active = this.notes.filter(n => !n.archived && !n.trashed);
+        const archived = this.notes.filter(n => n.archived && !n.trashed);
+        const trashed = this.notes.filter(n => n.trashed);
+        const today = active.filter(n => this.isToday(n.updatedAt));
+        const untagged = active.filter(n => !(n.tags && n.tags.length));
+
+        this.setNavCount('navCountAll', active.length);
+        this.setNavCount('navCountToday', today.length);
+        this.setNavCount('navCountUntagged', untagged.length);
+        this.setNavCount('navCountArchive', archived.length);
+        this.setNavCount('navCountTrash', trashed.length);
+
+        document.querySelectorAll('.nav-item[data-filter]').forEach(btn => {
+            btn.classList.toggle('active', this.activeFilter === btn.dataset.filter);
+        });
+
+        const tagCounts = new Map();
+        active.forEach(n => (n.tags || []).forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)));
+        const sortedTags = [...tagCounts.keys()].sort((a, b) => a.localeCompare(b));
+
+        const list = document.getElementById('navTagsList');
+        if (!list) return;
+
+        if (!sortedTags.length) {
+            list.innerHTML = '<div class="nav-tags-empty">No tags yet</div>';
+            return;
+        }
+
+        list.innerHTML = sortedTags.map(tag => `
+            <button class="nav-tag-item ${this.activeFilter === 'tag' && this.activeTag === tag ? 'active' : ''}" data-tag="${this.escapeHtml(tag)}">
+                <i class="fa-solid fa-hashtag"></i>
+                <span class="nav-tag-label">${this.escapeHtml(tag)}</span>
+                <span class="nav-item-count">${tagCounts.get(tag)}</span>
+            </button>
+        `).join('');
+    }
+
+    setNavCount(id, n) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = n > 0 ? n : '';
+    }
+
+    // ─── Notes List ───────────────────────────────────────────
+
     renderNotesList() {
         const list = document.getElementById('notesList');
         const sorted = this.getSortedFiltered();
 
-        const totalActive = this.notes.filter(n => !n.archived).length;
         const countEl = document.getElementById('notesCount');
-        if (countEl) countEl.textContent = `Notes${totalActive > 0 ? ` (${totalActive})` : ''}`;
+        const title = this.getViewTitle();
+        if (countEl) countEl.textContent = sorted.length > 0 ? `${title} (${sorted.length})` : title;
 
         if (sorted.length === 0) {
-            list.innerHTML = `<div class="notes-list-empty">${
-                this.searchQuery
-                    ? 'No notes match your search.'
-                    : 'No notes yet.<br>Click <strong>New Note</strong> to get started.'
-            }</div>`;
+            let msg;
+            if (this.searchQuery) msg = 'No notes match your search.';
+            else if (this.activeFilter === 'archive') msg = 'Archive is empty.';
+            else if (this.activeFilter === 'trash') msg = 'Trash is empty.';
+            else if (this.activeFilter === 'today') msg = 'No notes updated today.';
+            else if (this.activeFilter === 'untagged') msg = 'No untagged notes.';
+            else if (this.activeFilter === 'tag') msg = `No notes tagged #${this.escapeHtml(this.activeTag || '')}.`;
+            else msg = 'No notes yet.<br>Click <strong>New Note</strong> to get started.';
+            list.innerHTML = `<div class="notes-list-empty">${msg}</div>`;
             return;
         }
 
@@ -225,7 +322,7 @@ class NotesApp {
                     <div class="note-list-item-header">
                         <span class="note-list-title">${this.escapeHtml(displayTitle)}</span>
                         <div class="note-list-indicators">
-                            ${note.pinned ? '<i class="fa-solid fa-thumbtack pin-indicator" title="Pinned"></i>' : ''}
+                            ${note.pinned && this.activeFilter !== 'archive' && this.activeFilter !== 'trash' ? '<i class="fa-solid fa-thumbtack pin-indicator" title="Pinned"></i>' : ''}
                             ${isActive && hasUnsaved ? '<span class="unsaved-dot" title="Unsaved changes"></span>' : ''}
                         </div>
                     </div>
@@ -287,15 +384,6 @@ class NotesApp {
         document.getElementById('noteTitleInput').value = note.title || '';
         document.getElementById('noteContentInput').value = note.content || '';
 
-        const pinBtn = document.getElementById('pinBtn');
-        if (note.pinned) {
-            pinBtn.classList.add('active');
-            pinBtn.title = 'Unpin note';
-        } else {
-            pinBtn.classList.remove('active');
-            pinBtn.title = 'Pin note';
-        }
-
         if (this.previewMode) {
             this.previewMode = false;
             document.getElementById('noteContentInput').style.display = 'block';
@@ -311,6 +399,7 @@ class NotesApp {
 
         this.renderTagChips(note.tags || []);
         this.updateWordCount(note.content || '');
+        this.updateEditorChrome(note);
 
         document.getElementById('noteMetaCreated').textContent =
             note.createdAt ? `Created ${this.formatDate(note.createdAt)}` : '';
@@ -322,14 +411,84 @@ class NotesApp {
         if (charWarning) charWarning.style.display = 'none';
     }
 
+    // ─── Editor chrome (pin state, archive/trash banner, menu labels) ──
+
+    updateEditorChrome(note) {
+        const pinBtn = document.getElementById('pinBtn');
+        if (pinBtn) {
+            if (note.pinned) { pinBtn.classList.add('active'); pinBtn.title = 'Unpin note'; }
+            else { pinBtn.classList.remove('active'); pinBtn.title = 'Pin note'; }
+        }
+
+        const banner = document.getElementById('noteStatusBanner');
+        const text = document.getElementById('noteStatusText');
+        const icon = document.getElementById('noteStatusIcon');
+        const restoreBtn = document.getElementById('restoreBtn');
+        const purgeBtn = document.getElementById('purgeBtn');
+        const titleInput = document.getElementById('noteTitleInput');
+        const contentInput = document.getElementById('noteContentInput');
+        const tagInput = document.getElementById('tagInput');
+        const archiveBtn = document.getElementById('archiveNoteBtn');
+        const trashBtn = document.getElementById('deleteNoteBtn');
+
+        const readOnly = !!note.trashed;
+        if (titleInput) titleInput.disabled = readOnly;
+        if (contentInput) contentInput.disabled = readOnly;
+        if (tagInput) tagInput.disabled = readOnly;
+
+        if (banner) {
+            if (note.trashed) {
+                banner.style.display = 'flex';
+                icon.className = 'fa-solid fa-trash';
+                text.textContent = 'This note is in Trash.';
+                purgeBtn.style.display = 'inline-flex';
+            } else if (note.archived) {
+                banner.style.display = 'flex';
+                icon.className = 'fa-solid fa-box-archive';
+                text.textContent = 'This note is archived.';
+                purgeBtn.style.display = 'none';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        if (archiveBtn && trashBtn) {
+            if (note.trashed) {
+                archiveBtn.style.display = 'none';
+                trashBtn.style.display = 'none';
+            } else {
+                archiveBtn.style.display = 'flex';
+                trashBtn.style.display = 'flex';
+                archiveBtn.innerHTML = note.archived
+                    ? '<i class="fa-solid fa-box-open"></i> Unarchive'
+                    : '<i class="fa-solid fa-box-archive"></i> Archive';
+            }
+        }
+
+        this.syncFormatBarVisibility();
+    }
+
+    syncFormatBarVisibility() {
+        const bar = document.getElementById('editorFormatBar');
+        if (!bar) return;
+        const note = this.notes.find(n => n.id === this.currentNoteId);
+        const readOnly = note && note.trashed;
+        bar.style.display = (!readOnly && !this.previewMode && !this.splitView) ? 'flex' : 'none';
+    }
+
     // ─── CRUD ─────────────────────────────────────────────────
 
     async newNote() {
         if (!this.db || !this.user) return;
 
+        if (this.activeFilter !== 'all') {
+            this.activeFilter = 'all';
+            this.activeTag = null;
+        }
+
         const id = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const now = new Date().toISOString();
-        const note = { id, title: '', content: '', tags: [], pinned: false, archived: false, createdAt: now, updatedAt: now };
+        const note = { id, title: '', content: '', tags: [], pinned: false, archived: false, trashed: false, createdAt: now, updatedAt: now };
 
         if (this.saveTimer) {
             clearTimeout(this.saveTimer);
@@ -338,7 +497,7 @@ class NotesApp {
 
         this.currentNoteId = id;
         this.notes.unshift(note);
-        this.renderNotesList();
+        this.refresh();
         this.showEditor(note);
 
         setTimeout(() => document.getElementById('noteTitleInput')?.focus(), 50);
@@ -349,7 +508,7 @@ class NotesApp {
             console.error('Notes: Failed to create note:', err);
             this.notes = this.notes.filter(n => n.id !== id);
             this.currentNoteId = null;
-            this.renderNotesList();
+            this.refresh();
             this.showEmptyState();
         }
     }
@@ -362,13 +521,13 @@ class NotesApp {
         const id = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const now = new Date().toISOString();
         const { _firestoreId, ...rest } = note;
-        const duplicate = { ...rest, id, title: note.title ? `${note.title} (copy)` : '', pinned: false, archived: false, createdAt: now, updatedAt: now };
+        const duplicate = { ...rest, id, title: note.title ? `${note.title} (copy)` : '', pinned: false, archived: false, trashed: false, createdAt: now, updatedAt: now };
 
         if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
 
         this.currentNoteId = id;
         this.notes.unshift(duplicate);
-        this.renderNotesList();
+        this.refresh();
         this.showEditor(duplicate);
 
         try {
@@ -377,7 +536,7 @@ class NotesApp {
             console.error('Notes: Failed to duplicate:', err);
             this.notes = this.notes.filter(n => n.id !== id);
             this.currentNoteId = null;
-            this.renderNotesList();
+            this.refresh();
             this.showEmptyState();
         }
     }
@@ -413,7 +572,7 @@ class NotesApp {
         if (!titleEl || !contentEl) return;
 
         const note = this.notes.find(n => n.id === this.currentNoteId);
-        if (!note) return;
+        if (!note || note.trashed) return;
 
         const title = titleEl.value;
         const content = contentEl.value;
@@ -445,20 +604,59 @@ class NotesApp {
         }
     }
 
-    openDeleteModal(action = 'archive') {
+    // ─── Archive / Trash lifecycle ──────────────────────────────
+
+    async setNoteFlags(id, flags) {
+        if (!this.db || !this.user) return;
+        const idx = this.notes.findIndex(n => n.id === id);
+        if (idx === -1) return;
+
+        const prev = this.notes[idx];
+        const updatedAt = new Date().toISOString();
+        this.notes[idx] = { ...prev, ...flags, updatedAt };
+
+        if (this.currentNoteId === id) this.updateEditorChrome(this.notes[idx]);
+        this.refresh();
+
+        try {
+            await this.db.collection('users').doc(this.user.uid)
+                .collection('notes').doc(id)
+                .update({ ...flags, updatedAt });
+        } catch (err) {
+            console.error('Notes: Failed to update note:', err);
+            this.notes[idx] = prev;
+            if (this.currentNoteId === id) this.updateEditorChrome(prev);
+            this.refresh();
+        }
+    }
+
+    toggleArchive() {
+        if (!this.currentNoteId) return;
+        const note = this.notes.find(n => n.id === this.currentNoteId);
+        if (!note) return;
+        this.closeMoreMenu();
+        this.setNoteFlags(this.currentNoteId, { archived: !note.archived });
+    }
+
+    restoreNote(id = this.currentNoteId) {
+        if (!id) return;
+        this.setNoteFlags(id, { archived: false, trashed: false });
+    }
+
+    openDeleteModal(action = 'trash') {
         this.pendingAction = action;
         const title = document.getElementById('deleteModalTitle');
         const body = document.getElementById('deleteModalBody');
         const btn = document.getElementById('confirmDeleteBtn');
 
-        if (action === 'delete') {
-            if (title) title.textContent = 'Delete Note';
+        if (action === 'purge') {
+            if (title) title.textContent = 'Delete Forever';
             if (body) body.textContent = 'This note will be permanently deleted and cannot be recovered.';
-            if (btn) btn.textContent = 'Delete';
+            if (btn) btn.textContent = 'Delete Forever';
         } else {
-            if (title) title.textContent = 'Archive Note';
-            if (body) body.textContent = 'This note will be archived and hidden from your list.';
-            if (btn) btn.textContent = 'Archive';
+            if (title) title.textContent = 'Move to Trash';
+            if (body) body.textContent = 'This note will be moved to Trash. You can restore it anytime before it is permanently deleted.';
+            if (btn) btn.textContent = 'Move to Trash';
         }
 
         document.getElementById('deleteModal').style.display = 'flex';
@@ -472,43 +670,28 @@ class NotesApp {
     async confirmDelete() {
         if (!this.currentNoteId || !this.db || !this.user) return;
         const action = this.pendingAction;
+        const id = this.currentNoteId;
         this.closeDeleteModal();
 
-        const id = this.currentNoteId;
         this.currentNoteId = null;
         this.showEmptyState();
 
-        if (action === 'delete') {
-            // Hard delete
+        if (action === 'purge') {
             const idx = this.notes.findIndex(n => n.id === id);
             const removed = idx !== -1 ? this.notes.splice(idx, 1)[0] : null;
-            this.renderNotesList();
+            this.refresh();
 
             try {
                 await this.db.collection('users').doc(this.user.uid)
                     .collection('notes').doc(id)
                     .delete();
             } catch (err) {
-                console.error('Notes: Failed to delete:', err);
-                if (removed) { this.notes.splice(idx, 0, removed); }
-                this.renderNotesList();
+                console.error('Notes: Failed to permanently delete:', err);
+                if (removed) this.notes.splice(idx, 0, removed);
+                this.refresh();
             }
         } else {
-            // Soft archive
-            const idx = this.notes.findIndex(n => n.id === id);
-            if (idx !== -1) this.notes[idx].archived = true;
-            this.renderNotesList();
-
-            try {
-                await this.db.collection('users').doc(this.user.uid)
-                    .collection('notes').doc(id)
-                    .update({ archived: true, updatedAt: new Date().toISOString() });
-            } catch (err) {
-                console.error('Notes: Failed to archive:', err);
-                const i = this.notes.findIndex(n => n.id === id);
-                if (i !== -1) this.notes[i].archived = false;
-                this.renderNotesList();
-            }
+            await this.setNoteFlags(id, { trashed: true, pinned: false });
         }
     }
 
@@ -519,8 +702,9 @@ class NotesApp {
             await navigator.clipboard.writeText(content);
             const btn = document.getElementById('copyContentBtn');
             if (btn) {
-                btn.querySelector('i').className = 'fa-solid fa-check';
-                setTimeout(() => { btn.querySelector('i').className = 'fa-solid fa-clipboard'; }, 1500);
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check';
+                setTimeout(() => { icon.className = 'fa-solid fa-clipboard'; }, 1500);
             }
         } catch (err) {
             console.error('Notes: Failed to copy:', err);
@@ -541,30 +725,24 @@ class NotesApp {
         a.download = `${title}.${format}`;
         a.click();
         URL.revokeObjectURL(url);
-        this.closeExportDropdown();
+        this.closeMoreMenu();
     }
 
-    toggleExportDropdown() {
-        const dropdown = document.getElementById('exportDropdown');
-        const btn = document.getElementById('exportBtn');
-        if (!dropdown || !btn) return;
+    // ─── More menu ──────────────────────────────────────────────
 
-        this.exportDropdownOpen = !this.exportDropdownOpen;
-
-        if (this.exportDropdownOpen) {
-            const rect = btn.getBoundingClientRect();
-            dropdown.style.top = `${rect.bottom + 4}px`;
-            dropdown.style.right = `${window.innerWidth - rect.right}px`;
-            dropdown.style.display = 'block';
-        } else {
-            dropdown.style.display = 'none';
-        }
+    toggleMoreMenu() {
+        const dropdown = document.getElementById('moreMenuDropdown');
+        const btn = document.getElementById('moreMenuBtn');
+        if (!dropdown) return;
+        this.moreMenuOpen = !this.moreMenuOpen;
+        dropdown.classList.toggle('show', this.moreMenuOpen);
+        btn?.classList.toggle('active', this.moreMenuOpen);
     }
 
-    closeExportDropdown() {
-        this.exportDropdownOpen = false;
-        const dropdown = document.getElementById('exportDropdown');
-        if (dropdown) dropdown.style.display = 'none';
+    closeMoreMenu() {
+        this.moreMenuOpen = false;
+        document.getElementById('moreMenuDropdown')?.classList.remove('show');
+        document.getElementById('moreMenuBtn')?.classList.remove('active');
     }
 
     // ─── Word Count ───────────────────────────────────────────
@@ -598,17 +776,16 @@ class NotesApp {
 
     toggleSidebar() {
         this.sidebarCollapsed = !this.sidebarCollapsed;
-        const panel = document.querySelector('.notes-list-panel');
+        const panel = document.querySelector('.notes-sidebar');
         const btn = document.getElementById('collapseSidebarBtn');
+        if (!panel) return;
 
         if (this.sidebarCollapsed) {
             panel.classList.add('collapsed');
-            btn.querySelector('i').className = 'fa-solid fa-chevron-right';
-            btn.title = 'Expand sidebar';
+            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-right'; btn.title = 'Expand sidebar'; }
         } else {
             panel.classList.remove('collapsed');
-            btn.querySelector('i').className = 'fa-solid fa-chevron-left';
-            btn.title = 'Collapse sidebar';
+            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-left'; btn.title = 'Collapse sidebar'; }
         }
     }
 
@@ -646,6 +823,7 @@ class NotesApp {
         const idx = this.notes.findIndex(n => n.id === this.currentNoteId);
         if (idx !== -1) this.notes[idx] = { ...this.notes[idx], tags };
         this.renderTagChips(tags);
+        this.renderNavPanel();
 
         try {
             await this.db.collection('users').doc(this.user.uid)
@@ -660,7 +838,7 @@ class NotesApp {
 
     async togglePin() {
         const note = this.notes.find(n => n.id === this.currentNoteId);
-        if (!note || !this.db || !this.user) return;
+        if (!note || !this.db || !this.user || note.trashed) return;
 
         const pinned = !note.pinned;
         const idx = this.notes.findIndex(n => n.id === this.currentNoteId);
@@ -717,6 +895,7 @@ class NotesApp {
             textarea.focus();
         }
         body?.classList.remove('split');
+        this.syncFormatBarVisibility();
     }
 
     toggleSplit() {
@@ -747,6 +926,7 @@ class NotesApp {
                 btn.classList.remove('active');
             }
         }
+        this.syncFormatBarVisibility();
     }
 
     // ─── Markdown Editing Helpers ─────────────────────────────
@@ -838,6 +1018,7 @@ class NotesApp {
     handleInlineFormat(e, wrapper) {
         e.preventDefault();
         const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
         const start = ta.selectionStart;
         const end = ta.selectionEnd;
         const selected = ta.value.slice(start, end);
@@ -846,6 +1027,117 @@ class NotesApp {
         // Place cursor inside wrappers if no selection
         const cursorPos = selected ? start + insert.length : start + wrapper.length;
         ta.selectionStart = ta.selectionEnd = cursorPos;
+        ta.focus();
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    insertHeading() {
+        const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
+        const value = ta.value;
+        const pos = ta.selectionStart;
+        const lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+        let lineEnd = value.indexOf('\n', pos);
+        if (lineEnd === -1) lineEnd = value.length;
+        const line = value.slice(lineStart, lineEnd);
+        const match = line.match(/^(#{1,3})\s/);
+        let newLine;
+        if (!match) newLine = '# ' + line;
+        else if (match[1].length < 3) newLine = '#'.repeat(match[1].length + 1) + ' ' + line.slice(match[0].length);
+        else newLine = line.slice(match[0].length);
+
+        ta.value = value.slice(0, lineStart) + newLine + value.slice(lineEnd);
+        const delta = newLine.length - line.length;
+        ta.selectionStart = ta.selectionEnd = Math.max(lineStart, pos + delta);
+        ta.focus();
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    togglePrefixOnLines(prefixOf, makePrefix) {
+        const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
+        const value = ta.value;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        let lineEnd = value.indexOf('\n', end > start ? end - 1 : end);
+        if (lineEnd === -1) lineEnd = value.length;
+        const block = value.slice(lineStart, lineEnd);
+        const lines = block.split('\n');
+
+        const nonEmpty = lines.filter(l => l.trim() !== '');
+        const allPrefixed = nonEmpty.length > 0 && nonEmpty.every(l => prefixOf(l));
+
+        let counter = 1;
+        const newLines = lines.map(l => {
+            if (l.trim() === '') return l;
+            const existing = prefixOf(l);
+            if (allPrefixed) {
+                return existing ? l.slice(existing.length) : l;
+            }
+            const p = makePrefix(counter++);
+            return existing ? p + l.slice(existing.length) : p + l;
+        });
+
+        const newBlock = newLines.join('\n');
+        ta.value = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+        ta.selectionStart = lineStart;
+        ta.selectionEnd = lineStart + newBlock.length;
+        ta.focus();
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    toggleChecklist() {
+        this.togglePrefixOnLines(
+            l => (l.match(/^-\s\[[ x]\]\s/) || [])[0],
+            () => '- [ ] '
+        );
+    }
+
+    toggleBulletList() {
+        this.togglePrefixOnLines(
+            l => (l.match(/^-\s(?!\[[ x]\]\s)/) || [])[0],
+            () => '- '
+        );
+    }
+
+    toggleNumberedList() {
+        this.togglePrefixOnLines(
+            l => (l.match(/^\d+\.\s/) || [])[0],
+            (i) => `${i}. `
+        );
+    }
+
+    insertLink() {
+        const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
+        const start = ta.selectionStart, end = ta.selectionEnd;
+        const selected = ta.value.slice(start, end);
+        const insert = selected ? `[${selected}](url)` : `[text](url)`;
+        ta.value = ta.value.slice(0, start) + insert + ta.value.slice(end);
+
+        const urlIdx = start + insert.lastIndexOf('url');
+        ta.selectionStart = urlIdx;
+        ta.selectionEnd = urlIdx + 3;
+        ta.focus();
+        this.scheduleAutoSave();
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    insertCodeFormat() {
+        const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
+        const start = ta.selectionStart, end = ta.selectionEnd;
+        const selected = ta.value.slice(start, end);
+        const wrapper = selected.includes('\n') ? '```' : '`';
+        const insert = selected ? `${wrapper}${selected}${wrapper}` : `${wrapper}${wrapper}`;
+        ta.value = ta.value.slice(0, start) + insert + ta.value.slice(end);
+        const cursorPos = selected ? start + insert.length : start + wrapper.length;
+        ta.selectionStart = ta.selectionEnd = cursorPos;
+        ta.focus();
         this.scheduleAutoSave();
         if (this.splitView) this.renderPreview(ta.value);
     }
@@ -896,13 +1188,14 @@ class NotesApp {
         document.getElementById('signInBtn')?.addEventListener('click', () => this.signIn());
         document.getElementById('signOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('newNoteBtn')?.addEventListener('click', () => this.newNote());
+        document.getElementById('emptyStateNewBtn')?.addEventListener('click', () => this.newNote());
 
         document.getElementById('searchInput')?.addEventListener('input', e => {
             this.searchQuery = e.target.value;
             this.renderNotesList();
         });
 
-document.getElementById('noteContentInput')?.addEventListener('input', () => {
+        document.getElementById('noteContentInput')?.addEventListener('input', () => {
             this.scheduleAutoSave();
             const content = document.getElementById('noteContentInput').value;
             this.updateWordCount(content);
@@ -928,17 +1221,46 @@ document.getElementById('noteContentInput')?.addEventListener('input', () => {
         document.getElementById('previewToggleBtn')?.addEventListener('click', () => this.togglePreview());
         document.getElementById('splitViewBtn')?.addEventListener('click', () => this.toggleSplit());
         document.getElementById('pinBtn')?.addEventListener('click', () => this.togglePin());
-        document.getElementById('duplicateBtn')?.addEventListener('click', () => this.duplicateNote());
-        document.getElementById('copyContentBtn')?.addEventListener('click', () => this.copyContent());
         document.getElementById('zenBtn')?.addEventListener('click', () => this.toggleZen());
         document.getElementById('collapseSidebarBtn')?.addEventListener('click', () => this.toggleSidebar());
-        document.getElementById('archiveNoteBtn')?.addEventListener('click', () => this.openDeleteModal('archive'));
-        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => this.openDeleteModal('delete'));
-        document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.confirmDelete());
 
-        document.getElementById('exportBtn')?.addEventListener('click', () => this.toggleExportDropdown());
+        document.getElementById('moreMenuBtn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            this.toggleMoreMenu();
+        });
+        document.getElementById('duplicateBtn')?.addEventListener('click', () => { this.duplicateNote(); this.closeMoreMenu(); });
+        document.getElementById('copyContentBtn')?.addEventListener('click', () => { this.copyContent(); this.closeMoreMenu(); });
         document.getElementById('exportMdBtn')?.addEventListener('click', () => this.exportNote('md'));
         document.getElementById('exportTxtBtn')?.addEventListener('click', () => this.exportNote('txt'));
+        document.getElementById('archiveNoteBtn')?.addEventListener('click', () => this.toggleArchive());
+        document.getElementById('deleteNoteBtn')?.addEventListener('click', () => { this.closeMoreMenu(); this.openDeleteModal('trash'); });
+
+        document.getElementById('restoreBtn')?.addEventListener('click', () => this.restoreNote());
+        document.getElementById('purgeBtn')?.addEventListener('click', () => this.openDeleteModal('purge'));
+        document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.confirmDelete());
+
+        document.querySelectorAll('.fmt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.dataset.cmd;
+                if (cmd === 'heading') this.insertHeading();
+                else if (cmd === 'checklist') this.toggleChecklist();
+                else if (cmd === 'bullet') this.toggleBulletList();
+                else if (cmd === 'numbered') this.toggleNumberedList();
+                else if (cmd === 'bold') this.handleInlineFormat({ preventDefault() {} }, '**');
+                else if (cmd === 'italic') this.handleInlineFormat({ preventDefault() {} }, '_');
+                else if (cmd === 'code') this.insertCodeFormat();
+                else if (cmd === 'link') this.insertLink();
+            });
+        });
+
+        document.querySelectorAll('.nav-item[data-filter]').forEach(btn => {
+            btn.addEventListener('click', () => this.setFilter(btn.dataset.filter));
+        });
+
+        document.getElementById('navTagsList')?.addEventListener('click', e => {
+            const btn = e.target.closest('.nav-tag-item');
+            if (btn) this.setFilter('tag', btn.dataset.tag);
+        });
 
         document.getElementById('tagInput')?.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
@@ -973,12 +1295,12 @@ document.getElementById('noteContentInput')?.addEventListener('input', () => {
             }
         });
 
-        // Close export dropdown + shortcuts on outside click
+        // Close more-menu + shortcuts on outside click
         document.addEventListener('click', e => {
-            if (this.exportDropdownOpen &&
-                !document.getElementById('exportBtn')?.contains(e.target) &&
-                !document.getElementById('exportDropdown')?.contains(e.target)) {
-                this.closeExportDropdown();
+            if (this.moreMenuOpen &&
+                !document.getElementById('moreMenuBtn')?.contains(e.target) &&
+                !document.getElementById('moreMenuDropdown')?.contains(e.target)) {
+                this.closeMoreMenu();
             }
             if (!document.getElementById('shortcutsBtn')?.contains(e.target)) {
                 document.getElementById('shortcutsTooltip')?.classList.remove('show');
@@ -1015,8 +1337,8 @@ document.getElementById('noteContentInput')?.addEventListener('input', () => {
                 const tooltip = document.getElementById('shortcutsTooltip');
                 if (tooltip?.classList.contains('show')) {
                     tooltip.classList.remove('show');
-                } else if (this.exportDropdownOpen) {
-                    this.closeExportDropdown();
+                } else if (this.moreMenuOpen) {
+                    this.closeMoreMenu();
                 } else if (this.zenMode) {
                     this.toggleZen();
                 } else if (document.getElementById('deleteModal').style.display === 'flex') {

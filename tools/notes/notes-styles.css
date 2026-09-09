@@ -188,6 +188,27 @@
     margin: 0;
 }
 
+.empty-state-cta {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: "Raleway", sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+}
+
+.empty-state-cta:hover {
+    opacity: 0.85;
+}
+
 /* ─── Search ─────────────────────────────────────────────── */
 
 .search-wrapper {
@@ -299,7 +320,126 @@
     overflow: hidden;
 }
 
-/* ─── Notes List Panel ───────────────────────────────────── */
+/* ─── Sidebar (Nav panel + Notes List Panel) ─────────────── */
+
+.notes-sidebar {
+    display: flex;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.notes-nav-panel {
+    width: 190px;
+    flex-shrink: 0;
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.notes-nav-header {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.notes-nav-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 8px;
+}
+
+.nav-section {
+    margin-bottom: 14px;
+}
+
+.nav-item,
+.nav-tag-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: "Raleway", sans-serif;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+}
+
+.nav-item i,
+.nav-tag-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.nav-item:hover,
+.nav-tag-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.nav-item.active,
+.nav-tag-item.active {
+    background: var(--bg-tertiary);
+    color: var(--accent-secondary);
+}
+
+.nav-item-label,
+.nav-tag-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-item-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.75;
+    flex-shrink: 0;
+    min-width: 12px;
+    text-align: right;
+}
+
+.nav-item.active .nav-item-count,
+.nav-tag-item.active .nav-item-count {
+    color: var(--accent-secondary);
+    opacity: 1;
+}
+
+.nav-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    padding: 4px 10px 6px 10px;
+}
+
+.nav-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.nav-tags-empty {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
 
 .notes-list-panel {
     width: 300px;
@@ -426,7 +566,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--bg-primary);
+    background: var(--bg-tertiary);
 }
 
 .notes-editor-panel .empty-state {
@@ -468,6 +608,13 @@
     opacity: 0.4;
 }
 
+.note-title-input:disabled,
+.note-textarea:disabled,
+.tag-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .editor-actions {
     display: flex;
     align-items: center;
@@ -497,7 +644,7 @@
 .editor-body {
     flex: 1;
     display: flex;
-    overflow: hidden;
+    overflow: visible;
     min-height: 0;
     position: relative;
 }
@@ -509,7 +656,7 @@
     border: none;
     outline: none;
     resize: none;
-    padding: 20px 24px;
+    padding: 20px 24px 68px 24px;
     font-family: inherit;
     font-size: 14px;
     line-height: 1.8;
@@ -600,17 +747,21 @@
 
 /* ─── Collapsed Sidebar ──────────────────────────────────── */
 
-.notes-list-panel.collapsed {
+.notes-sidebar.collapsed {
     width: 36px;
     min-width: 36px;
 }
 
-.notes-list-panel.collapsed .notes-list,
-.notes-list-panel.collapsed .notes-count {
+.notes-sidebar.collapsed .notes-nav-panel {
+    width: 36px;
+}
+
+.notes-sidebar.collapsed .notes-nav-scroll,
+.notes-sidebar.collapsed .notes-list-panel {
     display: none;
 }
 
-.notes-list-panel.collapsed .notes-panel-header {
+.notes-sidebar.collapsed .notes-nav-header {
     justify-content: center;
     padding: 8px 0;
 }
@@ -655,17 +806,34 @@
     margin-left: auto;
 }
 
-/* ─── Export Dropdown ────────────────────────────────────── */
+/* ─── More Menu ──────────────────────────────────────────── */
 
-.export-dropdown {
-    position: fixed;
-    z-index: 3000;
-    background-color: var(--bg-secondary);
+.more-menu-wrapper {
+    position: relative;
+}
+
+.more-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 500;
+    background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 16px var(--shadow-color);
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.4);
     overflow: hidden;
-    min-width: 160px;
+    min-width: 200px;
+}
+
+.more-menu-dropdown.show {
+    display: block;
+}
+
+.more-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
 }
 
 .export-option {
@@ -686,6 +854,128 @@
 
 .export-option:hover {
     background-color: var(--bg-hover);
+}
+
+.export-option i {
+    width: 14px;
+    text-align: center;
+    color: inherit;
+}
+
+/* Light text/icons on this app's near-black surfaces can pick up LCD
+   subpixel (ClearType-style) color fringing on glyph edges; force
+   grayscale AA across the app so everything renders clean and colorless. */
+.notes-app,
+.sign-in-screen {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.export-option.danger {
+    color: var(--error-color);
+}
+
+.export-option.danger:hover {
+    background-color: var(--error-color);
+    color: var(--bg-primary);
+}
+
+/* ─── Note Status Banner (Archive / Trash) ───────────────── */
+
+.note-status-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    background: var(--bg-hover);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.note-status-banner i {
+    color: var(--accent-primary);
+}
+
+.note-status-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+.banner-btn {
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-secondary);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: "Raleway", sans-serif;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.banner-btn:hover {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+.banner-btn.danger {
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+
+.banner-btn.danger:hover {
+    background: var(--error-color);
+    color: var(--bg-primary);
+}
+
+/* ─── Floating Format Bar ────────────────────────────────── */
+
+.editor-format-bar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    position: absolute;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%);
+    padding: 7px 10px;
+    background: var(--bg-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 11px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 4px 14px rgba(0, 0, 0, 0.45);
+    z-index: 50;
+}
+
+.fmt-btn {
+    width: 31px;
+    height: 31px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.fmt-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
+}
+
+.fmt-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color);
+    margin: 0 6px;
+    flex-shrink: 0;
 }
 
 /* ─── Split View ─────────────────────────────────────────── */
@@ -768,6 +1058,29 @@
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+    /* Tablet width: shrink the nav pane to an icon-only rail so smart
+       filters (All/Today/Archive/Trash) stay one tap away; tags fold away
+       and remain reachable through search. */
+    .notes-nav-panel {
+        width: 44px;
+    }
+
+    .notes-nav-header {
+        justify-content: center;
+        padding: 8px 0;
+    }
+
+    .nav-item {
+        justify-content: center;
+        padding: 9px 0;
+    }
+
+    .nav-item-label,
+    .nav-item-count,
+    .nav-tags-section {
+        display: none;
+    }
+
     .notes-list-panel {
         width: 240px;
     }
@@ -801,9 +1114,20 @@
         flex-direction: column;
     }
 
-    .notes-list-panel {
+    .notes-sidebar {
         width: 100%;
         height: 220px;
+    }
+
+    /* Phone width: the icon rail would eat too much of an already-tight
+       220px list; smart filters/tags stay reachable via search here. */
+    .notes-nav-panel {
+        display: none;
+    }
+
+    .notes-list-panel {
+        width: 100%;
+        height: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
     }

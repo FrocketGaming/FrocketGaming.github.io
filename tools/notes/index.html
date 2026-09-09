@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -101,18 +101,61 @@
                 </div>
             </div>
 
-            <!-- Two-panel layout -->
+            <!-- Three-panel layout -->
             <div class="notes-layout">
 
-                <!-- Left: notes list -->
-                <div class="notes-list-panel">
-                    <div class="notes-panel-header">
-                        <span class="notes-count" id="notesCount">Notes</span>
-                        <button class="action-btn" id="collapseSidebarBtn" title="Collapse sidebar">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </button>
+                <!-- Left: nav (smart filters + tags) + notes list -->
+                <div class="notes-sidebar" id="notesSidebar">
+
+                    <div class="notes-nav-panel">
+                        <div class="notes-nav-header">
+                            <button class="action-btn" id="collapseSidebarBtn" title="Collapse sidebar">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                        </div>
+                        <div class="notes-nav-scroll">
+                            <div class="nav-section">
+                                <button class="nav-item active" data-filter="all" title="All Notes">
+                                    <i class="fa-solid fa-note-sticky"></i>
+                                    <span class="nav-item-label">All Notes</span>
+                                    <span class="nav-item-count" id="navCountAll"></span>
+                                </button>
+                                <button class="nav-item" data-filter="today" title="Today">
+                                    <i class="fa-regular fa-calendar"></i>
+                                    <span class="nav-item-label">Today</span>
+                                    <span class="nav-item-count" id="navCountToday"></span>
+                                </button>
+                                <button class="nav-item" data-filter="untagged" title="Untagged">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <span class="nav-item-label">Untagged</span>
+                                    <span class="nav-item-count" id="navCountUntagged"></span>
+                                </button>
+                            </div>
+                            <div class="nav-section">
+                                <button class="nav-item" data-filter="archive" title="Archive">
+                                    <i class="fa-solid fa-box-archive"></i>
+                                    <span class="nav-item-label">Archive</span>
+                                    <span class="nav-item-count" id="navCountArchive"></span>
+                                </button>
+                                <button class="nav-item" data-filter="trash" title="Trash">
+                                    <i class="fa-solid fa-trash"></i>
+                                    <span class="nav-item-label">Trash</span>
+                                    <span class="nav-item-count" id="navCountTrash"></span>
+                                </button>
+                            </div>
+                            <div class="nav-section nav-tags-section" id="navTagsSection">
+                                <div class="nav-section-title">Tags</div>
+                                <div id="navTagsList" class="nav-tags-list"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="notesList" class="notes-list"></div>
+
+                    <div class="notes-list-panel">
+                        <div class="notes-panel-header">
+                            <span class="notes-count" id="notesCount">All Notes</span>
+                        </div>
+                        <div id="notesList" class="notes-list"></div>
+                    </div>
                 </div>
 
                 <!-- Right: editor -->
@@ -120,6 +163,9 @@
                     <div class="empty-state" id="emptyState">
                         <i class="fa-solid fa-note-sticky"></i>
                         <p>Select a note or create a new one</p>
+                        <button class="empty-state-cta" id="emptyStateNewBtn">
+                            <i class="fa-solid fa-plus"></i> New Note
+                        </button>
                     </div>
 
                     <div class="note-editor" id="noteEditor" style="display:none">
@@ -135,24 +181,32 @@
                                 <button class="action-btn" id="splitViewBtn" title="Split view">
                                     <i class="fa-solid fa-table-columns"></i>
                                 </button>
-                                <button class="action-btn" id="duplicateBtn" title="Duplicate note">
-                                    <i class="fa-solid fa-copy"></i>
-                                </button>
-                                <button class="action-btn" id="copyContentBtn" title="Copy content to clipboard">
-                                    <i class="fa-solid fa-clipboard"></i>
-                                </button>
-                                <button class="action-btn" id="exportBtn" title="Export note">
-                                    <i class="fa-solid fa-download"></i>
-                                </button>
                                 <button class="action-btn" id="zenBtn" title="Zen mode">
                                     <i class="fa-solid fa-expand"></i>
                                 </button>
-                                <button class="action-btn" id="archiveNoteBtn" title="Archive note">
-                                    <i class="fa-solid fa-box-archive"></i>
-                                </button>
-                                <button class="action-btn delete" id="deleteNoteBtn" title="Delete permanently">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                <div class="more-menu-wrapper">
+                                    <button class="action-btn" id="moreMenuBtn" title="More">
+                                        <i class="fa-solid fa-ellipsis"></i>
+                                    </button>
+                                    <div id="moreMenuDropdown" class="more-menu-dropdown">
+                                        <button class="export-option" id="duplicateBtn"><i class="fa-solid fa-copy"></i> Duplicate</button>
+                                        <button class="export-option" id="copyContentBtn"><i class="fa-solid fa-clipboard"></i> Copy content</button>
+                                        <button class="export-option" id="exportMdBtn"><i class="fa-solid fa-file-code"></i> Export as .md</button>
+                                        <button class="export-option" id="exportTxtBtn"><i class="fa-solid fa-file-lines"></i> Export as .txt</button>
+                                        <div class="more-menu-divider"></div>
+                                        <button class="export-option" id="archiveNoteBtn"><i class="fa-solid fa-box-archive"></i> Archive</button>
+                                        <button class="export-option danger" id="deleteNoteBtn"><i class="fa-solid fa-trash"></i> Move to Trash</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="note-status-banner" id="noteStatusBanner" style="display:none">
+                            <i class="fa-solid fa-box-archive" id="noteStatusIcon"></i>
+                            <span id="noteStatusText"></span>
+                            <div class="note-status-actions">
+                                <button class="banner-btn" id="restoreBtn">Restore</button>
+                                <button class="banner-btn danger" id="purgeBtn" style="display:none">Delete Forever</button>
                             </div>
                         </div>
 
@@ -164,6 +218,19 @@
                         <div class="editor-body" id="editorBody">
                             <textarea id="noteContentInput" class="note-textarea" placeholder="Start writing... (supports Markdown)"></textarea>
                             <div id="notePreview" class="note-preview markdown-preview" style="display:none"></div>
+
+                            <div class="editor-format-bar" id="editorFormatBar">
+                                <button class="fmt-btn" data-cmd="heading" title="Heading"><i class="fa-solid fa-heading"></i></button>
+                                <button class="fmt-btn" data-cmd="checklist" title="Checklist"><i class="fa-regular fa-square-check"></i></button>
+                                <button class="fmt-btn" data-cmd="bullet" title="Bulleted list"><i class="fa-solid fa-list-ul"></i></button>
+                                <button class="fmt-btn" data-cmd="numbered" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+                                <span class="fmt-divider"></span>
+                                <button class="fmt-btn" data-cmd="bold" title="Bold (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
+                                <button class="fmt-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+                                <span class="fmt-divider"></span>
+                                <button class="fmt-btn" data-cmd="code" title="Code"><i class="fa-solid fa-code"></i></button>
+                                <button class="fmt-btn" data-cmd="link" title="Link"><i class="fa-solid fa-link"></i></button>
+                            </div>
                         </div>
 
                         <div class="editor-footer">
@@ -179,24 +246,18 @@
             </div>
         </div>
 
-        <!-- Export dropdown -->
-        <div id="exportDropdown" class="export-dropdown" style="display:none">
-            <button class="export-option" id="exportMdBtn"><i class="fa-solid fa-file-code"></i> Export as .md</button>
-            <button class="export-option" id="exportTxtBtn"><i class="fa-solid fa-file-lines"></i> Export as .txt</button>
-        </div>
-
-        <!-- Archive / Delete confirmation modal -->
+        <!-- Archive / Trash / Delete-forever confirmation modal -->
         <div id="deleteModal" class="modal">
             <div class="modal-content modal-small">
                 <div class="modal-header">
-                    <h3 id="deleteModalTitle">Archive Note</h3>
+                    <h3 id="deleteModalTitle">Move to Trash</h3>
                     <span class="modal-close" onclick="notesApp.closeDeleteModal()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p id="deleteModalBody">This note will be archived and hidden from your list.</p>
+                    <p id="deleteModalBody">This note will be moved to Trash. You can restore it later.</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="clear-bnt" id="confirmDeleteBtn">Archive</button>
+                    <button class="clear-bnt" id="confirmDeleteBtn">Move to Trash</button>
                     <button class="format-btn" onclick="notesApp.closeDeleteModal()">Cancel</button>
                 </div>
             </div>
