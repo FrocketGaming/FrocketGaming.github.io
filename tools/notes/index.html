@@ -75,11 +75,13 @@
                     </button>
                     <div class="shortcuts-tooltip" id="shortcutsTooltip">
                         <div class="shortcuts-tooltip-title">Keyboard Shortcuts</div>
+                        <div class="shortcut-row"><kbd>Ctrl+K</kbd> Jump to note</div>
                         <div class="shortcut-row"><kbd>Ctrl+S</kbd> Save note</div>
                         <div class="shortcut-row"><kbd>Ctrl+N</kbd> New note</div>
-                        <div class="shortcut-row"><kbd>/</kbd> or <kbd>Ctrl+K</kbd> Search</div>
+                        <div class="shortcut-row"><kbd>/</kbd> Focus search</div>
                         <div class="shortcut-row"><kbd>Ctrl+B</kbd> Bold</div>
                         <div class="shortcut-row"><kbd>Ctrl+I</kbd> Italic</div>
+                        <div class="shortcut-row"><kbd>[[</kbd> Link to another note</div>
                         <div class="shortcut-row"><kbd>&uarr;</kbd> <kbd>&darr;</kbd> Navigate notes</div>
                         <div class="shortcut-row"><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> Indent</div>
                         <div class="shortcut-row"><kbd>Esc</kbd> Close / Deselect / Exit zen</div>
@@ -153,6 +155,18 @@
                     <div class="notes-list-panel">
                         <div class="notes-panel-header">
                             <span class="notes-count" id="notesCount">All Notes</span>
+                            <button class="action-btn" id="selectModeBtn" title="Select notes">
+                                <i class="fa-regular fa-square-check"></i>
+                            </button>
+                        </div>
+                        <div class="bulk-action-bar" id="bulkActionBar">
+                            <span id="bulkSelectedCount">0 selected</span>
+                            <div class="bulk-action-buttons">
+                                <input type="text" id="bulkTagInput" class="bulk-tag-input" placeholder="Add tag..." />
+                                <button class="bulk-btn" id="bulkArchiveBtn" title="Archive selected"><i class="fa-solid fa-box-archive"></i></button>
+                                <button class="bulk-btn danger" id="bulkTrashBtn" title="Move selected to Trash"><i class="fa-solid fa-trash"></i></button>
+                                <button class="bulk-btn" id="bulkCancelBtn" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
                         </div>
                         <div id="notesList" class="notes-list"></div>
                     </div>
@@ -191,6 +205,7 @@
                                     <div id="moreMenuDropdown" class="more-menu-dropdown">
                                         <button class="export-option" id="duplicateBtn"><i class="fa-solid fa-copy"></i> Duplicate</button>
                                         <button class="export-option" id="copyContentBtn"><i class="fa-solid fa-clipboard"></i> Copy content</button>
+                                        <button class="export-option" id="versionHistoryBtn"><i class="fa-solid fa-clock-rotate-left"></i> Version History</button>
                                         <button class="export-option" id="exportMdBtn"><i class="fa-solid fa-file-code"></i> Export as .md</button>
                                         <button class="export-option" id="exportTxtBtn"><i class="fa-solid fa-file-lines"></i> Export as .txt</button>
                                         <div class="more-menu-divider"></div>
@@ -231,6 +246,13 @@
                                 <button class="fmt-btn" data-cmd="code" title="Code"><i class="fa-solid fa-code"></i></button>
                                 <button class="fmt-btn" data-cmd="link" title="Link"><i class="fa-solid fa-link"></i></button>
                             </div>
+
+                            <div class="wiki-autocomplete" id="wikiLinkAutocomplete"></div>
+                        </div>
+
+                        <div class="linked-mentions" id="linkedMentions">
+                            <div class="linked-mentions-title"><i class="fa-solid fa-link"></i> Linked mentions</div>
+                            <div class="linked-mentions-list" id="linkedMentionsList"></div>
                         </div>
 
                         <div class="editor-footer">
@@ -263,10 +285,37 @@
             </div>
         </div>
 
+        <!-- Version history modal -->
+        <div id="versionHistoryModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Version History</h3>
+                    <span class="modal-close" onclick="notesApp.closeVersionHistory()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="versionHistoryList" class="version-history-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Command palette (Ctrl+K) -->
+        <div class="command-palette-overlay" id="commandPaletteOverlay">
+            <div class="command-palette">
+                <div class="command-palette-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="commandPaletteInput" placeholder="Jump to a note..." autocomplete="off" />
+                </div>
+                <div class="command-palette-results" id="commandPaletteResults"></div>
+            </div>
+        </div>
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
         <script src="../../src/theme-manager.js"></script>
         <script src="../../src/firebase-config.js"></script>
         <script src="notes-app.js"></script>

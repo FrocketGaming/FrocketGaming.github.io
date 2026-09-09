@@ -986,7 +986,10 @@
 
 .editor-body.split .note-textarea {
     flex: 1;
-    border-right: 1px solid var(--border-color);
+    /* var(--border-color) is too close in value to the editor background
+       in several themes to read as a divider; blend off text color instead
+       so it stays visible regardless of theme. */
+    border-right: 1px solid color-mix(in srgb, var(--text-primary) 18%, transparent);
 }
 
 .editor-body.split .note-preview {
@@ -1084,6 +1087,10 @@
     .notes-list-panel {
         width: 240px;
     }
+
+    .bulk-tag-input {
+        width: 70px;
+    }
 }
 
 @media (max-width: 600px) {
@@ -1160,4 +1167,479 @@
     .sync-status {
         display: none;
     }
+}
+
+/* ─── Bulk Select ─────────────────────────────────────────── */
+
+.notes-panel-header .action-btn.active {
+    color: var(--accent-primary);
+}
+
+.note-select-checkbox {
+    margin-right: 8px;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.bulk-action-bar {
+    display: none;
+    align-items: center;
+    gap: 6px 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.bulk-action-buttons {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.bulk-tag-input {
+    padding: 5px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: "Raleway", sans-serif;
+    width: 96px;
+    outline: none;
+}
+
+.bulk-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.bulk-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
+}
+
+.bulk-btn.danger:hover {
+    background: var(--error-color);
+    color: var(--bg-primary);
+    border-color: var(--error-color);
+}
+
+/* ─── Command Palette ────────────────────────────────────────── */
+
+.command-palette-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 4000;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+}
+
+.command-palette {
+    width: 90%;
+    max-width: 560px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.command-palette-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+#commandPaletteInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: "Raleway", sans-serif;
+}
+
+.command-palette-results {
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.command-palette-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.command-palette-item i {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.command-palette-item.active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.command-palette-item-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.command-palette-item-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.command-palette-item-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.palette-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.command-palette-empty {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ─── Version History ────────────────────────────────────────── */
+
+.version-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.version-history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.version-history-item:last-child {
+    border-bottom: none;
+}
+
+.version-history-item-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.version-history-item-date {
+    font-size: 11px;
+    color: var(--accent-secondary);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.version-history-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.version-history-item-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.version-history-empty {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ─── Wiki Links (double-bracket note references) ────────────── */
+
+.wiki-link {
+    color: var(--accent-secondary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-secondary);
+    cursor: pointer;
+}
+
+.wiki-link:hover {
+    opacity: 0.8;
+}
+
+.wiki-link-missing {
+    color: var(--text-secondary);
+    border-bottom: 1px dashed var(--text-secondary);
+    cursor: help;
+}
+
+.wiki-autocomplete {
+    display: none;
+    position: fixed;
+    z-index: 600;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    min-width: 200px;
+    max-width: 320px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.wiki-autocomplete-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.wiki-autocomplete-item.active,
+.wiki-autocomplete-item:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
+}
+
+/* ─── Linked Mentions (backlinks) ─────────────────────────────── */
+
+.linked-mentions {
+    display: none;
+    padding: 10px 24px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.linked-mentions-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    opacity: 0.75;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.linked-mentions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.linked-mention-item {
+    padding: 4px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: "Raleway", sans-serif;
+}
+
+.linked-mention-item:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-secondary);
+}
+
+/* ─── Preview Images (pasted/dropped attachments) ─────────────── */
+
+.note-preview img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 10px 0;
+    display: block;
+}
+
+/* ─── Markdown Preview Code Blocks ────────────────────────────── */
+
+.note-preview pre {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0;
+}
+
+.note-preview pre code {
+    background: transparent;
+    padding: 0;
+    font-family: "JetBrains Mono", "Consolas", "Monaco", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.note-preview code {
+    font-family: "JetBrains Mono", "Consolas", "Monaco", monospace;
+    font-size: 0.9em;
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent-secondary);
+}
+
+/* Highlight.js theme, mapped to this site's syntax color tokens so code
+   blocks stay correct across every theme — matches the Snippets tool. */
+.hljs {
+    color: var(--text-primary);
+    background: transparent;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta {
+    color: var(--syntax-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-selector-class {
+    color: var(--syntax-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+    color: var(--syntax-comment);
+    font-style: italic;
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-selector-id {
+    color: var(--syntax-function);
+}
+
+.hljs-number,
+.hljs-literal {
+    color: var(--syntax-number);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-selector-pseudo {
+    color: var(--syntax-type);
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr,
+.hljs-params {
+    color: var(--syntax-variable);
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+    color: var(--syntax-tag);
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link {
+    color: var(--syntax-number);
+}
+
+.hljs-addition {
+    color: var(--syntax-addition);
+}
+
+.hljs-deletion {
+    color: var(--syntax-deletion);
+}
+
+.hljs-section,
+.hljs-title.class_ {
+    color: var(--syntax-function);
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: bold;
+}
+
+/* ─── Mermaid Diagrams ─────────────────────────────────────────── */
+
+.mermaid-diagram {
+    margin: 14px 0;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+}
+
+.mermaid-diagram svg {
+    max-width: 100%;
+}
+
+.mermaid-diagram.mermaid-error {
+    color: var(--error-color);
+    font-size: 13px;
+    font-family: "Consolas", "Monaco", monospace;
+    justify-content: flex-start;
 }

@@ -5,6 +5,7 @@ class NotesApp {
         this.user = null;
         this.db = null;
         this.auth = null;
+        this.storage = null;
         this.unsub = null;
         this.saveTimer = null;
         this.previewMode = false;
@@ -16,10 +17,29 @@ class NotesApp {
         this.pendingAction = null; // 'trash' | 'purge'
         this.activeFilter = 'all'; // 'all' | 'today' | 'untagged' | 'archive' | 'trash' | 'tag'
         this.activeTag = null;
+
+        this.selectMode = false;
+        this.selectedIds = new Set();
+
+        this.versionTimestamps = new Map(); // noteId -> ms of last version snapshot this session
+        this.versionCache = [];
+
+        this.paletteResults = [];
+        this.paletteIndex = 0;
+
+        this.wikiLinkCandidates = null;
+        this.wikiLinkMatchStart = null;
+        this.wikiAutocompleteIndex = 0;
+
+        this.previewRenderToken = 0;
     }
 
     init() {
         this.initFirebase();
+        if (typeof mermaid !== 'undefined') {
+            try { mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' }); }
+            catch (err) { console.warn('Notes: Mermaid init failed:', err); }
+        }
         this.bindEvents();
         this.updateHeaderOffset();
         window.addEventListener('resize', () => this.updateHeaderOffset());
@@ -65,6 +85,12 @@ class NotesApp {
             });
         } catch (err) {
             console.warn('Notes: Persistence error:', err);
+        }
+
+        try {
+            this.storage = firebase.storage();
+        } catch (err) {
+            console.warn('Notes: Storage not available:', err);
         }
 
         this.auth.getRedirectResult().catch(() => {});
@@ -160,6 +186,10 @@ class NotesApp {
     refresh() {
         this.renderNotesList();
         this.renderNavPanel();
+        if (this.currentNoteId) {
+            const note = this.notes.find(n => n.id === this.currentNoteId);
+            if (note) this.renderLinkedMentions(note);
+        }
     }
 
     isToday(iso) {
@@ -231,6 +261,10 @@ class NotesApp {
             .replace(/^#{1,6}\s*/, '')
             .trim()
             .slice(0, 50);
+    }
+
+    getNoteTitle(note) {
+        return note.title || this.getAutoTitle(note.content) || 'Untitled';
     }
 
     renderNavPanel() {
@@ -306,20 +340,26 @@ class NotesApp {
             const preview = (note.content || '')
                 .replace(/#{1,6}\s/g, '')
                 .replace(/[*_~`>]/g, '')
+                .replace(/\[\[([^\]]+)\]\]/g, '$1')
                 .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
                 .trim()
                 .slice(0, 100);
 
-            const displayTitle = note.title || this.getAutoTitle(note.content) || 'Untitled';
+            const displayTitle = this.getNoteTitle(note);
             const date = this.formatDate(note.updatedAt);
             const fullDate = note.updatedAt ? new Date(note.updatedAt).toLocaleString() : '';
             const tags = (note.tags || []).slice(0, 3)
                 .map(t => `<span class="note-tag-chip">${this.escapeHtml(t)}</span>`)
                 .join('');
 
+            const checkbox = this.selectMode
+                ? `<input type="checkbox" class="note-select-checkbox" ${this.selectedIds.has(note.id) ? 'checked' : ''} onclick="event.stopPropagation(); notesApp.toggleSelectNote('${note.id}')" />`
+                : '';
+
             return `
-                <div class="note-list-item ${isActive ? 'active' : ''}" data-id="${note.id}" onclick="notesApp.selectNote('${note.id}')">
+                <div class="note-list-item ${isActive ? 'active' : ''}" data-id="${note.id}" onclick="notesApp.handleNoteClick('${note.id}')">
                     <div class="note-list-item-header">
+                        ${checkbox}
                         <span class="note-list-title">${this.escapeHtml(displayTitle)}</span>
                         <div class="note-list-indicators">
                             ${note.pinned && this.activeFilter !== 'archive' && this.activeFilter !== 'trash' ? '<i class="fa-solid fa-thumbtack pin-indicator" title="Pinned"></i>' : ''}
@@ -334,6 +374,11 @@ class NotesApp {
                 </div>
             `;
         }).join('');
+    }
+
+    handleNoteClick(id) {
+        if (this.selectMode) this.toggleSelectNote(id);
+        else this.selectNote(id);
     }
 
     selectNote(id) {
@@ -400,6 +445,8 @@ class NotesApp {
         this.renderTagChips(note.tags || []);
         this.updateWordCount(note.content || '');
         this.updateEditorChrome(note);
+        this.renderLinkedMentions(note);
+        this.closeWikiAutocomplete();
 
         document.getElementById('noteMetaCreated').textContent =
             note.createdAt ? `Created ${this.formatDate(note.createdAt)}` : '';
@@ -423,7 +470,6 @@ class NotesApp {
         const banner = document.getElementById('noteStatusBanner');
         const text = document.getElementById('noteStatusText');
         const icon = document.getElementById('noteStatusIcon');
-        const restoreBtn = document.getElementById('restoreBtn');
         const purgeBtn = document.getElementById('purgeBtn');
         const titleInput = document.getElementById('noteTitleInput');
         const contentInput = document.getElementById('noteContentInput');
@@ -485,6 +531,7 @@ class NotesApp {
             this.activeFilter = 'all';
             this.activeTag = null;
         }
+        if (this.selectMode) this.toggleSelectMode();
 
         const id = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const now = new Date().toISOString();
@@ -564,6 +611,101 @@ class NotesApp {
         }
     }
 
+    // ─── Version History ────────────────────────────────────────
+
+    async maybeSnapshotVersion(id, prevTitle, prevContent, prevSavedAt, force = false) {
+        if (!this.db || !this.user) return;
+        if (!prevTitle && !prevContent) return; // nothing worth keeping
+
+        const last = this.versionTimestamps.get(id) || 0;
+        const now = Date.now();
+        if (!force && now - last < 5 * 60 * 1000) return;
+        this.versionTimestamps.set(id, now);
+
+        try {
+            await this.db.collection('users').doc(this.user.uid)
+                .collection('notes').doc(id)
+                .collection('versions')
+                .add({ title: prevTitle || '', content: prevContent || '', savedAt: prevSavedAt || new Date().toISOString() });
+        } catch (err) {
+            console.error('Notes: Failed to snapshot version:', err);
+        }
+    }
+
+    async openVersionHistory() {
+        if (!this.currentNoteId || !this.db || !this.user) return;
+        this.closeMoreMenu();
+
+        const modal = document.getElementById('versionHistoryModal');
+        const list = document.getElementById('versionHistoryList');
+        if (!modal || !list) return;
+
+        list.innerHTML = '<div class="version-history-empty">Loading&hellip;</div>';
+        modal.style.display = 'flex';
+
+        try {
+            const snap = await this.db.collection('users').doc(this.user.uid)
+                .collection('notes').doc(this.currentNoteId)
+                .collection('versions')
+                .orderBy('savedAt', 'desc')
+                .limit(50)
+                .get();
+
+            if (snap.empty) {
+                list.innerHTML = '<div class="version-history-empty">No earlier versions yet. Versions are saved automatically as you edit.</div>';
+                return;
+            }
+
+            this.versionCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            list.innerHTML = this.versionCache.map((v, i) => {
+                const title = v.title || this.getAutoTitle(v.content) || 'Untitled';
+                const preview = (v.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+                return `
+                    <div class="version-history-item">
+                        <div class="version-history-item-text">
+                            <div class="version-history-item-date">${this.formatDate(v.savedAt)}</div>
+                            <div class="version-history-item-title">${this.escapeHtml(title)}</div>
+                            <div class="version-history-item-preview">${this.escapeHtml(preview)}</div>
+                        </div>
+                        <button class="banner-btn" onclick="notesApp.restoreVersion(${i})">Restore</button>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error('Notes: Failed to load version history:', err);
+            list.innerHTML = '<div class="version-history-empty">Failed to load version history.</div>';
+        }
+    }
+
+    closeVersionHistory() {
+        const modal = document.getElementById('versionHistoryModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async restoreVersion(i) {
+        const version = this.versionCache?.[i];
+        if (!version || !this.currentNoteId) return;
+
+        const note = this.notes.find(n => n.id === this.currentNoteId);
+        if (note) {
+            await this.maybeSnapshotVersion(this.currentNoteId, note.title, note.content, note.updatedAt, true);
+        }
+
+        const titleEl = document.getElementById('noteTitleInput');
+        const contentEl = document.getElementById('noteContentInput');
+        if (titleEl) titleEl.value = version.title || '';
+        if (contentEl) contentEl.value = version.content || '';
+        this.updateWordCount(version.content || '');
+
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+        await this.saveCurrentNote();
+        this.closeVersionHistory();
+
+        if (this.splitView || this.previewMode) this.renderPreview(version.content || '');
+    }
+
     async saveCurrentNote(silent = false) {
         if (!this.currentNoteId || !this.db || !this.user) return;
 
@@ -578,6 +720,10 @@ class NotesApp {
         const content = contentEl.value;
         const updatedAt = new Date().toISOString();
 
+        if ((note.title || note.content) && (note.title !== title || note.content !== content)) {
+            this.maybeSnapshotVersion(this.currentNoteId, note.title, note.content, note.updatedAt);
+        }
+
         const idx = this.notes.findIndex(n => n.id === this.currentNoteId);
         if (idx !== -1) this.notes[idx] = { ...this.notes[idx], title, content, updatedAt };
 
@@ -585,6 +731,13 @@ class NotesApp {
             await this.db.collection('users').doc(this.user.uid)
                 .collection('notes').doc(this.currentNoteId)
                 .update({ title, content, updatedAt });
+
+            // Re-look-up by id rather than reusing idx — a listener update
+            // during the await above may have re-sorted this.notes into a
+            // new array, making the old numeric index point at a different
+            // note entirely.
+            const savedNote = this.notes.find(n => n.id === this.currentNoteId);
+            if (savedNote) this.renderLinkedMentions(savedNote);
 
             if (!silent) {
                 const status = document.getElementById('autoSaveStatus');
@@ -745,6 +898,154 @@ class NotesApp {
         document.getElementById('moreMenuBtn')?.classList.remove('active');
     }
 
+    // ─── Bulk select ────────────────────────────────────────────
+
+    toggleSelectMode() {
+        this.selectMode = !this.selectMode;
+        this.selectedIds.clear();
+        document.getElementById('selectModeBtn')?.classList.toggle('active', this.selectMode);
+        this.renderNotesList();
+        this.updateBulkBar();
+    }
+
+    toggleSelectNote(id) {
+        if (this.selectedIds.has(id)) this.selectedIds.delete(id);
+        else this.selectedIds.add(id);
+        this.renderNotesList();
+        this.updateBulkBar();
+    }
+
+    updateBulkBar() {
+        const bar = document.getElementById('bulkActionBar');
+        if (!bar) return;
+        const n = this.selectedIds.size;
+        bar.style.display = (this.selectMode && n > 0) ? 'flex' : 'none';
+        const countEl = document.getElementById('bulkSelectedCount');
+        if (countEl) countEl.textContent = `${n} selected`;
+    }
+
+    async bulkArchive() {
+        const ids = [...this.selectedIds];
+        for (const id of ids) await this.setNoteFlags(id, { archived: true });
+        this.selectedIds.clear();
+        this.updateBulkBar();
+        this.refresh();
+    }
+
+    async bulkTrash() {
+        const ids = [...this.selectedIds];
+        for (const id of ids) await this.setNoteFlags(id, { trashed: true, pinned: false });
+        this.selectedIds.clear();
+        this.updateBulkBar();
+        this.refresh();
+    }
+
+    async bulkAddTag(tag) {
+        if (!tag || !this.db || !this.user) return;
+        const ids = [...this.selectedIds];
+
+        for (const id of ids) {
+            const idx = this.notes.findIndex(n => n.id === id);
+            if (idx === -1) continue;
+            const tags = this.notes[idx].tags || [];
+            if (tags.includes(tag)) continue;
+
+            const newTags = [...tags, tag];
+            this.notes[idx] = { ...this.notes[idx], tags: newTags };
+
+            try {
+                await this.db.collection('users').doc(this.user.uid)
+                    .collection('notes').doc(id)
+                    .update({ tags: newTags, updatedAt: new Date().toISOString() });
+            } catch (err) {
+                console.error('Notes: Bulk tag failed:', err);
+            }
+        }
+
+        this.refresh();
+    }
+
+    // ─── Command Palette ────────────────────────────────────────
+
+    openCommandPalette() {
+        const overlay = document.getElementById('commandPaletteOverlay');
+        const input = document.getElementById('commandPaletteInput');
+        if (!overlay || !input) return;
+        this.closeMoreMenu();
+        overlay.style.display = 'flex';
+        input.value = '';
+        this.renderPaletteResults('');
+        setTimeout(() => input.focus(), 10);
+    }
+
+    closeCommandPalette() {
+        const overlay = document.getElementById('commandPaletteOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    renderPaletteResults(query) {
+        const q = query.trim().toLowerCase();
+        const pool = this.notes.filter(n => !n.trashed);
+        let results;
+
+        if (!q) {
+            results = [...pool].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).slice(0, 30);
+        } else {
+            results = pool.filter(n =>
+                (n.title || '').toLowerCase().includes(q) ||
+                (n.content || '').toLowerCase().includes(q) ||
+                (n.tags || []).some(t => t.toLowerCase().includes(q))
+            ).slice(0, 30);
+        }
+
+        this.paletteResults = results;
+        this.paletteIndex = 0;
+
+        const container = document.getElementById('commandPaletteResults');
+        if (!container) return;
+
+        if (!results.length) {
+            container.innerHTML = '<div class="command-palette-empty">No notes found.</div>';
+            return;
+        }
+
+        container.innerHTML = results.map((n, i) => {
+            const title = this.getNoteTitle(n);
+            const preview = (n.content || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+            const badge = n.archived ? '<span class="palette-badge">Archived</span>' : '';
+            return `
+                <div class="command-palette-item ${i === 0 ? 'active' : ''}" data-idx="${i}" onclick="notesApp.selectFromPalette(${i})">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    <div class="command-palette-item-text">
+                        <div class="command-palette-item-title">${this.escapeHtml(title)}</div>
+                        <div class="command-palette-item-preview">${this.escapeHtml(preview)}</div>
+                    </div>
+                    ${badge}
+                </div>
+            `;
+        }).join('');
+    }
+
+    movePaletteSelection(dir) {
+        if (!this.paletteResults.length) return;
+        this.paletteIndex = Math.max(0, Math.min(this.paletteResults.length - 1, this.paletteIndex + dir));
+        document.querySelectorAll('.command-palette-item').forEach((el, i) => {
+            el.classList.toggle('active', i === this.paletteIndex);
+        });
+        document.querySelector(`.command-palette-item[data-idx="${this.paletteIndex}"]`)?.scrollIntoView({ block: 'nearest' });
+    }
+
+    selectFromPalette(idx) {
+        const note = this.paletteResults[idx];
+        if (!note) return;
+        this.closeCommandPalette();
+
+        if (note.archived) this.setFilter('archive');
+        else if (this.activeFilter === 'archive' || this.activeFilter === 'trash') this.setFilter('all');
+
+        this.selectNote(note.id);
+    }
+
     // ─── Word Count ───────────────────────────────────────────
 
     updateWordCount(content) {
@@ -859,14 +1160,274 @@ class NotesApp {
         }
     }
 
+    // ─── Wiki links ([[Note Title]]) + backlinks ───────────────
+
+    resolveWikiLinks(content) {
+        return (content || '').replace(/\[\[([^\]]+)\]\]/g, (match, rawTitle) => {
+            const title = rawTitle.trim();
+            if (!title) return match;
+            const target = this.notes.find(n => !n.trashed && this.getNoteTitle(n).toLowerCase() === title.toLowerCase());
+            const label = this.escapeHtml(title);
+            if (target) {
+                return `<a href="#" class="wiki-link" data-note-id="${target.id}" onclick="notesApp.selectNote('${target.id}'); return false;">${label}</a>`;
+            }
+            return `<span class="wiki-link wiki-link-missing" title="No note titled &quot;${label}&quot;">${label}</span>`;
+        });
+    }
+
+    renderLinkedMentions(note) {
+        const container = document.getElementById('linkedMentions');
+        const list = document.getElementById('linkedMentionsList');
+        if (!container || !list) return;
+
+        const title = this.getNoteTitle(note).toLowerCase();
+        if (!title) { container.style.display = 'none'; return; }
+
+        const linkPattern = /\[\[([^\]]+)\]\]/g;
+        const backlinks = this.notes.filter(n => {
+            if (n.id === note.id || n.trashed) return false;
+            let m;
+            linkPattern.lastIndex = 0;
+            while ((m = linkPattern.exec(n.content || ''))) {
+                if (m[1].trim().toLowerCase() === title) return true;
+            }
+            return false;
+        });
+
+        if (!backlinks.length) { container.style.display = 'none'; return; }
+
+        container.style.display = 'block';
+        list.innerHTML = backlinks.map(n => {
+            const t = this.getNoteTitle(n);
+            return `<button class="linked-mention-item" onclick="notesApp.selectNote('${n.id}')">${this.escapeHtml(t)}</button>`;
+        }).join('');
+    }
+
+    // ─── Wiki link autocomplete ─────────────────────────────────
+
+    getCaretCoordinates(textarea, position) {
+        const div = document.createElement('div');
+        const style = getComputedStyle(textarea);
+        const properties = [
+            'boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+            'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+            'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize', 'lineHeight',
+            'fontFamily', 'textAlign', 'textTransform', 'textIndent', 'textDecoration',
+            'letterSpacing', 'wordSpacing', 'whiteSpace', 'wordWrap',
+        ];
+        properties.forEach(p => { div.style[p] = style[p]; });
+        div.style.position = 'absolute';
+        div.style.visibility = 'hidden';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.wordWrap = 'break-word';
+        document.body.appendChild(div);
+
+        div.textContent = textarea.value.substring(0, position);
+        const span = document.createElement('span');
+        span.textContent = textarea.value.substring(position) || '.';
+        div.appendChild(span);
+
+        const rect = textarea.getBoundingClientRect();
+        const spanRect = span.getBoundingClientRect();
+        const divRect = div.getBoundingClientRect();
+
+        const coords = {
+            top: rect.top + (spanRect.top - divRect.top) - textarea.scrollTop,
+            left: rect.left + (spanRect.left - divRect.left) - textarea.scrollLeft,
+        };
+
+        document.body.removeChild(div);
+        return coords;
+    }
+
+    handleWikiLinkAutocomplete() {
+        const ta = document.getElementById('noteContentInput');
+        const dropdown = document.getElementById('wikiLinkAutocomplete');
+        if (!ta || !dropdown) return;
+
+        const pos = ta.selectionStart;
+        const uptoCursor = ta.value.slice(0, pos);
+        const match = uptoCursor.match(/\[\[([^\[\]\n]*)$/);
+
+        if (!match) { this.closeWikiAutocomplete(); return; }
+
+        const query = match[1].toLowerCase();
+        const candidates = [...new Set(
+            this.notes
+                .filter(n => !n.trashed && n.id !== this.currentNoteId)
+                .map(n => this.getNoteTitle(n))
+        )].filter(t => t.toLowerCase().includes(query)).slice(0, 8);
+
+        if (!candidates.length) { this.closeWikiAutocomplete(); return; }
+
+        this.wikiLinkMatchStart = pos - match[1].length - 2;
+        this.wikiLinkCandidates = candidates;
+        this.wikiAutocompleteIndex = 0;
+
+        dropdown.innerHTML = candidates.map((t, i) => `
+            <div class="wiki-autocomplete-item ${i === 0 ? 'active' : ''}" data-idx="${i}" onmousedown="notesApp.applyWikiLink(${i})">${this.escapeHtml(t)}</div>
+        `).join('');
+        dropdown.style.display = 'block';
+
+        const coords = this.getCaretCoordinates(ta, pos);
+        const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+        dropdown.style.top = (coords.top + lineHeight + 4) + 'px';
+        dropdown.style.left = coords.left + 'px';
+    }
+
+    moveWikiAutocomplete(dir) {
+        if (!this.wikiLinkCandidates) return;
+        this.wikiAutocompleteIndex = Math.max(0, Math.min(this.wikiLinkCandidates.length - 1, this.wikiAutocompleteIndex + dir));
+        document.querySelectorAll('.wiki-autocomplete-item').forEach((el, i) => {
+            el.classList.toggle('active', i === this.wikiAutocompleteIndex);
+        });
+    }
+
+    applyWikiLink(idx) {
+        const ta = document.getElementById('noteContentInput');
+        const title = this.wikiLinkCandidates?.[idx];
+        if (!ta || !title || this.wikiLinkMatchStart == null) return;
+
+        const pos = ta.selectionStart;
+        const before = ta.value.slice(0, this.wikiLinkMatchStart + 2);
+        const after = ta.value.slice(pos);
+        const insert = `${title}]]`;
+        ta.value = before + insert + after;
+        const newPos = before.length + insert.length;
+        ta.selectionStart = ta.selectionEnd = newPos;
+        ta.focus();
+
+        this.closeWikiAutocomplete();
+        this.scheduleAutoSave();
+        this.updateWordCount(ta.value);
+        if (this.splitView) this.renderPreview(ta.value);
+    }
+
+    closeWikiAutocomplete() {
+        const dropdown = document.getElementById('wikiLinkAutocomplete');
+        if (dropdown) dropdown.style.display = 'none';
+        this.wikiLinkCandidates = null;
+        this.wikiLinkMatchStart = null;
+    }
+
+    // ─── Image paste / drop (Firebase Storage) ─────────────────
+
+    async handlePaste(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+            if (item.type && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    e.preventDefault();
+                    await this.uploadAndInsertImage(file);
+                }
+                return;
+            }
+        }
+    }
+
+    async handleDrop(e) {
+        const files = e.dataTransfer?.files;
+        if (!files || !files.length) return;
+        const file = files[0];
+        if (!file.type || !file.type.startsWith('image/')) return;
+        e.preventDefault();
+        await this.uploadAndInsertImage(file);
+    }
+
+    async uploadAndInsertImage(file) {
+        const ta = document.getElementById('noteContentInput');
+        if (!ta || ta.disabled) return;
+
+        if (!this.storage) {
+            alert('Image uploads are not available right now.');
+            return;
+        }
+        if (!this.user || !this.currentNoteId) return;
+
+        const MAX_BYTES = 8 * 1024 * 1024;
+        if (file.size > MAX_BYTES) {
+            alert('Image is too large (max 8MB).');
+            return;
+        }
+
+        const pos = ta.selectionStart;
+        const placeholder = `![Uploading ${file.name}...]()`;
+        ta.value = ta.value.slice(0, pos) + placeholder + ta.value.slice(pos);
+        ta.selectionStart = ta.selectionEnd = pos + placeholder.length;
+        this.updateWordCount(ta.value);
+        if (this.splitView) this.renderPreview(ta.value);
+
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+        const path = `users/${this.user.uid}/notes/${this.currentNoteId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        let markdown;
+        try {
+            const ref = this.storage.ref(path);
+            await ref.put(file);
+            const url = await ref.getDownloadURL();
+            markdown = `![${file.name}](${url})`;
+        } catch (err) {
+            console.error('Notes: Image upload failed:', err);
+            markdown = `![Upload failed: ${file.name}]()`;
+        }
+
+        ta.value = ta.value.replace(placeholder, markdown);
+        this.scheduleAutoSave();
+        if (this.splitView || this.previewMode) this.renderPreview(ta.value);
+    }
+
     // ─── Preview / Split View ─────────────────────────────────
 
     renderPreview(content) {
         const preview = document.getElementById('notePreview');
         if (!preview) return;
-        preview.innerHTML = typeof marked !== 'undefined'
-            ? marked.parse(content || '')
-            : this.escapeHtml(content);
+
+        if (typeof marked === 'undefined') {
+            preview.innerHTML = this.escapeHtml(content);
+            return;
+        }
+
+        const withLinks = this.resolveWikiLinks(content);
+        preview.innerHTML = marked.parse(withLinks || '');
+
+        if (typeof hljs !== 'undefined') {
+            preview.querySelectorAll('pre code:not(.language-mermaid)').forEach(block => {
+                try { hljs.highlightElement(block); } catch (err) { /* unrecognized language, leave as-is */ }
+            });
+        }
+
+        const token = ++this.previewRenderToken;
+        this.renderMermaidBlocks(preview, token);
+    }
+
+    async renderMermaidBlocks(container, token) {
+        if (typeof mermaid === 'undefined') return;
+        const blocks = [...container.querySelectorAll('code.language-mermaid')];
+        let i = 0;
+
+        for (const block of blocks) {
+            const source = block.textContent;
+            const pre = block.closest('pre');
+            if (!pre) continue;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mermaid-diagram';
+            wrapper.textContent = 'Rendering diagram…';
+            pre.replaceWith(wrapper);
+
+            const id = `mermaid-${token}-${i++}`;
+            try {
+                const { svg } = await mermaid.render(id, source);
+                if (token !== this.previewRenderToken) return;
+                wrapper.innerHTML = svg;
+            } catch (err) {
+                if (token !== this.previewRenderToken) return;
+                wrapper.textContent = 'Invalid Mermaid diagram.';
+                wrapper.classList.add('mermaid-error');
+            }
+        }
     }
 
     togglePreview() {
@@ -887,6 +1448,7 @@ class NotesApp {
             this.renderPreview(textarea.value);
             btn.querySelector('i').className = 'fa-solid fa-pen';
             btn.title = 'Edit';
+            this.closeWikiAutocomplete();
         } else {
             textarea.style.display = 'block';
             preview.style.display = 'none';
@@ -1200,9 +1762,20 @@ class NotesApp {
             const content = document.getElementById('noteContentInput').value;
             this.updateWordCount(content);
             if (this.previewMode || this.splitView) this.renderPreview(content);
+            this.handleWikiLinkAutocomplete();
         });
 
         document.getElementById('noteContentInput')?.addEventListener('keydown', e => {
+            const dropdown = document.getElementById('wikiLinkAutocomplete');
+            const autocompleteOpen = dropdown && dropdown.style.display === 'block';
+
+            if (autocompleteOpen) {
+                if (e.key === 'ArrowDown') { e.preventDefault(); this.moveWikiAutocomplete(1); return; }
+                if (e.key === 'ArrowUp') { e.preventDefault(); this.moveWikiAutocomplete(-1); return; }
+                if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); this.applyWikiLink(this.wikiAutocompleteIndex); return; }
+                if (e.key === 'Escape') { e.preventDefault(); this.closeWikiAutocomplete(); return; }
+            }
+
             if (e.key === 'Tab') {
                 this.handleTabKey(e);
             } else if (e.key === 'Enter') {
@@ -1212,6 +1785,13 @@ class NotesApp {
             } else if (e.ctrlKey && e.key === 'i') {
                 this.handleInlineFormat(e, '_');
             }
+        });
+
+        document.getElementById('noteContentInput')?.addEventListener('paste', e => this.handlePaste(e));
+        document.getElementById('noteContentInput')?.addEventListener('dragover', e => e.preventDefault());
+        document.getElementById('noteContentInput')?.addEventListener('drop', e => this.handleDrop(e));
+        document.getElementById('noteContentInput')?.addEventListener('blur', () => {
+            setTimeout(() => this.closeWikiAutocomplete(), 150);
         });
 
         document.getElementById('noteTitleInput')?.addEventListener('input', () => {
@@ -1230,6 +1810,7 @@ class NotesApp {
         });
         document.getElementById('duplicateBtn')?.addEventListener('click', () => { this.duplicateNote(); this.closeMoreMenu(); });
         document.getElementById('copyContentBtn')?.addEventListener('click', () => { this.copyContent(); this.closeMoreMenu(); });
+        document.getElementById('versionHistoryBtn')?.addEventListener('click', () => this.openVersionHistory());
         document.getElementById('exportMdBtn')?.addEventListener('click', () => this.exportNote('md'));
         document.getElementById('exportTxtBtn')?.addEventListener('click', () => this.exportNote('txt'));
         document.getElementById('archiveNoteBtn')?.addEventListener('click', () => this.toggleArchive());
@@ -1238,6 +1819,36 @@ class NotesApp {
         document.getElementById('restoreBtn')?.addEventListener('click', () => this.restoreNote());
         document.getElementById('purgeBtn')?.addEventListener('click', () => this.openDeleteModal('purge'));
         document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.confirmDelete());
+
+        // Version history modal
+        document.getElementById('versionHistoryModal')?.addEventListener('click', e => {
+            if (e.target.id === 'versionHistoryModal') this.closeVersionHistory();
+        });
+
+        // Bulk select
+        document.getElementById('selectModeBtn')?.addEventListener('click', () => this.toggleSelectMode());
+        document.getElementById('bulkCancelBtn')?.addEventListener('click', () => this.toggleSelectMode());
+        document.getElementById('bulkArchiveBtn')?.addEventListener('click', () => this.bulkArchive());
+        document.getElementById('bulkTrashBtn')?.addEventListener('click', () => this.bulkTrash());
+        document.getElementById('bulkTagInput')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = e.target.value.trim();
+                if (val) { this.bulkAddTag(val); e.target.value = ''; }
+            }
+        });
+
+        // Command palette
+        document.getElementById('commandPaletteInput')?.addEventListener('input', e => this.renderPaletteResults(e.target.value));
+        document.getElementById('commandPaletteInput')?.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); this.movePaletteSelection(1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); this.movePaletteSelection(-1); }
+            else if (e.key === 'Enter') { e.preventDefault(); this.selectFromPalette(this.paletteIndex); }
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeCommandPalette(); }
+        });
+        document.getElementById('commandPaletteOverlay')?.addEventListener('click', e => {
+            if (e.target.id === 'commandPaletteOverlay') this.closeCommandPalette();
+        });
 
         document.querySelectorAll('.fmt-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1295,7 +1906,7 @@ class NotesApp {
             }
         });
 
-        // Close more-menu + shortcuts on outside click
+        // Close more-menu + shortcuts + wiki-autocomplete on outside click
         document.addEventListener('click', e => {
             if (this.moreMenuOpen &&
                 !document.getElementById('moreMenuBtn')?.contains(e.target) &&
@@ -1304,6 +1915,10 @@ class NotesApp {
             }
             if (!document.getElementById('shortcutsBtn')?.contains(e.target)) {
                 document.getElementById('shortcutsTooltip')?.classList.remove('show');
+            }
+            if (!document.getElementById('noteContentInput')?.contains(e.target) &&
+                !document.getElementById('wikiLinkAutocomplete')?.contains(e.target)) {
+                this.closeWikiAutocomplete();
             }
         });
 
@@ -1323,7 +1938,10 @@ class NotesApp {
                 this.newNote();
             }
 
-            if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && !inInput)) {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                this.openCommandPalette();
+            } else if (e.key === '/' && !inInput) {
                 e.preventDefault();
                 document.getElementById('searchInput')?.focus();
             }
@@ -1334,11 +1952,18 @@ class NotesApp {
             }
 
             if (e.key === 'Escape') {
+                const overlay = document.getElementById('commandPaletteOverlay');
                 const tooltip = document.getElementById('shortcutsTooltip');
-                if (tooltip?.classList.contains('show')) {
+                if (overlay && overlay.style.display === 'flex') {
+                    this.closeCommandPalette();
+                } else if (document.getElementById('versionHistoryModal')?.style.display === 'flex') {
+                    this.closeVersionHistory();
+                } else if (tooltip?.classList.contains('show')) {
                     tooltip.classList.remove('show');
                 } else if (this.moreMenuOpen) {
                     this.closeMoreMenu();
+                } else if (this.selectMode) {
+                    this.toggleSelectMode();
                 } else if (this.zenMode) {
                     this.toggleZen();
                 } else if (document.getElementById('deleteModal').style.display === 'flex') {
