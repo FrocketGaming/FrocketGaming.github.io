@@ -4,29 +4,13 @@
     max-width: 1600px;
     margin: 0 auto;
     display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-
-.tz-left-col {
-    flex: 1;
-    min-width: 0;
-    display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.tz-meeting-planner {
-    width: 520px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 20px;
-}
-
 /* Section Cards */
 .tz-converter,
-.tz-world-clock,
-.tz-meeting-planner {
+.tz-timeline {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -34,31 +18,15 @@
 }
 
 .tz-converter h3,
-.tz-world-clock h3,
-.tz-meeting-planner h3 {
+.tz-timeline h3 {
     color: var(--accent-primary);
     margin: 0 0 15px 0;
     font-size: 1.1rem;
 }
 
 .tz-converter h3 i,
-.tz-world-clock h3 i,
-.tz-meeting-planner h3 i {
+.tz-timeline h3 i {
     margin-right: 8px;
-}
-
-/* Section Header with controls */
-.tz-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.tz-section-header h3 {
-    margin-bottom: 0 !important;
 }
 
 /* Shared Input Styles */
@@ -268,194 +236,240 @@ input[type="datetime-local"]:focus {
     background: var(--bg-hover);
 }
 
-/* World Clock Preview Bar */
-.tz-clock-preview-bar {
+/* Timeline Header + Nav */
+.tz-timeline-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 4px;
 }
 
-.tz-clock-preview-bar label {
+.tz-timeline-header h3 {
+    margin-bottom: 0;
+}
+
+.tz-timeline-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tz-nav-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.tz-nav-btn:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.tz-nav-today-active {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.tz-timeline-date {
     color: var(--text-secondary);
     font-size: 0.85rem;
+    margin-left: 6px;
     white-space: nowrap;
 }
 
-.tz-clock-preview-bar .tz-select {
+/* Timeline Readout */
+.tz-timeline-readout {
     font-size: 0.85rem;
-    padding: 5px 10px;
-}
-
-.tz-preview-mode .tz-clock-card {
-    border-color: var(--accent-primary);
-    opacity: 0.92;
-}
-
-.tz-preview-mode .tz-clock-time {
-    color: var(--accent-secondary);
-}
-
-/* World Clock Grid */
-.tz-clock-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
-    gap: 12px;
-}
-
-.tz-clock-card {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    text-align: center;
-    position: relative;
-    transition: border-color 0.2s;
-    min-width: 0;
-}
-
-.tz-clock-card:hover {
-    border-color: var(--accent-primary);
-}
-
-.tz-clock-card .tz-clock-remove {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    background: none;
-    border: none;
     color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 2px 6px;
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    margin: 12px 0;
+    font-family: "Courier New", Consolas, monospace;
+    transition: color 0.15s, background 0.15s;
 }
 
-.tz-clock-card:hover .tz-clock-remove {
+.tz-timeline-readout.tz-tl-readout-active {
+    color: var(--accent-secondary);
+    background: color-mix(in srgb, var(--accent-primary) 14%, var(--bg-tertiary));
+}
+
+/* Timeline Rows */
+.tz-timeline-scroll {
+    overflow-x: auto;
+}
+
+.tz-tl-row {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--border-color);
+    min-width: 75vw;
+}
+
+.tz-tl-row:first-child {
+    border-top: 1px solid var(--border-color);
+}
+
+.tz-tl-row-home {
+    background: color-mix(in srgb, var(--accent-primary) 6%, transparent);
+}
+
+.tz-tl-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 210px;
+    flex-shrink: 0;
+    padding: 8px 10px;
+}
+
+.tz-tl-drag {
+    color: var(--text-secondary);
+    cursor: grab;
+    opacity: 0.4;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
+
+.tz-tl-row:hover .tz-tl-drag {
     opacity: 1;
 }
 
-.tz-clock-card .tz-clock-remove:hover {
-    color: var(--error-color);
+.tz-tl-home-icon {
+    color: var(--accent-primary);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
 }
 
-.tz-clock-city {
+.tz-tl-dragging {
+    opacity: 0.4;
+}
+
+.tz-tl-info-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.tz-tl-city {
     font-weight: 600;
     color: var(--accent-primary);
-    font-size: 0.85rem;
-    margin-bottom: 8px;
+    font-size: 0.82rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.tz-clock-time {
-    font-size: 1.6rem;
+.tz-tl-offset-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    vertical-align: middle;
+}
+
+.tz-tl-clock {
+    font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 4px;
     font-variant-numeric: tabular-nums;
-    font-family: "Courier New", Consolas, monospace;
-    letter-spacing: 0.5px;
+    font-family: Consolas, Monaco, monospace;
 }
 
-.tz-clock-date {
-    font-size: 0.8rem;
+.tz-tl-meta {
+    font-size: 0.7rem;
     color: var(--text-secondary);
-    margin-bottom: 6px;
-}
-
-.tz-clock-offset {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-}
-
-/* Meeting Planner */
-.tz-meeting-planner .tz-section-header {
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.tz-planner-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.tz-planner-controls label {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-}
-
-.tz-planner-controls .tz-picker {
-    min-width: 0;
-    flex: 1;
-}
-
-.tz-planner-controls .tz-picker-input {
-    min-width: 150px;
-}
-
-.tz-planner-grid {
-    overflow-x: auto;
-    margin-bottom: 15px;
-}
-
-.tz-planner-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-}
-
-.tz-planner-table th {
-    background: var(--bg-tertiary);
-    color: var(--accent-primary);
-    padding: 8px 6px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    font-size: 0.75rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tz-tl-remove {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.tz-tl-row:hover .tz-tl-remove {
+    opacity: 1;
+}
+
+.tz-tl-remove:hover {
+    color: var(--error-color);
+    background: var(--bg-hover);
+}
+
+/* Timeline Bar */
+.tz-tl-bar {
+    flex: 1;
+    display: flex;
+    position: relative;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.tz-tl-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    font-family: Consolas, Monaco, monospace;
+    transition: filter 0.1s;
     position: relative;
 }
 
-.tz-planner-table th .tz-planner-remove-tz {
-    cursor: pointer;
-    color: var(--text-secondary);
-    margin-left: 4px;
-    font-size: 0.7rem;
+.tz-tl-cell-num {
+    font-size: 0.72rem;
+    font-weight: 700;
 }
 
-.tz-planner-table th .tz-planner-remove-tz:hover {
-    color: var(--error-color);
+.tz-tl-cell-ampm {
+    font-size: 0.55rem;
+    opacity: 0.75;
 }
 
-.tz-planner-table td {
-    padding: 6px 8px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
+.tz-tl-cell.tz-tl-weekend {
+    filter: brightness(0.8) saturate(0.7);
 }
 
-.tz-planner-table .tz-hour-label {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    font-weight: 600;
-    text-align: left;
-    white-space: nowrap;
-    min-width: 80px;
+.tz-tl-cell.tz-tl-cell-now {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 45%, transparent);
 }
 
-.tz-planner-table .tz-hour-selected {
+.tz-tl-cell.tz-tl-cell-hover {
+    filter: brightness(1.35);
+}
+
+.tz-tl-cell.tz-tl-cell-pinned {
     outline: 2px solid var(--accent-primary);
     outline-offset: -2px;
+    z-index: 1;
 }
 
 /* Hour Color Coding */
@@ -502,32 +516,13 @@ input[type="datetime-local"]:focus {
     border: 1px solid var(--border-color);
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    .tz-container {
-        flex-direction: column;
-    }
-
-    .tz-meeting-planner {
-        width: 100%;
-        position: static;
-    }
+.tz-weekend-swatch {
+    background: var(--bg-tertiary);
+    filter: brightness(0.8) saturate(0.7);
 }
 
+/* Responsive */
 @media (max-width: 768px) {
-    .tz-clock-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .tz-section-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .tz-planner-controls {
-        width: 100%;
-    }
-
     .tz-row {
         flex-direction: column;
         align-items: stretch;
@@ -541,23 +536,16 @@ input[type="datetime-local"]:focus {
         align-self: flex-end;
     }
 
-    .tz-planner-grid {
-        overflow-x: auto;
-    }
-
     .tz-picker {
         min-width: 0;
         width: 100%;
     }
-}
 
-@media (max-width: 480px) {
-    .tz-clock-grid {
-        grid-template-columns: 1fr;
+    .tz-tl-info {
+        width: 160px;
     }
 
-    .tz-planner-controls {
-        flex-direction: column;
-        align-items: flex-start;
+    .tz-tl-meta {
+        display: none;
     }
 }

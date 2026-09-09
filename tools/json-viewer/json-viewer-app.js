@@ -19,10 +19,21 @@ class JsonViewerApp {
         this.searchIndex   = -1;
         this.parsed        = null;
         this.debounceTimer = null;
+
+        this.currentView   = 'tree';
+        this.treeViewBtn   = document.getElementById('treeViewBtn');
+        this.graphViewBtn  = document.getElementById('graphViewBtn');
+        this.jsonGraphEl   = document.getElementById('jsonGraph');
+        this.graphView     = new JsonGraphView(this.jsonGraphEl, {
+            onCopyPath: (path) => this.copyPath(path)
+        });
+
         this.init();
     }
 
     init() {
+        this.treeViewBtn.addEventListener('click', () => this.switchView('tree'));
+        this.graphViewBtn.addEventListener('click', () => this.switchView('graph'));
         this.jsonInput.addEventListener('input', () => this.scheduleRender());
         this.formatBtn.addEventListener('click', () => this.formatInput());
         this.expandAllBtn.addEventListener('click', () => this.expandAll());
@@ -71,7 +82,9 @@ class JsonViewerApp {
             this.jsonError.textContent = '';
             this.jsonError.style.display = 'none';
             this.renderTree(this.parsed);
+            this.graphView.render(this.parsed);
             this.renderStats(this.parsed);
+            if (this.currentView === 'graph') this.graphView.ensureFit();
         } catch (e) {
             this.parsed = null;
             this.jsonTree.innerHTML = '';
@@ -234,19 +247,41 @@ class JsonViewerApp {
         return keyEl;
     }
 
+    // ─── View switching ────────────────────────────────────────
+
+    switchView(view) {
+        if (view === this.currentView) return;
+        this.currentView = view;
+        this.treeViewBtn.classList.toggle('active', view === 'tree');
+        this.graphViewBtn.classList.toggle('active', view === 'graph');
+        this.jsonTree.classList.toggle('jg-hidden-view', view !== 'tree');
+        this.jsonGraphEl.classList.toggle('jg-active', view === 'graph');
+        if (view === 'graph') this.graphView.ensureFit();
+        if (this.searchInput.value.trim()) this.performSearch();
+    }
+
     // ─── Search ────────────────────────────────────────────────
 
     performSearch() {
+        const query = this.searchInput.value.trim();
+        this.searchClear.style.display = query ? '' : 'none';
+
+        if (this.currentView === 'graph') {
+            this.performGraphSearch(query);
+            return;
+        }
+        this.performTreeSearch(query);
+    }
+
+    performTreeSearch(query) {
         this.jsonTree.querySelectorAll('.search-match, .search-match-active').forEach(el => {
             el.classList.remove('search-match', 'search-match-active');
         });
         this.searchMatches = [];
         this.searchIndex = -1;
 
-        const query = this.searchInput.value.trim().toLowerCase();
-        this.searchClear.style.display = query ? '' : 'none';
-
-        if (!query || !this.parsed) {
+        const q = query.toLowerCase();
+        if (!q || !this.parsed) {
             this.searchCount.textContent = '';
             this.searchPrev.disabled = true;
             this.searchNext.disabled = true;
@@ -254,7 +289,7 @@ class JsonViewerApp {
         }
 
         this.jsonTree.querySelectorAll('.json-key, .json-value').forEach(el => {
-            if (el.textContent.toLowerCase().includes(query)) {
+            if (el.textContent.toLowerCase().includes(q)) {
                 el.classList.add('search-match');
                 this.searchMatches.push(el);
             }
@@ -269,6 +304,24 @@ class JsonViewerApp {
         }
         this.searchPrev.disabled = this.searchMatches.length === 0;
         this.searchNext.disabled = this.searchMatches.length === 0;
+    }
+
+    performGraphSearch(query) {
+        if (!query || !this.parsed) {
+            this.graphView.search('');
+            this.searchCount.textContent = '';
+            this.searchPrev.disabled = true;
+            this.searchNext.disabled = true;
+            return;
+        }
+        const result = this.graphView.search(query);
+        if (result.count > 0) {
+            this.searchCount.textContent = `1 / ${result.count}`;
+        } else {
+            this.searchCount.textContent = 'no matches';
+        }
+        this.searchPrev.disabled = result.count === 0;
+        this.searchNext.disabled = result.count === 0;
     }
 
     activateMatch(index) {
@@ -290,6 +343,11 @@ class JsonViewerApp {
     }
 
     navigateSearch(dir) {
+        if (this.currentView === 'graph') {
+            const result = this.graphView.navigateSearch(dir);
+            if (result) this.searchCount.textContent = `${result.index + 1} / ${result.count}`;
+            return;
+        }
         if (this.searchMatches.length === 0) return;
         this.searchIndex = (this.searchIndex + dir + this.searchMatches.length) % this.searchMatches.length;
         this.activateMatch(this.searchIndex);
@@ -322,6 +380,7 @@ class JsonViewerApp {
             const toggle = el.querySelector('.json-toggle');
             if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
         });
+        this.graphView.expandAll();
     }
 
     collapseAll() {
@@ -332,6 +391,7 @@ class JsonViewerApp {
             const toggle = el.querySelector('.json-toggle');
             if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
         });
+        this.graphView.collapseAll();
     }
 
     copyFormatted() {
@@ -368,6 +428,7 @@ class JsonViewerApp {
         this.searchCount.textContent = '';
         this.searchPrev.disabled = true;
         this.searchNext.disabled = true;
+        this.graphView.reset();
     }
 
     showCopyNotif(msg) {

@@ -37,7 +37,7 @@
                 <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Cron Builder</span></span></a>
                 <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Timezone</span></span></a>
                 <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Text Diff</span></span></a>
-                <a class="nav-pill-item active" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a>
+                <a class="nav-pill-item active" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a><a class="nav-pill-item" href="../palette-extractor/index.html"><i class="fa-solid fa-palette"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Palette Extractor</span></span></a>
             </nav>
             <div class="theme-selector">
                 <label for="themeSelect">Theme:</label>
@@ -74,7 +74,10 @@
             </div>
             <div class="json-output-panel">
                 <div class="json-panel-label">
-                    Tree
+                    <div class="json-view-toggle" id="viewToggle">
+                        <button class="json-view-toggle-btn active" data-view="tree" id="treeViewBtn"><i class="fa-solid fa-list-tree"></i> Tree</button>
+                        <button class="json-view-toggle-btn" data-view="graph" id="graphViewBtn"><i class="fa-solid fa-diagram-project"></i> Graph</button>
+                    </div>
                     <span class="json-path-hint" id="pathHint">click any key to copy its path</span>
                 </div>
                 <div class="json-search-bar" id="searchBar">
@@ -91,6 +94,7 @@
                         <p>Paste JSON on the left to explore it here</p>
                     </div>
                 </div>
+                <div id="jsonGraph" class="jg-root"></div>
             </div>
         </div>
 
@@ -102,6 +106,7 @@
 
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
+    <script src="json-viewer-graph.js"></script>
     <script src="json-viewer-app.js"></script>
 <!-- impeccable-live-start -->
 <!-- impeccable-live-end -->

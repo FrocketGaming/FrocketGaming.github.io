@@ -20,6 +20,7 @@
         <link rel="stylesheet" href="../../src/stylesheet.css" />
         <link rel="stylesheet" href="../../src/firebase-sync.css" />
         <link rel="stylesheet" href="snippets-styles.css" />
+        <link rel="stylesheet" href="graph-view-styles.css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -43,7 +44,7 @@
                     <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Cron Builder</span></span></a>
                     <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Timezone</span></span></a>
                     <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Text Diff</span></span></a>
-                    <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a>
+                    <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a><a class="nav-pill-item" href="../palette-extractor/index.html"><i class="fa-solid fa-palette"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Palette Extractor</span></span></a>
                 </nav>
                 <div class="theme-selector">
                     <label for="themeSelect">Theme:</label>
@@ -170,6 +171,10 @@
                     </div>
                 </div>
                 <div class="toolbar-spacer"></div>
+                <button id="graphViewBtn" class="format-btn" title="Graph view">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    Graph
+                </button>
                 <button id="templatesBtn" class="format-btn" title="Code templates">
                     <i class="fa-solid fa-file-code"></i>
                     Templates
@@ -736,6 +741,7 @@
         <script src="../../src/storage-manager.js"></script>
         <script src="../../src/firebase-config.js"></script>
         <script src="../../src/firebase-sync.js"></script>
+        <script src="graph-view.js"></script>
         <script src="snippets-app.js"></script>
     <!-- impeccable-live-start -->
 <!-- impeccable-live-end -->

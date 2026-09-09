@@ -116,7 +116,19 @@ The system currently carries a few generic-AI-interface tells worth naming rathe
 
 ## Colors
 
-Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave) restates the same roles with different hues — describe by role, not by one theme's hex.
+Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave) restates the same roles with different hues — describe by role, not by one theme's hex. All seven live in `src/stylesheet.css` under `[data-theme="…"]`; that file is the single source of truth for exact per-theme hex — this table exists so a new theme can be sized up by character before opening it:
+
+| Theme | Accent pair | Character |
+|---|---|---|
+| Default | `#74a12e` → `#c6ee86` (green → lime) | Terminal green — the namesake identity |
+| Dracula | `#bd93f9` → `#ff79c6` (purple → pink) | Classic Dracula, warm neon on near-black |
+| Catppuccin | `#cba6f7` → `#f5c2e7` (mauve → pink) | Softer, pastel version of the Dracula pairing |
+| Atom | `#61afef` → `#98c379` (blue → green) | Editor-native — closest to the actual Atom One Dark theme |
+| Nord | `#88c0d0` → `#81a1c1` (frost → blue) | Coolest, lowest-contrast palette; two blues instead of a hue jump |
+| Solarized Dark | `#268bd2` → `#2aa198` (blue → cyan) | The most muted ground (`#002b36`) of any theme |
+| SynthWave '84 | `#ff7edb` → `#36f9f6` (pink → cyan) | The one theme where the *neutrals* break "everything else quiet" too — secondary text and syntax colors stay saturated instead of settling into gray |
+
+A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the seven above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
 ### Primary
 - **Terminal Green** (`--accent-primary`, `#74a12e`): the one interactive/signal color — button fills, hover glows, focus rings, active nav-link background, logo text-shadow.
@@ -138,6 +150,15 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 
 ### Utility
 - **Scrim** (`rgba(0, 0, 0, 0.4)`): the neutral black overlay-separation shadow used by floating tooltips/modals (see Elevation & Depth). Theme-independent by design — a scrim dims what's behind it regardless of which palette is active, so it deliberately does not use a theme token.
+
+### Known Exceptions (not systemized)
+A handful of literal colors exist outside the token list above, each for a specific reason rather than by drift. These are intentionally *not* promoted to named tokens — each is scoped to one job:
+- **Timezone hour-coding** (`tools/timezone/timezone-styles.css`, `.tz-hour-good/ok/bad`: `#2d5a2d`/`#5a4a1a`/`#5a1a1a` backgrounds with `#a8e6a8`/`#f0d68a`/`#f0a0a0` text, plus a Dracula-specific override `#264a26`/`#4a3a10`/`#4a1010`): fixed business-hours/early-late/night semantics, deliberately theme-invariant so "green means business hours" reads the same on every palette — the opposite intent of a theme token.
+- **JSON viewer SynthWave contrast fix** (`tools/json-viewer/json-viewer-styles.css`, `[data-theme="synthwave"] .json-children`: `#6c5a9e`): `--border-color` is nearly invisible against `--bg-primary` in that one theme, so the tree's nesting guide gets a manual, theme-scoped bump. The pattern to follow for a future theme with the same problem: a scoped `[data-theme="…"]` override with a comment stating the contrast issue, not a global change.
+- **Error-row tint** (`tools/csv-viewer/csv-styles.css`, `tools/regex-tester/regex-styles.css`: `#3d1f1f`): predates this project's `color-mix()` usage; new code with the same need should use `color-mix(in srgb, var(--error-color) 15%, transparent)` instead.
+- **Firebase auth amber** (`src/firebase-sync.css`: `#f0ad4e`): matches Firebase/Google's own warning-state amber inside their auth popup UI, intentionally not themed since it lives inside a third-party-styled surface this project doesn't control.
+- **To-do priority colors** (`tools/todo/todo-styles.css`: `#9b59b6` purple "someday" tag, `#f4d35e`/`#1a1a1a` yellow flag): same reasoning as the timezone hour colors — the meaning depends on staying constant across themes.
+- **Export/canvas contexts** (`#1a1a1a`, `#fff` in todo, image-editor, chart-builder): places where the value must match a real exported pixel (image export, chart background) rather than a themed surface — theming these would produce incorrect output files.
 
 ### Named Rules
 **The Single-Accent Rule.** Exactly one accent color (per active theme) carries interactive/focus/active signal across the entire site. A second color never competes for that job — the secondary accent is reserved for "peak/hover" states of the same interaction, not a second independent signal.
@@ -168,6 +189,8 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 
 **The Fixed-Step Rule.** Every font-size in the codebase snaps to one of: 11px (Micro), 12px (Label), 13px (Small), 14px (Compact), 16px (Body), 24px (Title), 28 / 48px (Stat), 2.5em (Headline). A one-off size outside this list is drift, not a new tier — either it belongs to an existing step or the step list needs a deliberate addition here first. (Markdown-rendered content is the sole exception: `.markdown-preview h1-h4`/`code` use `em` multipliers on the Body base so arbitrary user content keeps a proportional internal hierarchy — that ramp is relative by design, not an absolute step.)
 
+**Known drift from the Fixed-Step Rule.** In practice the codebase does not hold to the eight steps above. A full grep across all 13 tools turns up 70+ distinct `font-size` values spread across three units (`rem`, `px`, `em`) — most commonly `0.85rem` (~38 uses), `0.8rem` (~27), `12px` (~59), `14px` (~53), `13px` (~45), and `11px`/`10px` clusters, none of which are the same value written consistently. Most of this is the same handful of intents ("small UI text," "meta text") re-authored in a different unit at different times, not genuinely new tiers — `0.85rem` and `13px`/`13.6px` are the same size meant twice. This is real, existing debt, not a second accepted scale: treat any of these as equivalent to the nearest step above rather than inventing a ninth tier, and prefer the `px` values in this rule (the ones actually named as steps) when writing new code, since `rem` usage crept in later without ever being adopted here as the standard unit. Icon glyph sizing (`font-size` on `i.fa-solid`, e.g. `48px` empty-state icons) is a separate axis from text sizing and isn't part of this scale at all.
+
 ## Layout
 
 Fixed-position header (logo + theme selector + tool nav) with `body { padding-top: 140px }` to clear it; `body` uses `display:flex; flex-direction:column; align-items:center`, so page containers must set `width: 100%` to fill available space. The landing page is a centered hero (max-width 700px) above a responsive card grid (`repeat(auto-fill, minmax(270px, 1fr))`). Tool pages generally use a two-panel or three-panel row layout (`.columns-row`, `.box` at `height: 50vh`) that collapses to a single column under 992px.
@@ -193,6 +216,8 @@ Corners are consistently soft and small: 3px on primary/ghost buttons and small 
 
 ### Named Rules
 **The Six-Step Radius Rule.** Every `border-radius` snaps to one of: 3px (sm), 5px (md), 8px (floating), 10px (lg), 12px (xl), or 999px (pill, for fully-rounded badges). A value outside this list is drift.
+
+**Known drift from the Six-Step Radius Rule.** Two more values are common enough across the codebase to be de facto accepted rather than one-off drift: **4px** (chart-builder, json-viewer, timezone, notes — sits between sm and md, used the same way sm/md are) and **2px** (small underline/highlight accents in json-viewer's search matches and todo's strike-through styling, plus the checkbox radius already implied above but never stated as its own step). Treat both as recognized, just under-documented; anything else outside the eight values now in play (2, 3, 4, 5, 8, 10, 12, 999px) is still drift.
 
 ## Components
 
