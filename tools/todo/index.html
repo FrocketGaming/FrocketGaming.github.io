@@ -64,8 +64,11 @@
                         <span>Sign in</span>
                     </button>
                     <div id="userInfo" class="user-info" style="display:none;">
-                        <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
-                        <span id="userName" class="user-name"></span>
+                        <div class="user-identity" tabindex="0" title="Hover or focus to reveal" aria-label="Signed in account, hover or focus to reveal">
+                            <span class="user-identity-hint"><i class="fa-solid fa-user"></i></span>
+                            <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+                            <span id="userName" class="user-name"></span>
+                        </div>
                         <div id="syncStatus" class="sync-status" style="display:none;">
                             <span class="sync-status-dot" id="syncDot"></span>
                             <span id="syncLabel">Synced</span>

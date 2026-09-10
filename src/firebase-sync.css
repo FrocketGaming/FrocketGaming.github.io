@@ -41,12 +41,56 @@
     gap: 10px;
 }
 
+/* Avatar + name are hidden behind a generic placeholder by default;
+   hovering or focusing reveals them. */
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.user-identity-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.user-identity .user-avatar,
+.user-identity .user-name {
+    display: none;
+}
+
+.user-identity:hover .user-identity-hint,
+.user-identity:focus-within .user-identity-hint {
+    display: none;
+}
+
+.user-identity:hover .user-avatar,
+.user-identity:focus-within .user-avatar {
+    display: block;
+}
+
+.user-identity:hover .user-name,
+.user-identity:focus-within .user-name {
+    display: inline-block;
+}
+
 .user-avatar {
     width: 28px;
     height: 28px;
     border-radius: 50%;
     border: 2px solid var(--accent-primary);
     object-fit: cover;
+    flex-shrink: 0;
 }
 
 .user-name {
