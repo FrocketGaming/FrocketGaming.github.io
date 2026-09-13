@@ -1488,12 +1488,140 @@ class NotesApp {
                 const { svg } = await mermaid.render(id, source);
                 if (token !== this.previewRenderToken) return;
                 wrapper.innerHTML = svg;
+                this.addMermaidActions(wrapper);
             } catch (err) {
                 if (token !== this.previewRenderToken) return;
                 wrapper.textContent = 'Invalid Mermaid diagram.';
                 wrapper.classList.add('mermaid-error');
             }
         }
+    }
+
+    // ─── Mermaid Export ───────────────────────────────────────
+
+    addMermaidActions(wrapper) {
+        const bar = document.createElement('div');
+        bar.className = 'mermaid-actions';
+
+        const makeBtn = (label, icon, handler) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'mermaid-action-btn';
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+            btn.innerHTML = `<i class="${icon}"></i>`;
+            btn.addEventListener('click', () => handler(btn));
+            return btn;
+        };
+
+        bar.append(
+            makeBtn('Copy diagram as image', 'fa-solid fa-clipboard', btn => this.copyMermaidImage(wrapper, btn)),
+            makeBtn('Download PNG', 'fa-solid fa-image', btn => this.downloadMermaid(wrapper, 'png', btn)),
+            makeBtn('Download SVG', 'fa-solid fa-code', btn => this.downloadMermaid(wrapper, 'svg', btn))
+        );
+        wrapper.appendChild(bar);
+    }
+
+    serializeMermaidSvg(wrapper) {
+        const svg = wrapper.querySelector('svg');
+        if (!svg) return null;
+
+        const box = svg.getBoundingClientRect();
+        const view = svg.viewBox?.baseVal;
+        const width = Math.ceil(box.width || view?.width || 800);
+        const height = Math.ceil(box.height || view?.height || 600);
+
+        const clone = svg.cloneNode(true);
+        clone.removeAttribute('style');
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        clone.setAttribute('width', width);
+        clone.setAttribute('height', height);
+        if (!clone.getAttribute('viewBox') && view) {
+            clone.setAttribute('viewBox', `0 0 ${view.width} ${view.height}`);
+        }
+
+        return { markup: new XMLSerializer().serializeToString(clone), width, height };
+    }
+
+    async mermaidToPngBlob(wrapper, scale = 2) {
+        const data = this.serializeMermaidSvg(wrapper);
+        if (!data) throw new Error('No diagram to export');
+
+        const img = new Image();
+        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(data.markup)}`;
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = () => reject(new Error('Diagram could not be rasterized'));
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(data.width * scale);
+        canvas.height = Math.round(data.height * scale);
+        const ctx = canvas.getContext('2d');
+        const bg = getComputedStyle(wrapper).backgroundColor;
+        ctx.fillStyle = (bg && bg !== 'rgba(0, 0, 0, 0)') ? bg : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Diagram could not be rasterized');
+        return blob;
+    }
+
+    async copyMermaidImage(wrapper, btn) {
+        if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+            this.downloadMermaid(wrapper, 'png', btn);
+            return;
+        }
+        try {
+            // Passing the promise keeps the user gesture alive while the canvas encodes.
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': this.mermaidToPngBlob(wrapper) })
+            ]);
+            this.flashMermaidBtn(btn, 'fa-solid fa-check', 'fa-solid fa-clipboard');
+        } catch (err) {
+            console.error('Notes: Failed to copy diagram:', err);
+            this.flashMermaidBtn(btn, 'fa-solid fa-xmark', 'fa-solid fa-clipboard');
+        }
+    }
+
+    async downloadMermaid(wrapper, format, btn) {
+        const note = this.notes.find(n => n.id === this.currentNoteId);
+        const base = (note?.title || this.getAutoTitle(note?.content) || 'diagram')
+            .replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const index = [...(wrapper.parentElement?.querySelectorAll('.mermaid-diagram') || [])].indexOf(wrapper) + 1;
+        const name = `${base}-diagram-${index || 1}.${format}`;
+
+        try {
+            let blob;
+            if (format === 'svg') {
+                const data = this.serializeMermaidSvg(wrapper);
+                if (!data) throw new Error('No diagram to export');
+                blob = new Blob([data.markup], { type: 'image/svg+xml;charset=utf-8' });
+            } else {
+                blob = await this.mermaidToPngBlob(wrapper);
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.flashMermaidBtn(btn, 'fa-solid fa-check', btn.querySelector('i').className);
+        } catch (err) {
+            console.error('Notes: Failed to export diagram:', err);
+            this.flashMermaidBtn(btn, 'fa-solid fa-xmark', btn.querySelector('i').className);
+        }
+    }
+
+    flashMermaidBtn(btn, tempIcon, restoreIcon) {
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        if (!icon) return;
+        icon.className = tempIcon;
+        setTimeout(() => { icon.className = restoreIcon; }, 1500);
     }
 
     togglePreview() {

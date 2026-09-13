@@ -1819,6 +1819,7 @@
 /* ─── Mermaid Diagrams ─────────────────────────────────────────── */
 
 .mermaid-diagram {
+    position: relative;
     margin: 14px 0;
     padding: 16px;
     background: var(--bg-secondary);
@@ -1827,6 +1828,45 @@
     overflow-x: auto;
     display: flex;
     justify-content: center;
+}
+
+.mermaid-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.mermaid-diagram:hover .mermaid-actions,
+.mermaid-actions:focus-within {
+    opacity: 1;
+}
+
+.mermaid-action-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.mermaid-action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
 }
 
 .mermaid-diagram svg {
