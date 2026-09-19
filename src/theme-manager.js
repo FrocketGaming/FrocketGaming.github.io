@@ -5,7 +5,7 @@ const ThemeManager = {
     DEFAULT_THEME: document.documentElement.getAttribute('data-default-theme') || 'default',
 
     themes: [
-        { id: 'default', name: 'Default (Green)' },
+        { id: 'default', name: 'Green' },
         { id: 'dracula', name: 'Dracula' },
         { id: 'catppuccin', name: 'Catppuccin Mocha' },
         { id: 'atom', name: 'Atom One Dark' },
