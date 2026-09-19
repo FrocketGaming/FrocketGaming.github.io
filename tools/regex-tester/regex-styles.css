@@ -390,6 +390,7 @@
 
 .category-tab.active {
     background-color: var(--accent-primary);
+    color: var(--bg-primary);
     border-color: var(--accent-primary);
     box-shadow: 0 0 10px var(--accent-primary);
 }
@@ -416,6 +417,7 @@
 
 .example-btn:hover {
     background-color: var(--accent-primary);
+    color: var(--bg-primary);
     border-color: var(--accent-primary);
     box-shadow: 0 0 10px var(--accent-primary);
 }

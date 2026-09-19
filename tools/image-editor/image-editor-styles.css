@@ -101,7 +101,7 @@
 
 .tool-btn-editor.active {
     background-color: var(--accent-primary);
-    color: #fff;
+    color: var(--bg-primary);
     border-color: var(--accent-primary);
 }
 
@@ -264,7 +264,7 @@
 
 .action-btn.primary {
     background-color: var(--accent-primary);
-    color: #fff;
+    color: var(--bg-primary);
     border-color: var(--accent-primary);
 }
 
