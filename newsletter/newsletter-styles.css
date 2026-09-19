@@ -198,6 +198,9 @@
     display: block;
 }
 
+/* :first-child as well as the class, so the name stays highlighted even if an older cached script
+   builds the heading without the class */
+.nl-masthead span:first-child,
 .nl-masthead-name {
     color: var(--band-1);
 }
