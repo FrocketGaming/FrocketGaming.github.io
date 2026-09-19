@@ -254,6 +254,7 @@ Corners are consistently soft and small: 3px on primary/ghost buttons and small 
 ### Navigation
 - Fixed header, centered uppercase logo (3px letter-spacing, accent-primary text-shadow glow), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
 - Newsletter link (`.newsletter-link`): pinned to the far left of the fixed header on every page, out of flow so it never widens the centered icon row, and deliberately not part of the tool rail. An outlined pill in `--accent-primary` that fills on hover, focus, and on the newsletter page itself (`.active`). Shows `__dunder__ Review` above 1100px, an icon-only pill from 1100px down to 640px, and below 640px joins the row in flow as an icon-only pill.
+- Newsletter section navigation (`.nl-jump`, `newsletter/` only): a fixed rail in the free space right of the column at 1200px and up, and a floating accent-primary "Sections" pill button that opens the same list in a panel below that width. Both stay hidden until the in-page contents list has scrolled out of view, so they never duplicate it. Flat like the rest of the page (hairline border, no shadow); the section in view is marked with a `--band` colored outline (`aria-current="true"`), deliberately not a side stripe.
 
 ## Do's and Don'ts
 

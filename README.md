@@ -49,6 +49,7 @@ A Markdown note-taking tool with Firebase sync. Accessible at `/tools/notes/` â€
 A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, stdlib updates, and long-form deep dives with code. It is linked from the far left of every page header, separate from the tool nav. Issues are individual Markdown files rendered in the browser (no build step, no email), and its colors follow whichever site theme is selected. With no saved theme it opens in the Dunder theme.
 
 - `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
+- A section navigator follows you down the page: a side rail on wide screens, a floating "Sections" button on narrow ones.
 - Writing rules and a starting point live in `newsletter/template.md`.
 
 To add an issue, copy the template, write it, then add an entry to `newsletter/issues.json` (newest issue first is easiest to read, but the page sorts by date):

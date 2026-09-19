@@ -3,12 +3,16 @@
    recolors the page. The four section bands use --band-1..4, which fall back to
    existing tokens on every theme except Dunder. */
 
-.nl {
+.nl,
+.nl-jump {
     --font-code: Consolas, Monaco, monospace;
     /* Text on colored bands: bg-primary darkened toward black so mid-tone band colors reach 4.5:1 */
     --band-ink: color-mix(in srgb, var(--bg-primary) 40%, black);
     /* Reading text: text-primary eased toward the ground; 4.5:1 or better on every theme except Solarized */
     --nl-muted: color-mix(in srgb, var(--text-primary) 88%, var(--bg-primary));
+}
+
+.nl {
     width: 100%;
     max-width: 640px;
     box-sizing: border-box;
@@ -624,6 +628,159 @@
     color: var(--nl-muted);
     font-size: 14px;
     line-height: 1.6;
+}
+
+/* Section navigation. Narrow screens: a floating button that opens a panel.
+   Wide screens (1200px+): a rail in the space beside the column.
+   Hidden until the in-page contents list has scrolled out of view. */
+@media (prefers-reduced-motion: no-preference) {
+    html:has(.nl) {
+        scroll-behavior: smooth;
+    }
+}
+
+.nl-jump {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.nl-jump.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nl-jump {
+        transition: none;
+    }
+}
+
+.nl-jump-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--accent-primary);
+    color: var(--band-ink);
+    font-family: "Raleway", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.nl-jump-toggle:hover {
+    background-color: var(--accent-secondary);
+}
+
+.nl-jump-toggle:focus-visible {
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 2px;
+}
+
+.nl-jump-panel {
+    display: none;
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 32px));
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 14px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.nl-jump.is-open .nl-jump-panel {
+    display: block;
+}
+
+.nl-jump-panel .nl-label {
+    margin: 0 0 10px;
+    text-align: left;
+}
+
+.nl-jump-list .nl-jump-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: var(--nl-muted);
+    font-size: 13px;
+    line-height: 1.3;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.nl-jump-link:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.nl-jump-link[aria-current="true"] {
+    background-color: var(--bg-secondary);
+    border-color: var(--band);
+    color: var(--text-primary);
+}
+
+.nl-jump-num {
+    flex-shrink: 0;
+    min-width: 26px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    background-color: var(--band);
+    color: var(--band-ink);
+    font-family: var(--font-code);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.nl-jump-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.nl-jump-name code {
+    padding: 0;
+    background: none;
+    font-size: 1em;
+}
+
+@media (min-width: 1200px) {
+    .nl-jump {
+        top: 160px;
+        right: auto;
+        bottom: auto;
+        left: calc(50% + 352px);
+        width: 200px;
+        display: block;
+    }
+
+    .nl-jump-toggle {
+        display: none;
+    }
+
+    .nl-jump-panel {
+        display: block;
+        width: auto;
+        max-height: calc(100vh - 200px);
+    }
 }
 
 /* Loading and error states */

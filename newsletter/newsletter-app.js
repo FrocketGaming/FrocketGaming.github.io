@@ -19,6 +19,7 @@ class NewsletterApp {
         this.main = null;
         this.archive = null;
         this.stamp = null;
+        this.jump = null;
     }
 
     init() {
@@ -308,6 +309,7 @@ class NewsletterApp {
         if (this.main.querySelector('pre code')) {
             this.highlightCode();
         }
+        this.renderJump(issue);
     }
 
     tocRowHtml(section, index) {
@@ -389,6 +391,87 @@ class NewsletterApp {
 
     renderFatal(message) {
         this.main.innerHTML = `<p class="nl-error" role="alert">${this.escapeHtml(message)}</p>`;
+    }
+
+    // ---------- Section navigation ----------
+    // A rail beside the column on wide screens, a floating button + panel on narrow ones.
+    // It shows only once the in-page contents list has scrolled out of view.
+
+    renderJump(issue) {
+        if (!this.jump) this.buildJump();
+
+        this.jump.querySelector('.nl-jump-list').innerHTML = issue.sections.map((section, index) => `
+            <li>
+                <a class="nl-jump-link" data-band="${this.bandOf(index)}" href="#section-${index + 1}">
+                    <span class="nl-jump-num">${this.pad(index + 1)}</span>
+                    <span class="nl-jump-name">${section.headingHtml}</span>
+                </a>
+            </li>`).join('');
+
+        this.observeSections();
+    }
+
+    buildJump() {
+        this.jump = document.createElement('nav');
+        this.jump.className = 'nl-jump';
+        this.jump.setAttribute('aria-label', 'Jump to section');
+        this.jump.innerHTML = `
+            <button type="button" class="nl-jump-toggle" aria-expanded="false" aria-controls="nlJumpPanel">
+                <i class="fa-solid fa-list" aria-hidden="true"></i> Sections
+            </button>
+            <div class="nl-jump-panel" id="nlJumpPanel">
+                <p class="nl-label">On this page</p>
+                <ol class="nl-toc nl-jump-list"></ol>
+            </div>`;
+        document.body.appendChild(this.jump);
+
+        const toggle = this.jump.querySelector('.nl-jump-toggle');
+        toggle.addEventListener('click', () => this.setJumpOpen(!this.jump.classList.contains('is-open')));
+        this.jump.querySelector('.nl-jump-list').addEventListener('click', () => this.setJumpOpen(false));
+        document.addEventListener('click', (event) => {
+            if (!this.jump.contains(event.target)) this.setJumpOpen(false);
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.jump.classList.contains('is-open')) {
+                this.setJumpOpen(false);
+                toggle.focus();
+            }
+        });
+    }
+
+    setJumpOpen(open) {
+        this.jump.classList.toggle('is-open', open);
+        this.jump.querySelector('.nl-jump-toggle').setAttribute('aria-expanded', String(open));
+    }
+
+    observeSections() {
+        const sections = [...this.main.querySelectorAll('.nl-section')];
+        const links = [...this.jump.querySelectorAll('.nl-jump-link')];
+        const inBand = new Set();
+
+        // Highlight the lowest section touching the band between the header and 45% down the viewport
+        const sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                const index = sections.indexOf(entry.target);
+                if (entry.isIntersecting) inBand.add(index);
+                else inBand.delete(index);
+            });
+            if (!inBand.size) return;
+            const active = Math.max(...inBand);
+            links.forEach((link, index) => {
+                if (index === active) link.setAttribute('aria-current', 'true');
+                else link.removeAttribute('aria-current');
+            });
+        }, { rootMargin: '-150px 0px -55% 0px' });
+        sections.forEach((section) => sectionObserver.observe(section));
+
+        // Show the navigation once the contents list has scrolled up past the header
+        const tocObserver = new IntersectionObserver(([entry]) => {
+            const scrolledPast = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+            this.jump.classList.toggle('is-visible', scrolledPast);
+            if (!scrolledPast) this.setJumpOpen(false);
+        }, { rootMargin: '-92px 0px 0px 0px' });
+        tocObserver.observe(this.main.querySelector('.nl-toc-block'));
     }
 
     // ---------- Syntax highlighting ----------
