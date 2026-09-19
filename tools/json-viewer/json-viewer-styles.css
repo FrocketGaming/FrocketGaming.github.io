@@ -78,7 +78,7 @@
     color: var(--text-secondary);
     opacity: 0.6;
     margin-left: auto;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     transition: color 0.2s, opacity 0.2s;
     white-space: nowrap;
     overflow: hidden;
@@ -99,7 +99,7 @@
     border: none;
     resize: none;
     font-size: 13px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     outline: none;
     line-height: 1.6;
     padding: 12px 14px;
@@ -111,7 +111,7 @@
     overflow-y: auto;
     overflow-x: auto;
     padding: 10px 6px 10px 10px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     line-height: 1.6;
 }
@@ -126,7 +126,7 @@
     display: inline-flex;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     padding: 2px;
     gap: 2px;
     margin-left: 8px;
@@ -206,8 +206,8 @@
 }
 
 .jg-edge-label {
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 11px;
     fill: var(--text-secondary);
     paint-order: stroke;
     stroke: var(--bg-primary);
@@ -225,9 +225,9 @@
     position: absolute;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 7px;
+    border-radius: 8px;
     box-shadow: 0 1px 3px var(--shadow-color);
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 12px;
     overflow: hidden;
     user-select: none;
@@ -271,7 +271,7 @@
 }
 
 .jg-row-toggle {
-    font-size: 9px;
+    font-size: 11px;
     color: var(--text-secondary);
     width: 11px;
     flex-shrink: 0;
@@ -347,7 +347,7 @@
     background: none;
     border: none;
     color: var(--text-secondary);
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 12px;
     transition: background 0.15s, color 0.15s;
@@ -375,7 +375,7 @@
     height: 110px;
     background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     overflow: hidden;
     box-shadow: 0 4px 14px var(--shadow-color);
     z-index: 20;
@@ -459,7 +459,7 @@
     border-radius: 5px;
     color: var(--error-color);
     font-size: 13px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
 }
 
 /* ─── Search Bar ─────────────────────────────────────────── */
@@ -488,7 +488,7 @@
     outline: none;
     color: var(--text-primary);
     font-size: 12px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     padding: 2px 4px;
     min-width: 0;
 }
@@ -598,7 +598,7 @@
     height: 16px;
     margin-right: 4px;
     color: var(--text-secondary);
-    font-size: 10px;
+    font-size: 11px;
     flex-shrink: 0;
     transition: color 0.15s;
 }
@@ -625,7 +625,7 @@
 
 .json-key:hover::after {
     content: ' ⎘';
-    font-size: 10px;
+    font-size: 11px;
     opacity: 0.7;
 }
 

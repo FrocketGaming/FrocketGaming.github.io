@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "newsletter/newsletter-styles.css"
+        ],
+        "createdAt": "2026-09-19T14:02:44.288Z",
+        "reason": "Blockquote rule (.nl-article blockquote) carried over from the original newsletter design; the handoff says to keep article styling exactly. It is a quote rule, not a card accent. Decided by the assistant from the handoff, not confirmed on this specific finding."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "tools/markdown/markdown-styles.css"
+        ],
+        "createdAt": "2026-09-19T15:06:12.252Z",
+        "reason": "Blockquote rule in the Markdown preview: conventional quote styling, not a card accent; same call as the newsletter blockquote. Decided by the assistant, not confirmed on this specific finding."
+      }
+    ]
+  }
+}

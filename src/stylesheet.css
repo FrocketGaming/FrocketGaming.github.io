@@ -24,6 +24,12 @@
     --syntax-tag: #e06c75;
     --syntax-addition: #74a12e;
     --syntax-deletion: #ff6b6b;
+
+    /* Newsletter section bands. Default to existing tokens so every theme works without its own values. */
+    --band-1: var(--accent-primary);
+    --band-2: var(--accent-secondary);
+    --band-3: var(--info-color);
+    --band-4: var(--warning-color);
 }
 
 [data-theme="dracula"] {
@@ -180,6 +186,54 @@
     --syntax-tag: #72f1b8;
     --syntax-addition: #72f1b8;
     --syntax-deletion: #fe4450;
+}
+
+[data-theme="dunder"] {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #161616;
+    --bg-tertiary: #222222;
+    --bg-hover: #1c1c1c;
+    --accent-primary: #ffd43b;
+    --accent-secondary: #5a9dd6;
+    --text-primary: #ededed;
+    --text-secondary: #a1a1a1;
+    --border-color: #333333;
+    --shadow-color: #000000;
+    --error-color: #ff5c7a;
+    --warning-color: #f0883e;
+    --info-color: #6cb6ff;
+    --syntax-keyword: #ff7b72;
+    --syntax-string: #a5d6ff;
+    --syntax-comment: #8b949e;
+    --syntax-function: #d2a8ff;
+    --syntax-number: #3ddc97;
+    --syntax-type: #f0883e;
+    --syntax-variable: #79c0ff;
+    --syntax-tag: #7ee787;
+    --syntax-addition: #56d364;
+    --syntax-deletion: #ffa198;
+    --band-1: #ffd43b;
+    --band-2: #4b8bbe;
+    --band-3: #3ddc97;
+    --band-4: #ff6ba9;
+}
+
+/* Browser surfaces that would otherwise ship default-colored: follow the active theme */
+::selection {
+    background-color: color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    color: var(--text-primary);
+}
+
+input,
+textarea {
+    caret-color: var(--accent-primary);
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+progress {
+    accent-color: var(--accent-primary);
 }
 
 body {
@@ -660,6 +714,60 @@ input[type="checkbox"]:checked {
     align-items: center;
     gap: 14px;
     padding: 7.5px 0;
+}
+
+/* Newsletter link: pinned to the far left of the header, deliberately separate
+   from the tool rail. It is out of flow so it never widens the centered row.
+   Below 1100px it drops its text; below 640px there is no spare margin, so it
+   joins the row as an icon-only pill. */
+.newsletter-link {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--accent-primary);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.newsletter-link:hover,
+.newsletter-link:focus-visible,
+.newsletter-link.active {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+@media (max-width: 1100px) {
+    .newsletter-link {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .newsletter-link-text {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .newsletter-link {
+        position: static;
+        transform: none;
+        flex-shrink: 0;
+    }
 }
 
 /* Nav icon rail — hover-expand pills. Icons stay compact at rest; hovering,

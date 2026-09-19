@@ -21,7 +21,7 @@
 .tz-timeline h3 {
     color: var(--accent-primary);
     margin: 0 0 15px 0;
-    font-size: 1.1rem;
+    font-size: 16px;
 }
 
 .tz-converter h3 i,
@@ -151,7 +151,7 @@ input[type="datetime-local"]:focus {
     font-size: 0.75rem;
     color: var(--text-secondary);
     white-space: nowrap;
-    font-family: "Courier New", Consolas, monospace;
+    font-family: Consolas, Monaco, monospace;
     flex-shrink: 0;
 }
 
@@ -198,7 +198,7 @@ input[type="datetime-local"]:focus {
     gap: 10px;
     padding: 10px;
     background: var(--bg-tertiary);
-    border-radius: 6px;
+    border-radius: 5px;
     margin-bottom: 8px;
     flex-wrap: wrap;
 }
@@ -214,9 +214,9 @@ input[type="datetime-local"]:focus {
 .tz-row .tz-result {
     flex: 1;
     color: var(--accent-secondary);
-    font-size: 0.95rem;
+    font-size: 16px;
     min-width: 150px;
-    font-family: "Courier New", Consolas, monospace;
+    font-family: Consolas, Monaco, monospace;
     font-variant-numeric: tabular-nums;
 }
 
@@ -292,9 +292,9 @@ input[type="datetime-local"]:focus {
     color: var(--text-secondary);
     padding: 8px 12px;
     background: var(--bg-tertiary);
-    border-radius: 6px;
+    border-radius: 5px;
     margin: 12px 0;
-    font-family: "Courier New", Consolas, monospace;
+    font-family: Consolas, Monaco, monospace;
     transition: color 0.15s, background 0.15s;
 }
 
@@ -378,7 +378,7 @@ input[type="datetime-local"]:focus {
     border-radius: 8px;
     background: var(--bg-secondary);
     color: var(--text-secondary);
-    font-size: 0.65rem;
+    font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     vertical-align: middle;
@@ -450,7 +450,7 @@ input[type="datetime-local"]:focus {
 }
 
 .tz-tl-cell-ampm {
-    font-size: 0.55rem;
+    font-size: 11px;
     opacity: 0.75;
 }
 
@@ -491,6 +491,11 @@ input[type="datetime-local"]:focus {
 [data-theme="dracula"] .tz-hour-good { background: #264a26; color: #a8e6a8; }
 [data-theme="dracula"] .tz-hour-ok  { background: #4a3a10; color: #f0d68a; }
 [data-theme="dracula"] .tz-hour-bad { background: #4a1010; color: #f0a0a0; }
+
+/* Dunder's ground is pure black, where the default olive/brown/maroon read muddy: same meanings, tinted from its mint/yellow/coral */
+[data-theme="dunder"] .tz-hour-good { background: #153829; color: #9bf0c8; }
+[data-theme="dunder"] .tz-hour-ok  { background: #3b3214; color: #ffe38a; }
+[data-theme="dunder"] .tz-hour-bad { background: #3b211f; color: #ffb4ac; }
 
 /* Legend */
 .tz-planner-legend {

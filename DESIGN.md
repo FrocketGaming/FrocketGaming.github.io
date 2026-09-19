@@ -1,6 +1,6 @@
 ---
 name: QoL Tools
-description: A local-first developer utility belt, themed across 7 selectable palettes.
+description: A local-first developer utility belt, themed across 8 selectable palettes.
 colors:
   bg-primary: "#1a1a1a"
   bg-secondary: "#2a2a2a"
@@ -54,6 +54,10 @@ typography:
     fontFamily: "Raleway, sans-serif"
     fontWeight: 400
     fontSize: "48px"
+  display:
+    fontFamily: "JetBrains Mono, monospace"
+    fontWeight: 800
+    fontSize: "72px"
   code:
     fontFamily: "Consolas, Monaco, monospace"
     fontWeight: 400
@@ -63,7 +67,9 @@ typography:
     fontWeight: 400
     fontSize: "12px"
 rounded:
+  xs: "2px"
   sm: "3px"
+  snug: "4px"
   md: "5px"
   floating: "8px"
   lg: "10px"
@@ -104,7 +110,7 @@ components:
 
 **Creative North Star: "The Developer's Workbench"**
 
-QoL Tools is a dark, utilitarian dashboard of small browser-based dev utilities, built by its own owner for daily personal use. Nothing here performs for a first-time visitor — every surface is designed to be glanced at, used, and left alone. The system is deliberately unadorned at rest: flat panels, hairline borders, a single accent color per active theme. The whole site ships 7 interchangeable palettes (Default/green, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave), all driven by one shared CSS custom-property contract — the visual "shape" of the site never changes across themes, only its color values do.
+QoL Tools is a dark, utilitarian dashboard of small browser-based dev utilities, built by its own owner for daily personal use. Nothing here performs for a first-time visitor — every surface is designed to be glanced at, used, and left alone. The system is deliberately unadorned at rest: flat panels, hairline borders, a single accent color per active theme. The whole site ships 8 interchangeable palettes (Default/green, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder), all driven by one shared CSS custom-property contract — the visual "shape" of the site never changes across themes, only its color values do.
 
 The system currently carries a few generic-AI-interface tells worth naming rather than hiding: a gradient-clipped hero headline on the landing page, and colored top/side accent stripes on cards. This is descriptive of what ships today, not a prescription to keep it that way.
 
@@ -116,7 +122,7 @@ The system currently carries a few generic-AI-interface tells worth naming rathe
 
 ## Colors
 
-Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave) restates the same roles with different hues — describe by role, not by one theme's hex. All seven live in `src/stylesheet.css` under `[data-theme="…"]`; that file is the single source of truth for exact per-theme hex — this table exists so a new theme can be sized up by character before opening it:
+Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder) restates the same roles with different hues — describe by role, not by one theme's hex. All eight live in `src/stylesheet.css` under `[data-theme="…"]`; that file is the single source of truth for exact per-theme hex — this table exists so a new theme can be sized up by character before opening it:
 
 | Theme | Accent pair | Character |
 |---|---|---|
@@ -127,8 +133,9 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 | Nord | `#88c0d0` → `#81a1c1` (frost → blue) | Coolest, lowest-contrast palette; two blues instead of a hue jump |
 | Solarized Dark | `#268bd2` → `#2aa198` (blue → cyan) | The most muted ground (`#002b36`) of any theme |
 | SynthWave '84 | `#ff7edb` → `#36f9f6` (pink → cyan) | The one theme where the *neutrals* break "everything else quiet" too — secondary text and syntax colors stay saturated instead of settling into gray |
+| Dunder | `#ffd43b` → `#4b8bbe` (Python yellow → Python blue) | The `__dunder__ Review` newsletter's own palette on a near-black ground (`#0a0a0a`). The only theme that overrides the `--band-*` tokens, and the default for `/newsletter/` when a visitor has no saved theme |
 
-A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the seven above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
+A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the eight above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
 ### Primary
 - **Terminal Green** (`--accent-primary`, `#74a12e`): the one interactive/signal color — button fills, hover glows, focus rings, active nav-link background, logo text-shadow.
@@ -151,9 +158,16 @@ A new theme should pick an accent pair with a clear identity of its own — not 
 ### Utility
 - **Scrim** (`rgba(0, 0, 0, 0.4)`): the neutral black overlay-separation shadow used by floating tooltips/modals (see Elevation & Depth). Theme-independent by design — a scrim dims what's behind it regardless of which palette is active, so it deliberately does not use a theme token.
 
+### Newsletter Bands
+The newsletter page (`newsletter/`) colors its sections with four bands, one per section in rotation, so it needs four distinct colors where a theme has two accents. `src/stylesheet.css` defines `--band-1` to `--band-4` in `:root`, defaulting to `--accent-primary`, `--accent-secondary`, `--info-color`, and `--warning-color`, so every theme works without its own values. Only `[data-theme="dunder"]` overrides them (yellow, blue, mint, pink). `--error-color` is deliberately never a band, so no theme produces a red section.
+
+Two page-local values sit on top of the bands in `newsletter-styles.css`, both derived with `color-mix()` rather than hardcoded:
+- **`--band-ink`** (`--bg-primary` at 40% mixed with black): text on a band. A plain `--bg-primary` fails 4.5:1 on mid-tone bands in Nord and Solarized; this reaches 4.5:1 on every band of every theme except Solarized band 4 (4.2:1, its orange-red is at the ceiling for dark text).
+- **`--nl-muted`** (`--text-primary` at 88% mixed into `--bg-primary`): reading text such as the intro, link summaries, and footer copy. `--text-secondary` is under 4.5:1 on six themes, which is too dim for body copy. Short labels (counts, item numbers) still use `--text-secondary`.
+
 ### Known Exceptions (not systemized)
 A handful of literal colors exist outside the token list above, each for a specific reason rather than by drift. These are intentionally *not* promoted to named tokens — each is scoped to one job:
-- **Timezone hour-coding** (`tools/timezone/timezone-styles.css`, `.tz-hour-good/ok/bad`: `#2d5a2d`/`#5a4a1a`/`#5a1a1a` backgrounds with `#a8e6a8`/`#f0d68a`/`#f0a0a0` text, plus a Dracula-specific override `#264a26`/`#4a3a10`/`#4a1010`): fixed business-hours/early-late/night semantics, deliberately theme-invariant so "green means business hours" reads the same on every palette — the opposite intent of a theme token.
+- **Timezone hour-coding** (`tools/timezone/timezone-styles.css`, `.tz-hour-good/ok/bad`: `#2d5a2d`/`#5a4a1a`/`#5a1a1a` backgrounds with `#a8e6a8`/`#f0d68a`/`#f0a0a0` text, plus a Dracula-specific override `#264a26`/`#4a3a10`/`#4a1010` and a Dunder-specific one `#153829`/`#3b3214`/`#3b211f` with `#9bf0c8`/`#ffe38a`/`#ffb4ac` text, because the defaults read muddy on Dunder's pure-black ground): fixed business-hours/early-late/night semantics, deliberately theme-invariant so "green means business hours" reads the same on every palette — the opposite intent of a theme token.
 - **JSON viewer SynthWave contrast fix** (`tools/json-viewer/json-viewer-styles.css`, `[data-theme="synthwave"] .json-children`: `#6c5a9e`): `--border-color` is nearly invisible against `--bg-primary` in that one theme, so the tree's nesting guide gets a manual, theme-scoped bump. The pattern to follow for a future theme with the same problem: a scoped `[data-theme="…"]` override with a comment stating the contrast issue, not a global change.
 - **Error-row tint** (`tools/csv-viewer/csv-styles.css`, `tools/regex-tester/regex-styles.css`: `#3d1f1f`): predates this project's `color-mix()` usage; new code with the same need should use `color-mix(in srgb, var(--error-color) 15%, transparent)` instead.
 - **Firebase auth amber** (`src/firebase-sync.css`: `#f0ad4e`): matches Firebase/Google's own warning-state amber inside their auth popup UI, intentionally not themed since it lives inside a third-party-styled surface this project doesn't control.
@@ -161,7 +175,7 @@ A handful of literal colors exist outside the token list above, each for a speci
 - **Export/canvas contexts** (`#1a1a1a`, `#fff` in todo, image-editor, chart-builder): places where the value must match a real exported pixel (image export, chart background) rather than a themed surface — theming these would produce incorrect output files.
 
 ### Named Rules
-**The Single-Accent Rule.** Exactly one accent color (per active theme) carries interactive/focus/active signal across the entire site. A second color never competes for that job — the secondary accent is reserved for "peak/hover" states of the same interaction, not a second independent signal.
+**The Single-Accent Rule.** Exactly one accent color (per active theme) carries interactive/focus/active signal across the entire site. A second color never competes for that job — the secondary accent is reserved for "peak/hover" states of the same interaction, not a second independent signal. One scoped exception: the newsletter's section bands (see Newsletter Bands) use four colors as structure, not as interactive signal; links, focus rings, and the active header link on that page still follow the single accent.
 
 ## Typography
 
@@ -180,6 +194,7 @@ A handful of literal colors exist outside the token list above, each for a speci
 - **Small** (500 weight, 13px): item names and history-entry titles; slightly heavier than Label to carry a name over its metadata.
 - **Compact** (400 weight, 14px): the largest micro step — sort/shortcuts controls, slightly more prominent captions.
 - **Stat-sm / Stat** (400 weight, 28px / 48px): large numerals and icons used for modal close glyphs, empty-state icons, and similar one-off display moments. Not body-text sizes; reserved for a single dominant visual per view.
+- **Display** (JetBrains Mono / code stack, 800 weight, 72px, 40px / 48px on phones): the newsletter page's masthead (`.nl-masthead`) and section-band numerals only (`newsletter/`). One step above Stat, used for a single dominant word or numeral per view, never for UI text.
 - **Code** (400 weight, 11px, `Consolas, Monaco, monospace`): `<kbd>` keys and rendered code. Monospace is functionally correct for code/key alignment, not a second brand voice.
 - **Math** (400 weight, 12px, italic, `Georgia, Times New Roman, serif`): inline/display math-notation buttons in the Markdown toolbar (`.md-btn-math`, showing literal `$x$`/`$$x$$`). Serif italic is the standard typographic convention for math variables — matches KaTeX's own rendering, which this project already loads.
 - **Logo/Label** (bold, uppercase, 3px letter-spacing, accent-primary text-shadow): the site logo and nav-adjacent labels.
@@ -189,7 +204,7 @@ A handful of literal colors exist outside the token list above, each for a speci
 
 **The Fixed-Step Rule.** Every font-size in the codebase snaps to one of: 11px (Micro), 12px (Label), 13px (Small), 14px (Compact), 16px (Body), 24px (Title), 28 / 48px (Stat), 2.5em (Headline). A one-off size outside this list is drift, not a new tier — either it belongs to an existing step or the step list needs a deliberate addition here first. (Markdown-rendered content is the sole exception: `.markdown-preview h1-h4`/`code` use `em` multipliers on the Body base so arbitrary user content keeps a proportional internal hierarchy — that ramp is relative by design, not an absolute step.)
 
-**Known drift from the Fixed-Step Rule.** In practice the codebase does not hold to the eight steps above. A full grep across all 13 tools turns up 70+ distinct `font-size` values spread across three units (`rem`, `px`, `em`) — most commonly `0.85rem` (~38 uses), `0.8rem` (~27), `12px` (~59), `14px` (~53), `13px` (~45), and `11px`/`10px` clusters, none of which are the same value written consistently. Most of this is the same handful of intents ("small UI text," "meta text") re-authored in a different unit at different times, not genuinely new tiers — `0.85rem` and `13px`/`13.6px` are the same size meant twice. This is real, existing debt, not a second accepted scale: treat any of these as equivalent to the nearest step above rather than inventing a ninth tier, and prefer the `px` values in this rule (the ones actually named as steps) when writing new code, since `rem` usage crept in later without ever being adopted here as the standard unit. Icon glyph sizing (`font-size` on `i.fa-solid`, e.g. `48px` empty-state icons) is a separate axis from text sizing and isn't part of this scale at all.
+**Known drift from the Fixed-Step Rule.** Most of the codebase now holds to the steps above: on 2026-09-19 every off-scale `px`, `rem`, and `em` size the design detector flagged across the tools (55 of them: 9px and 10px text, `0.95rem`, 17-20px, 22px, 26px, 36px, 52px, 64px, and so on) was snapped to its nearest step, taking the smaller step on a tie, and 2.5rem became the documented 2.5em. What remains is `rem` sizes that sit close to a step without being flagged (`0.75rem` to `0.9rem`, for example `0.85rem` next to `13px`/`14px`): the same size meant twice, written in a different unit at a different time. That is existing debt, not a second accepted scale: treat those as the nearest step rather than inventing a ninth tier, and prefer the `px` values named in this rule when writing new code, since `rem` usage crept in later without ever being adopted here as the standard unit. Icon glyph sizing (`font-size` on `i.fa-solid`, e.g. `48px` empty-state icons) is a separate axis from text sizing and isn't part of this scale at all.
 
 ## Layout
 
@@ -215,9 +230,9 @@ Floating overlays (tooltips, modal panels) are a distinct, legitimate second cas
 Corners are consistently soft and small: 3px on primary/ghost buttons and small controls, 5px on `.box` containers, nav-links, and panels, 8px on floating elements (tooltips, modals, template cards), 10-12px on landing-page cards and their icon chips. A dedicated `pill` step (`999px`) exists for fully-rounded badges (e.g. `.snippet-type-badge`) — always use it for pill shapes rather than guessing a px value close to the element's height. No sharp corners anywhere. Borders are uniformly 1px at `--border-color`, and only change color (never thickness) to signal an interactive state.
 
 ### Named Rules
-**The Six-Step Radius Rule.** Every `border-radius` snaps to one of: 3px (sm), 5px (md), 8px (floating), 10px (lg), 12px (xl), or 999px (pill, for fully-rounded badges). A value outside this list is drift.
+**The Eight-Step Radius Rule.** Every `border-radius` snaps to one of: 2px (xs), 3px (sm), 4px (snug), 5px (md), 8px (floating), 10px (lg), 12px (xl), or 999px (pill, for fully-rounded badges). A value outside this list is drift.
 
-**Known drift from the Six-Step Radius Rule.** Two more values are common enough across the codebase to be de facto accepted rather than one-off drift: **4px** (chart-builder, json-viewer, timezone, notes — sits between sm and md, used the same way sm/md are) and **2px** (small underline/highlight accents in json-viewer's search matches and todo's strike-through styling, plus the checkbox radius already implied above but never stated as its own step). Treat both as recognized, just under-documented; anything else outside the eight values now in play (2, 3, 4, 5, 8, 10, 12, 999px) is still drift.
+The two steps beyond the original six were already in wide use and are now documented instead of rewritten: **4px** (snug: chart-builder, json-viewer, timezone, notes; sits between sm and md and is used the same way) and **2px** (xs: small underline/highlight accents in json-viewer's search matches, todo's strike-through styling, and checkboxes). On 2026-09-19 the two stray values, 6px and 7px, were snapped to 5px and 8px.
 
 ## Components
 
@@ -240,6 +255,8 @@ Corners are consistently soft and small: 3px on primary/ghost buttons and small 
 
 ### Navigation
 - Fixed header, centered uppercase logo (3px letter-spacing, accent-primary text-shadow glow), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
+- Newsletter link (`.newsletter-link`): pinned to the far left of the fixed header on every page, out of flow so it never widens the centered icon row, and deliberately not part of the tool rail. An outlined pill in `--accent-primary` that fills on hover, focus, and on the newsletter page itself (`.active`). Shows `__dunder__ Review` above 1100px, an icon-only pill from 1100px down to 640px, and below 640px joins the row in flow as an icon-only pill.
+- Newsletter section navigation (`.nl-jump`, `newsletter/` only): a fixed rail in the free space right of the 800px column at 1320px and up, up to 264px wide, and a floating accent-primary "Sections" pill button that opens the same list in a panel below that width. Both are visible from the moment the issue renders, so navigation is available before any scrolling. Flat like the rest of the page (hairline border, no shadow); the section in view is marked with a `--band` colored outline (`aria-current="true"`), deliberately not a side stripe.
 
 ## Do's and Don'ts
 
@@ -247,7 +264,9 @@ Corners are consistently soft and small: 3px on primary/ghost buttons and small 
 - **Do** keep exactly one accent color driving interactive signal per theme; a second accent only ever represents that same signal's "peak" state.
 - **Do** use the shared focus treatment (`border-color: var(--accent-secondary)` + `0 0 15px var(--accent-primary)` glow) for every new input/select/textarea, rather than inventing a new focus style per component.
 - **Do** keep shadows as ambient, non-directional glows tinted from theme tokens — never a fixed black/gray shadow that ignores the active theme.
-- **Do** make every new themeable component render correctly across all 7 existing palettes via the CSS custom-property contract; don't hardcode a color that only looks right in the Default theme.
+- **Do** make every new themeable component render correctly across all 8 existing palettes via the CSS custom-property contract; don't hardcode a color that only looks right in the Default theme.
+
+- **Do** put `--bg-primary` on text that sits on an `--accent-primary` or `--accent-secondary` fill, never `--text-primary` or a literal white. Accents are light-to-mid in every theme (Dunder's yellow is the extreme case at about 1.4:1 with white text), and dark ink on the accent is also higher contrast on every other theme.
 
 ### Don't:
 - **Don't** introduce a second typeface without treating it as a deliberate, site-wide system change (see The One-Voice Type Rule) — don't drop one in for a single new component.

@@ -109,7 +109,7 @@
     border: none;
     resize: none;
     font-size: 14px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     outline: none;
     line-height: 1.6;
     box-sizing: border-box;
@@ -154,7 +154,7 @@
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     line-height: 1.5;
     overflow-x: auto;

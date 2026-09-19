@@ -1,16 +1,18 @@
 // Theme Manager - Handles theme switching with localStorage caching
 const ThemeManager = {
     STORAGE_KEY: 'qol-tools-theme',
-    DEFAULT_THEME: 'default',
+    // A page can set data-default-theme on <html> to change what a visitor with no saved theme sees
+    DEFAULT_THEME: document.documentElement.getAttribute('data-default-theme') || 'default',
 
     themes: [
-        { id: 'default', name: 'Default (Green)' },
+        { id: 'default', name: 'Green' },
         { id: 'dracula', name: 'Dracula' },
         { id: 'catppuccin', name: 'Catppuccin Mocha' },
         { id: 'atom', name: 'Atom One Dark' },
         { id: 'nord', name: 'Nord' },
         { id: 'solarized', name: 'Solarized Dark' },
-        { id: 'synthwave', name: "SynthWave '84" }
+        { id: 'synthwave', name: "SynthWave '84" },
+        { id: 'dunder', name: 'Dunder' }
     ],
 
     init() {
