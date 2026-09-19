@@ -38,8 +38,8 @@ Add multiple timezones and compare times across them at a glance. Includes a mee
 ### Text Diff
 Compare two blocks of text and see exactly what changed — additions, deletions, and modified lines with word-level highlighting. Unchanged lines are collapsed by default so the output stays focused on the differences. Supports unified and side-by-side views, with optional labels for each side.
 
-### Notes *(direct URL only)*
-A Markdown note-taking tool with Firebase sync. Accessible at `/tools/notes/` — not linked from the main nav. Supports tags, pinning, archiving, split editor/preview, zen mode, and keyboard shortcuts. Requires Google sign-in.
+### Notes
+A Markdown note-taking tool with Firebase sync. Linked from the main nav and the landing page (`/tools/notes/`). Supports tags, pinning, archiving, split editor/preview, zen mode, a command palette, wiki-links, bulk actions, version history, image paste, Mermaid diagrams, and keyboard shortcuts. Requires Google sign-in.
 
 ---
 
