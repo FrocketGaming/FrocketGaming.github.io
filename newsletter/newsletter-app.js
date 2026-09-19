@@ -276,7 +276,7 @@ class NewsletterApp {
     renderIssue(issue) {
         const linkCount = issue.sections.reduce((sum, section) => sum + section.items.length, 0);
         const articleCount = issue.sections.filter((section) => section.kind === 'article').length;
-        const number = String(issue.number).padStart(3, '0');
+        const number = this.pad(issue.number);
 
         document.title = `${issue.title} - No. ${number} - __dunder__ Review`;
         const description = document.querySelector('meta[name="description"]');
@@ -415,7 +415,7 @@ class NewsletterApp {
             return `
                 <li>
                     <a class="nl-toc-row" data-band="${this.bandOf(index)}" href="?issue=${this.escapeHtml(entry.date)}"${current}>
-                        <span class="nl-toc-num">${this.pad(entry.number, 3)}</span>
+                        <span class="nl-toc-num">${this.pad(entry.number)}</span>
                         <span class="nl-toc-name">
                             <span class="nl-archive-title">${this.escapeHtml(entry.title)}</span>
                             ${intro}
