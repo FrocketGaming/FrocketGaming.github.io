@@ -314,6 +314,7 @@ class NewsletterApp {
             ${issue.sections.map((section, index) => this.sectionHtml(section, index)).join('')}
         `;
 
+        this.addCopyButtons();
         if (this.main.querySelector('pre code')) {
             this.highlightCode();
         }
@@ -512,6 +513,71 @@ class NewsletterApp {
             });
         }, { rootMargin: '-150px 0px -55% 0px' });
         sections.forEach((section) => sectionObserver.observe(section));
+    }
+
+    // ---------- Code copy buttons ----------
+    // Each block is wrapped so the button stays put while a long line scrolls sideways inside the <pre>.
+
+    addCopyButtons() {
+        this.main.querySelectorAll('.nl-article pre').forEach((pre) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'nl-code';
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'nl-copy';
+            button.setAttribute('aria-label', 'Copy code to clipboard');
+            button.innerHTML = '<i class="fa-solid fa-copy" aria-hidden="true"></i><span class="nl-copy-label" aria-live="polite">Copy</span>';
+            button.addEventListener('click', () => this.copyCode(pre, button));
+            wrapper.appendChild(button);
+        });
+    }
+
+    async copyCode(pre, button) {
+        const code = (pre.querySelector('code') || pre).textContent.replace(/\n$/, '');
+        this.flashCopy(button, await this.writeClipboard(code));
+    }
+
+    async writeClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (error) {
+            // No async clipboard (insecure context) or permission denied: fall back to a selection copy
+            const field = document.createElement('textarea');
+            field.value = text;
+            field.setAttribute('readonly', '');
+            field.style.position = 'fixed';
+            field.style.opacity = '0';
+            document.body.appendChild(field);
+            field.select();
+            let copied = false;
+            try {
+                copied = document.execCommand('copy');
+            } catch (fallbackError) {
+                copied = false;
+            }
+            field.remove();
+            return copied;
+        }
+    }
+
+    flashCopy(button, copied) {
+        const label = button.querySelector('.nl-copy-label');
+        const icon = button.querySelector('i');
+        label.textContent = copied ? 'Copied' : 'Copy failed';
+        icon.className = copied ? 'fa-solid fa-check' : 'fa-solid fa-triangle-exclamation';
+        button.classList.toggle('is-copied', copied);
+        button.classList.toggle('is-failed', !copied);
+
+        clearTimeout(button.resetTimer);
+        button.resetTimer = setTimeout(() => {
+            label.textContent = 'Copy';
+            icon.className = 'fa-solid fa-copy';
+            button.classList.remove('is-copied', 'is-failed');
+        }, 1800);
     }
 
     // ---------- Syntax highlighting ----------

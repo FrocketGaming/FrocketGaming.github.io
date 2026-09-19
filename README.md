@@ -51,6 +51,7 @@ A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, std
 - `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
 - A section navigator follows you down the page: a side rail on wide screens, a floating "Sections" button on narrow ones. Previous and next arrows beside the issue number step through issues, and the navigator's "Past issues" entry jumps to the archive at the bottom.
 - Writing rules and a starting point live in `newsletter/template.md`.
+- Code blocks get a copy button on hover (always visible on touch, and revealed by keyboard focus).
 - Markdown images work: `![alt text](images/name.png "optional tooltip")`, with files in `newsletter/images/`. The path is relative to the newsletter page, not the `.md` file. Images fit the column and load lazily.
 
 To add an issue, copy the template and write it. The `.md` file is the only thing you edit: a GitHub Action rebuilds `newsletter/issues.json` (the archive manifest) from the issue files when they land on `main`.
