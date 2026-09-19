@@ -632,7 +632,7 @@
 
 /* Section navigation. Narrow screens: a floating button that opens a panel.
    Wide screens (1200px+): a rail in the space beside the column.
-   Hidden until the in-page contents list has scrolled out of view. */
+   Fades in once the issue has rendered. */
 @media (prefers-reduced-motion: no-preference) {
     html:has(.nl) {
         scroll-behavior: smooth;

@@ -395,7 +395,7 @@ class NewsletterApp {
 
     // ---------- Section navigation ----------
     // A rail beside the column on wide screens, a floating button + panel on narrow ones.
-    // It shows only once the in-page contents list has scrolled out of view.
+    // It is visible as soon as the issue renders.
 
     renderJump(issue) {
         if (!this.jump) this.buildJump();
@@ -409,6 +409,8 @@ class NewsletterApp {
             </li>`).join('');
 
         this.observeSections();
+        // Fade in on the next frame so the opacity transition runs
+        requestAnimationFrame(() => this.jump.classList.add('is-visible'));
     }
 
     buildJump() {
@@ -464,14 +466,6 @@ class NewsletterApp {
             });
         }, { rootMargin: '-150px 0px -55% 0px' });
         sections.forEach((section) => sectionObserver.observe(section));
-
-        // Show the navigation once the contents list has scrolled up past the header
-        const tocObserver = new IntersectionObserver(([entry]) => {
-            const scrolledPast = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-            this.jump.classList.toggle('is-visible', scrolledPast);
-            if (!scrolledPast) this.setJumpOpen(false);
-        }, { rootMargin: '-92px 0px 0px 0px' });
-        tocObserver.observe(this.main.querySelector('.nl-toc-block'));
     }
 
     // ---------- Syntax highlighting ----------
