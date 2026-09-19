@@ -84,6 +84,11 @@
     color: var(--band-1);
 }
 
+/* " Newsletter" is a descriptor, not part of the name, so it stays regular weight */
+.nl-wordmark-suffix {
+    font-weight: 400;
+}
+
 .nl-stamp {
     padding: 2px 10px;
     background-color: var(--band-1);
