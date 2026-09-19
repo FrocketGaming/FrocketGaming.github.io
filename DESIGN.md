@@ -54,6 +54,10 @@ typography:
     fontFamily: "Raleway, sans-serif"
     fontWeight: 400
     fontSize: "48px"
+  display:
+    fontFamily: "JetBrains Mono, monospace"
+    fontWeight: 800
+    fontSize: "72px"
   code:
     fontFamily: "Consolas, Monaco, monospace"
     fontWeight: 400
@@ -180,6 +184,7 @@ A handful of literal colors exist outside the token list above, each for a speci
 - **Small** (500 weight, 13px): item names and history-entry titles; slightly heavier than Label to carry a name over its metadata.
 - **Compact** (400 weight, 14px): the largest micro step — sort/shortcuts controls, slightly more prominent captions.
 - **Stat-sm / Stat** (400 weight, 28px / 48px): large numerals and icons used for modal close glyphs, empty-state icons, and similar one-off display moments. Not body-text sizes; reserved for a single dominant visual per view.
+- **Display** (JetBrains Mono / code stack, 800 weight, 72px, 40px / 48px on phones): the newsletter page's masthead (`.nl-masthead`) and section-band numerals only (`newsletter/`). One step above Stat, used for a single dominant word or numeral per view, never for UI text.
 - **Code** (400 weight, 11px, `Consolas, Monaco, monospace`): `<kbd>` keys and rendered code. Monospace is functionally correct for code/key alignment, not a second brand voice.
 - **Math** (400 weight, 12px, italic, `Georgia, Times New Roman, serif`): inline/display math-notation buttons in the Markdown toolbar (`.md-btn-math`, showing literal `$x$`/`$$x$$`). Serif italic is the standard typographic convention for math variables — matches KaTeX's own rendering, which this project already loads.
 - **Logo/Label** (bold, uppercase, 3px letter-spacing, accent-primary text-shadow): the site logo and nav-adjacent labels.
