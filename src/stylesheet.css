@@ -718,8 +718,9 @@ input[type="checkbox"]:checked {
 
 /* Newsletter link: pinned to the far left of the header, deliberately separate
    from the tool rail. It is out of flow so it never widens the centered row.
-   Below 1100px it drops its text; below 640px there is no spare margin, so it
-   joins the row as an icon-only pill. */
+   Its label uses the same .nav-pill-label markup and animation as the rail's pills:
+   always shown on wide screens, and at 1100px and below an icon that expands to the
+   name on hover or focus (and stays expanded when it is the current page, above 1000px). */
 .newsletter-link {
     position: absolute;
     left: 20px;
@@ -727,7 +728,6 @@ input[type="checkbox"]:checked {
     transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
     height: 36px;
     padding: 0 14px;
     box-sizing: border-box;
@@ -739,11 +739,24 @@ input[type="checkbox"]:checked {
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.newsletter-link .nav-pill-label {
+    grid-template-columns: 1fr;
+    opacity: 1;
+    margin-left: 8px;
+    font-size: inherit;
 }
 
 .newsletter-link:hover,
-.newsletter-link:focus-visible,
+.newsletter-link:focus-visible {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+    box-shadow: 0 0 10px var(--accent-primary);
+}
+
 .newsletter-link.active {
     background-color: var(--accent-primary);
     border-color: var(--accent-primary);
@@ -752,13 +765,35 @@ input[type="checkbox"]:checked {
 
 @media (max-width: 1100px) {
     .newsletter-link {
-        width: 36px;
-        padding: 0;
-        justify-content: center;
+        padding: 0 8px;
     }
 
-    .newsletter-link-text {
-        display: none;
+    .newsletter-link i {
+        width: 18px;
+        font-size: 14px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .newsletter-link .nav-pill-label {
+        grid-template-columns: 0fr;
+        opacity: 0;
+        margin-left: 0;
+    }
+
+    .newsletter-link:hover .nav-pill-label,
+    .newsletter-link:focus-visible .nav-pill-label {
+        grid-template-columns: 1fr;
+        opacity: 1;
+        margin-left: 8px;
+    }
+}
+
+@media (min-width: 1001px) and (max-width: 1100px) {
+    .newsletter-link.active .nav-pill-label {
+        grid-template-columns: 1fr;
+        opacity: 1;
+        margin-left: 8px;
     }
 }
 
@@ -767,6 +802,86 @@ input[type="checkbox"]:checked {
         position: static;
         transform: none;
         flex-shrink: 0;
+    }
+}
+
+/* 641-1100px: the pinned newsletter link and theme selector sit outside the row, so a 12-pill rail
+   (plus the current page's expanded label) could run into them. Here all three share one flow row:
+   link, rail centered in the space that is left, then selector. */
+@media (min-width: 641px) and (max-width: 1100px) {
+    .header-icon-row {
+        width: 100%;
+    }
+
+    .newsletter-link {
+        position: static;
+        transform: none;
+        flex-shrink: 0;
+    }
+
+    .nav-pill-rail {
+        justify-content: center;
+        /* "safe" keeps any overflow (a pill expanding on hover) off the newsletter link side */
+        justify-content: safe center;
+        min-width: 0;
+    }
+
+    .header .theme-selector {
+        position: static;
+        padding-right: 0;
+        flex-shrink: 0;
+    }
+}
+
+/* Up to 1000px the "Theme:" label is dropped and the current page's pill stays icon-only
+   (it still expands on hover or focus) so the rail fits on one row. */
+@media (min-width: 641px) and (max-width: 1000px) {
+    .header .theme-selector label {
+        display: none;
+    }
+
+    .nav-pill-item.active:not(:hover):not(:focus-visible) .nav-pill-label {
+        grid-template-columns: 0fr;
+        opacity: 0;
+        margin-left: 0;
+    }
+}
+
+/* Tighter spacing keeps the icon-only rail on one row down to about 705px. */
+@media (min-width: 641px) and (max-width: 800px) {
+    .header .header-icon-row {
+        gap: 8px;
+    }
+
+    .header .nav-pill-rail {
+        gap: 4px;
+    }
+
+    .header .nav-pill-item {
+        padding: 0 8px;
+    }
+
+    .header .nav-pill-item.active {
+        padding-right: 8px;
+    }
+}
+
+/* Hovering a pill (or the newsletter link) expands it. Keep the rail on one row while that happens so
+   the header never jumps in height; the expansion may briefly cover the selector instead. */
+@media (min-width: 705px) and (max-width: 1000px) {
+    .header .nav-pill-rail {
+        flex-wrap: nowrap;
+    }
+
+    .header .nav-pill-item {
+        flex-shrink: 0;
+    }
+}
+
+/* Below that the rail wraps to a second row, so the page gets the extra top space the phone layout uses. */
+@media (min-width: 641px) and (max-width: 720px) {
+    body {
+        padding-top: 140px;
     }
 }
 
