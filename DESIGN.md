@@ -67,7 +67,9 @@ typography:
     fontWeight: 400
     fontSize: "12px"
 rounded:
+  xs: "2px"
   sm: "3px"
+  snug: "4px"
   md: "5px"
   floating: "8px"
   lg: "10px"
@@ -202,7 +204,7 @@ A handful of literal colors exist outside the token list above, each for a speci
 
 **The Fixed-Step Rule.** Every font-size in the codebase snaps to one of: 11px (Micro), 12px (Label), 13px (Small), 14px (Compact), 16px (Body), 24px (Title), 28 / 48px (Stat), 2.5em (Headline). A one-off size outside this list is drift, not a new tier — either it belongs to an existing step or the step list needs a deliberate addition here first. (Markdown-rendered content is the sole exception: `.markdown-preview h1-h4`/`code` use `em` multipliers on the Body base so arbitrary user content keeps a proportional internal hierarchy — that ramp is relative by design, not an absolute step.)
 
-**Known drift from the Fixed-Step Rule.** In practice the codebase does not hold to the eight steps above. A full grep across all 13 tools turns up 70+ distinct `font-size` values spread across three units (`rem`, `px`, `em`) — most commonly `0.85rem` (~38 uses), `0.8rem` (~27), `12px` (~59), `14px` (~53), `13px` (~45), and `11px`/`10px` clusters, none of which are the same value written consistently. Most of this is the same handful of intents ("small UI text," "meta text") re-authored in a different unit at different times, not genuinely new tiers — `0.85rem` and `13px`/`13.6px` are the same size meant twice. This is real, existing debt, not a second accepted scale: treat any of these as equivalent to the nearest step above rather than inventing a ninth tier, and prefer the `px` values in this rule (the ones actually named as steps) when writing new code, since `rem` usage crept in later without ever being adopted here as the standard unit. Icon glyph sizing (`font-size` on `i.fa-solid`, e.g. `48px` empty-state icons) is a separate axis from text sizing and isn't part of this scale at all.
+**Known drift from the Fixed-Step Rule.** Most of the codebase now holds to the steps above: on 2026-09-19 every off-scale `px`, `rem`, and `em` size the design detector flagged across the tools (55 of them: 9px and 10px text, `0.95rem`, 17-20px, 22px, 26px, 36px, 52px, 64px, and so on) was snapped to its nearest step, taking the smaller step on a tie, and 2.5rem became the documented 2.5em. What remains is `rem` sizes that sit close to a step without being flagged (`0.75rem` to `0.9rem`, for example `0.85rem` next to `13px`/`14px`): the same size meant twice, written in a different unit at a different time. That is existing debt, not a second accepted scale: treat those as the nearest step rather than inventing a ninth tier, and prefer the `px` values named in this rule when writing new code, since `rem` usage crept in later without ever being adopted here as the standard unit. Icon glyph sizing (`font-size` on `i.fa-solid`, e.g. `48px` empty-state icons) is a separate axis from text sizing and isn't part of this scale at all.
 
 ## Layout
 
@@ -228,9 +230,9 @@ Floating overlays (tooltips, modal panels) are a distinct, legitimate second cas
 Corners are consistently soft and small: 3px on primary/ghost buttons and small controls, 5px on `.box` containers, nav-links, and panels, 8px on floating elements (tooltips, modals, template cards), 10-12px on landing-page cards and their icon chips. A dedicated `pill` step (`999px`) exists for fully-rounded badges (e.g. `.snippet-type-badge`) — always use it for pill shapes rather than guessing a px value close to the element's height. No sharp corners anywhere. Borders are uniformly 1px at `--border-color`, and only change color (never thickness) to signal an interactive state.
 
 ### Named Rules
-**The Six-Step Radius Rule.** Every `border-radius` snaps to one of: 3px (sm), 5px (md), 8px (floating), 10px (lg), 12px (xl), or 999px (pill, for fully-rounded badges). A value outside this list is drift.
+**The Eight-Step Radius Rule.** Every `border-radius` snaps to one of: 2px (xs), 3px (sm), 4px (snug), 5px (md), 8px (floating), 10px (lg), 12px (xl), or 999px (pill, for fully-rounded badges). A value outside this list is drift.
 
-**Known drift from the Six-Step Radius Rule.** Two more values are common enough across the codebase to be de facto accepted rather than one-off drift: **4px** (chart-builder, json-viewer, timezone, notes — sits between sm and md, used the same way sm/md are) and **2px** (small underline/highlight accents in json-viewer's search matches and todo's strike-through styling, plus the checkbox radius already implied above but never stated as its own step). Treat both as recognized, just under-documented; anything else outside the eight values now in play (2, 3, 4, 5, 8, 10, 12, 999px) is still drift.
+The two steps beyond the original six were already in wide use and are now documented instead of rewritten: **4px** (snug: chart-builder, json-viewer, timezone, notes; sits between sm and md and is used the same way) and **2px** (xs: small underline/highlight accents in json-viewer's search matches, todo's strike-through styling, and checkboxes). On 2026-09-19 the two stray values, 6px and 7px, were snapped to 5px and 8px.
 
 ## Components
 
