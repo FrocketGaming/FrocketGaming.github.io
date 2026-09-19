@@ -1189,6 +1189,43 @@ body {
     box-shadow: 0 0 15px var(--accent-primary);
 }
 
+.tag-input-wrapper {
+    position: relative;
+}
+
+.tag-autocomplete {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    max-width: 280px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 200;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.tag-autocomplete.show {
+    display: block;
+}
+
+.tag-suggestion-item {
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.tag-suggestion-item.active,
+.tag-suggestion-item:hover {
+    background: var(--bg-hover);
+    color: var(--accent-secondary);
+}
+
 .tag-chips {
     display: flex;
     flex-wrap: wrap;

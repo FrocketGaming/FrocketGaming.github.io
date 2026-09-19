@@ -24,6 +24,8 @@ class SnippetsApp {
     this._historyVersions = [];
     this._variableCallback = null;
     this.graphView = new SnippetGraphView(this);
+    this.tagSuggestions = null;
+    this.tagSuggestionIndex = 0;
 
     this.extensionToLanguage = {
       js: "javascript",
@@ -1083,10 +1085,34 @@ class SnippetsApp {
     // Tag input
     const tagInput = document.getElementById("tagInput");
     tagInput.addEventListener("keydown", (e) => {
+      const dropdown = document.getElementById("tagAutocomplete");
+      const open = dropdown && dropdown.classList.contains("show");
+
+      if (open && e.key === "ArrowDown") {
+        e.preventDefault();
+        this.moveTagSuggestion(1);
+        return;
+      }
+      if (open && e.key === "ArrowUp") {
+        e.preventDefault();
+        this.moveTagSuggestion(-1);
+        return;
+      }
+      if (open && e.key === "Escape") {
+        e.preventDefault();
+        this.closeTagSuggestions();
+        return;
+      }
+
       if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
+        if (open && this.tagSuggestions?.length) {
+          this.applyTagSuggestion(this.tagSuggestionIndex);
+          return;
+        }
         this.addTagChip(tagInput.value);
         tagInput.value = "";
+        this.closeTagSuggestions();
       } else if (e.key === "Backspace" && tagInput.value === "") {
         // Remove last chip on backspace when input is empty
         const chips = document.getElementById("tagChips");
@@ -1094,6 +1120,12 @@ class SnippetsApp {
           chips.lastElementChild.remove();
         }
       }
+    });
+
+    tagInput.addEventListener("focus", () => this.renderTagSuggestions(tagInput.value));
+    tagInput.addEventListener("input", () => this.renderTagSuggestions(tagInput.value));
+    tagInput.addEventListener("blur", () => {
+      setTimeout(() => this.closeTagSuggestions(), 150);
     });
 
     // Focus tag input when clicking wrapper
@@ -1392,6 +1424,73 @@ class SnippetsApp {
       // Get text content without the × remove button
       return c.firstChild.textContent.trim();
     });
+  }
+
+  // ─── Tag autocomplete ──────────────────────────────────────
+
+  getAllUsedTags() {
+    const counts = new Map();
+    this.snippets.forEach((s) => {
+      (s.tags || []).forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
+    });
+    return counts;
+  }
+
+  renderTagSuggestions(query) {
+    const dropdown = document.getElementById("tagAutocomplete");
+    if (!dropdown) return;
+
+    const currentTags = new Set(this.getTagChips().map((t) => t.toLowerCase()));
+    const q = query.trim().toLowerCase();
+
+    const candidates = [...this.getAllUsedTags().entries()]
+      .filter(([tag]) => !currentTags.has(tag.toLowerCase()))
+      .filter(([tag]) => !q || tag.toLowerCase().includes(q))
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 8)
+      .map(([tag]) => tag);
+
+    if (!candidates.length) {
+      this.closeTagSuggestions();
+      return;
+    }
+
+    this.tagSuggestions = candidates;
+    this.tagSuggestionIndex = 0;
+
+    dropdown.innerHTML = candidates
+      .map(
+        (t, i) =>
+          `<div class="tag-suggestion-item ${i === 0 ? "active" : ""}" data-idx="${i}" onmousedown="snippetsApp.applyTagSuggestion(${i})">${this.escapeHtml(t)}</div>`,
+      )
+      .join("");
+    dropdown.classList.add("show");
+  }
+
+  moveTagSuggestion(dir) {
+    if (!this.tagSuggestions) return;
+    this.tagSuggestionIndex = Math.max(
+      0,
+      Math.min(this.tagSuggestions.length - 1, this.tagSuggestionIndex + dir),
+    );
+    document.querySelectorAll(".tag-suggestion-item").forEach((el, i) => {
+      el.classList.toggle("active", i === this.tagSuggestionIndex);
+    });
+  }
+
+  applyTagSuggestion(idx) {
+    const tag = this.tagSuggestions?.[idx];
+    if (!tag) return;
+    this.addTagChip(tag);
+    const input = document.getElementById("tagInput");
+    if (input) input.value = "";
+    this.closeTagSuggestions();
+  }
+
+  closeTagSuggestions() {
+    document.getElementById("tagAutocomplete")?.classList.remove("show");
+    this.tagSuggestions = null;
+    this.tagSuggestionIndex = 0;
   }
 
   renderTagsView(snippet) {
