@@ -71,27 +71,17 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.nl-tile {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    background-color: var(--band-1);
-    color: var(--band-ink);
-    font-family: var(--font-code);
-    font-size: 14px;
-    font-weight: 700;
-    border-radius: 5px;
-}
-
 .nl-wordmark {
     flex: 1;
     min-width: 0;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
+}
+
+/* The newsletter's one brand color moment now that the large masthead is gone */
+.nl-wordmark-name {
+    color: var(--band-1);
 }
 
 .nl-stamp {
@@ -149,7 +139,7 @@
 
 /* Hero: REPL box, issue title, intro */
 .nl-hero {
-    padding: 56px 40px;
+    padding: 48px 40px 32px;
 }
 
 .nl-repl {
@@ -262,7 +252,7 @@
 
 /* Table of contents and archive rows */
 .nl-toc-block {
-    padding: 48px 40px 56px;
+    padding: 32px 40px 48px;
 }
 
 .nl-label {
@@ -380,7 +370,7 @@
 }
 
 .nl-section-body {
-    padding: 8px 40px 56px;
+    padding: 8px 40px 40px;
 }
 
 .nl-section-body.is-article {
@@ -400,21 +390,11 @@
 .nl-item {
     display: flex;
     gap: 0;
-    padding: 28px 0;
+    padding: 24px 0;
 }
 
 .nl-item + .nl-item {
     border-top: 1px solid var(--border-color);
-}
-
-.nl-item-num {
-    flex-shrink: 0;
-    width: 44px;
-    color: var(--text-secondary);
-    font-family: var(--font-code);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 26px;
 }
 
 .nl-item-body {
@@ -739,10 +719,6 @@
     border-top: 1px solid var(--border-color);
 }
 
-.nl-footer .nl-tile {
-    margin-bottom: 20px;
-}
-
 .nl-footer-brand {
     color: var(--text-primary);
     font-size: 16px;
@@ -1003,7 +979,33 @@
     .nl-issue-title { font-size: 28px; }
     .nl-band-heading { font-size: 28px; }
     .nl-band-number { font-size: 48px; }
-    .nl-item-num { width: 32px; }
     .nl-item-title { font-size: 16px; }
     .nl-article pre { font-size: 12px; padding: 14px; }
+}
+
+/* Where the side rail shows the same section list, the in-page contents would only repeat it */
+@media (min-width: 1320px) {
+    .nl-toc-block {
+        display: none;
+    }
+
+    .nl-hero {
+        padding-bottom: 56px;
+    }
+}
+
+/* Phones: get the title and intro on screen sooner. The REPL box keeps only its date and counts line. */
+@media (max-width: 540px) {
+    .nl-hero {
+        padding-top: 32px;
+    }
+
+    .nl-repl {
+        padding: 10px 14px;
+    }
+
+    .nl-repl p:first-child,
+    .nl-repl p:last-child {
+        display: none;
+    }
 }

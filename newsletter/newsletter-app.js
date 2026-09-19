@@ -393,7 +393,6 @@ class NewsletterApp {
         const url = this.escapeHtml(item.url);
         return `
             <li class="nl-item">
-                <span class="nl-item-num" aria-hidden="true">${this.pad(index + 1)}</span>
                 <div class="nl-item-body">
                     <h3 class="nl-item-title"><a href="${url}"><span class="nl-item-label">${this.escapeHtml(item.title)}</span>&nbsp;<span class="nl-item-arrow" aria-hidden="true">&#8599;</span></a></h3>
                     <p class="nl-item-summary">${item.summaryHtml}</p>
