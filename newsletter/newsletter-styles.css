@@ -759,7 +759,7 @@
 .nl-jump-panel {
     display: none;
     box-sizing: border-box;
-    width: min(320px, calc(100vw - 32px));
+    width: min(360px, calc(100vw - 32px));
     max-height: 60vh;
     overflow-y: auto;
     padding: 14px;
@@ -828,13 +828,14 @@
     font-size: 1em;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1320px) {
     .nl-jump {
         top: 160px;
         right: auto;
         bottom: auto;
         left: calc(50% + 432px);
-        width: 200px;
+        /* Grows with the free space beside the 800px column, up to 264px */
+        width: min(264px, calc(50vw - 452px));
         display: block;
     }
 
