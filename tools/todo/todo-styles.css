@@ -1463,6 +1463,7 @@
 
 .agenda-layout .empty-state {
     width: 100%;
+    box-sizing: border-box;
 }
 
 .empty-state-icon {
