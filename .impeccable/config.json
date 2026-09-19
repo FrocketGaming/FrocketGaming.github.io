@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-09-19T15:06:12.252Z",
         "reason": "Blockquote rule in the Markdown preview: conventional quote styling, not a card accent; same call as the newsletter blockquote. Decided by the assistant, not confirmed on this specific finding."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "tools/notes/notes-styles.css"
+        ],
+        "createdAt": "2026-09-19T15:52:26.997Z",
+        "reason": "Blockquote rule in the Notes preview: conventional quote styling, not a card accent; same call as the newsletter and Markdown tool blockquotes. Decided by the assistant, not confirmed on this specific finding."
       }
     ]
   }
