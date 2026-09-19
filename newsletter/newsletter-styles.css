@@ -728,7 +728,7 @@
 
 .nl-archive .nl-toc-row {
     align-items: flex-start;
-    padding: 12px 0;
+    padding: 12px 2px;
 }
 
 .nl-archive-title {
