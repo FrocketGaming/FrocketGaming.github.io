@@ -314,6 +314,7 @@ class NewsletterApp {
             ${issue.sections.map((section, index) => this.sectionHtml(section, index)).join('')}
         `;
 
+        this.markExternalLinks();
         this.addCopyButtons();
         if (this.main.querySelector('pre code')) {
             this.highlightCode();
@@ -513,6 +514,29 @@ class NewsletterApp {
             });
         }, { rootMargin: '-150px 0px -55% 0px' });
         sections.forEach((section) => sectionObserver.observe(section));
+    }
+
+    // ---------- External links ----------
+    // Links leaving the site open in a new tab so readers keep their place; internal links stay in the tab.
+
+    markExternalLinks() {
+        this.main.querySelectorAll('a[href]').forEach((link) => {
+            let url;
+            try {
+                url = new URL(link.getAttribute('href'), window.location.href);
+            } catch (error) {
+                return;
+            }
+            const isWeb = url.protocol === 'http:' || url.protocol === 'https:';
+            if (!isWeb || url.origin === window.location.origin) return;
+
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            const hint = document.createElement('span');
+            hint.className = 'nl-sr';
+            hint.textContent = ' (opens in a new tab)';
+            link.appendChild(hint);
+        });
     }
 
     // ---------- Code copy buttons ----------
