@@ -19,6 +19,7 @@ class NewsletterApp {
         this.main = null;
         this.archive = null;
         this.stamp = null;
+        this.issueNav = null;
         this.jump = null;
     }
 
@@ -26,6 +27,7 @@ class NewsletterApp {
         this.main = document.getElementById('nlMain');
         this.archive = document.getElementById('nlArchive');
         this.stamp = document.getElementById('nlStamp');
+        this.issueNav = document.getElementById('nlIssueNav');
         this.configureMarked();
         this.load();
     }
@@ -274,7 +276,7 @@ class NewsletterApp {
         const description = document.querySelector('meta[name="description"]');
         if (description && issue.intro) description.setAttribute('content', issue.intro.text);
         this.stamp.textContent = `No. ${number}`;
-        this.stamp.hidden = false;
+        this.renderIssueNav(issue.date);
 
         const stats = [
             this.formatDate(issue.date),
@@ -310,6 +312,36 @@ class NewsletterApp {
             this.highlightCode();
         }
         this.renderJump(issue);
+    }
+
+    // Previous/next arrows beside the issue number; the manifest is sorted newest first
+    renderIssueNav(date) {
+        const prev = document.getElementById('nlPrev');
+        const next = document.getElementById('nlNext');
+        const hasArchive = this.manifest.length > 1;
+        prev.hidden = !hasArchive;
+        next.hidden = !hasArchive;
+
+        const index = this.manifest.findIndex((entry) => entry.date === date);
+        const older = index === -1 ? null : this.manifest[index + 1];
+        const newer = index === -1 ? null : this.manifest[index - 1];
+        this.setStep(prev, older, 'Previous issue');
+        this.setStep(next, newer, 'Next issue');
+        this.issueNav.hidden = false;
+    }
+
+    setStep(link, entry, label) {
+        if (entry) {
+            link.href = `?issue=${entry.date}`;
+            link.title = `${label}: ${entry.title}`;
+            link.setAttribute('aria-label', `${label}: ${entry.title}`);
+            link.removeAttribute('aria-disabled');
+        } else {
+            link.removeAttribute('href');
+            link.removeAttribute('title');
+            link.setAttribute('aria-label', `${label} (none)`);
+            link.setAttribute('aria-disabled', 'true');
+        }
     }
 
     tocRowHtml(section, index) {
@@ -400,13 +432,21 @@ class NewsletterApp {
     renderJump(issue) {
         if (!this.jump) this.buildJump();
 
+        const past = this.manifest.length > 1 ? `
+            <li>
+                <a class="nl-jump-link is-archive" href="#nlArchive">
+                    <span class="nl-jump-num"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></span>
+                    <span class="nl-jump-name">Past issues</span>
+                </a>
+            </li>` : '';
+
         this.jump.querySelector('.nl-jump-list').innerHTML = issue.sections.map((section, index) => `
             <li>
                 <a class="nl-jump-link" data-band="${this.bandOf(index)}" href="#section-${index + 1}">
                     <span class="nl-jump-num">${this.pad(index + 1)}</span>
                     <span class="nl-jump-name">${section.headingHtml}</span>
                 </a>
-            </li>`).join('');
+            </li>`).join('') + past;
 
         this.observeSections();
         // Fade in on the next frame so the opacity transition runs
