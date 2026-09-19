@@ -43,12 +43,28 @@ A Markdown note-taking tool with Firebase sync. Accessible at `/tools/notes/` �
 
 ---
 
+## Newsletter
+
+### `__dunder__ Review`
+A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, stdlib updates, and long-form deep dives with code. It is linked from the far left of every page header, separate from the tool nav. Issues are individual Markdown files rendered in the browser (no build step, no email), and its colors follow whichever site theme is selected. With no saved theme it opens in the Dunder theme.
+
+- `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
+- Writing rules and a starting point live in `newsletter/template.md`.
+
+To add an issue, copy the template, write it, then add an entry to `newsletter/issues.json` (newest issue first is easiest to read, but the page sorts by date):
+
+```nu
+cp newsletter/template.md newsletter/issues/2026-10-02.md
+```
+
+---
+
 ## Architecture
 
 - **Static site** hosted on GitHub Pages — no server, no build step
 - **Local persistence** via IndexedDB (`QoLToolsDB`) using a shared `StorageManager` wrapper
 - **Cloud sync** (Snippets, Notes) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners
-- **Theming** — 7 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave) applied via `data-theme` on `<html>` with no flash on load
+- **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder) applied via `data-theme` on `<html>` with no flash on load
 - No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK)
 
 ---
@@ -62,6 +78,8 @@ git clone https://github.com/FrocketGaming/FrocketGaming.github.io.git
 cd FrocketGaming.github.io
 npx serve .
 ```
+
+The newsletter fetches its issues with `fetch`, which browsers block on `file://` pages, so serve the site over http to view it locally.
 
 Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.js` pointing to your own Firebase project for cloud sync to work. Local-only features work without it.
 
@@ -79,6 +97,13 @@ Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.
 │   ├── storage-manager.js  IndexedDB wrapper
 │   ├── firebase-config.js  Firebase project config
 │   └── firebase-sync.js    Firestore sync service
+├── newsletter/             __dunder__ Review newsletter
+│   ├── index.html
+│   ├── newsletter-app.js
+│   ├── newsletter-styles.css
+│   ├── issues.json         Archive manifest (edit by hand per issue)
+│   ├── template.md         Authoring rules and starting point
+│   └── issues/             One Markdown file per issue (YYYY-MM-DD.md)
 └── tools/
     ├── chart-builder/
     ├── cron-builder/
