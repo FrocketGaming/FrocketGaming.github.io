@@ -56,7 +56,7 @@ A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, std
 - Code blocks get a copy button on hover (always visible on touch, and revealed by keyboard focus).
 - Markdown images work: `![alt text](images/name.png "optional tooltip")`, with files in `newsletter/images/`. The path is relative to the newsletter page, not the `.md` file. Images fit the column and load lazily.
 
-To add an issue, copy the template and write it. The `.md` file is the only thing you edit: a GitHub Action rebuilds `newsletter/issues.json` (the archive manifest) from the issue files when they land on `main`.
+To add an issue, copy the template and write it. The `.md` file is the only thing you edit: a GitHub Action rebuilds `newsletter/issues.json` (the archive manifest) from the issue files when they land on `main`. The same script stamps the page's CSS and JS URLs with a content hash (`?v=...` in `newsletter/index.html`), so a stale cached copy can never be paired with newer files. Never edit those `?v=` values by hand.
 
 ```nu
 cp newsletter/template.md newsletter/issues/2026-10-02.md

@@ -1,7 +1,12 @@
-// Rebuilds newsletter/issues.json from the Markdown files in newsletter/issues/.
+// Rebuilds newsletter/issues.json from the Markdown files in newsletter/issues/, and stamps the page's
+// CSS and JS URLs with a content hash (newsletter-app.js?v=1a2b3c4d).
 // Run locally with `node newsletter/build-manifest.mjs`; a GitHub Action runs it on every push to main
-// that touches an issue, so adding the .md file is all that is needed to publish.
+// that touches an issue or the page's CSS/JS, so adding the .md file is all that is needed to publish.
+//
+// Why the stamp: GitHub Pages lets browsers and its CDN keep CSS/JS for 4 hours but the HTML for only
+// 10 minutes. A changed file gets a new URL, so a stale copy can never be paired with newer files.
 
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,3 +86,18 @@ if (repeated.length) {
 
 writeFileSync(MANIFEST, `${JSON.stringify(entries, null, 4)}\n`);
 console.log(`Wrote ${entries.length} issue${entries.length === 1 ? '' : 's'} to newsletter/issues.json`);
+
+// Hash both assets together (line endings normalized so Windows and CI agree) and stamp index.html
+const PAGE = join(ROOT, 'index.html');
+const hash = createHash('md5');
+for (const asset of ['newsletter-styles.css', 'newsletter-app.js']) {
+    hash.update(readFileSync(join(ROOT, asset), 'utf8').replace(/\r\n?/g, '\n'));
+}
+const version = hash.digest('hex').slice(0, 8);
+
+const page = readFileSync(PAGE, 'utf8');
+const stamped = page
+    .replace(/newsletter-styles\.css(\?v=[0-9a-f]+)?/, `newsletter-styles.css?v=${version}`)
+    .replace(/newsletter-app\.js(\?v=[0-9a-f]+)?/, `newsletter-app.js?v=${version}`);
+if (stamped !== page) writeFileSync(PAGE, stamped);
+console.log(`Asset version ${version}${stamped !== page ? ' (index.html updated)' : ' (index.html already current)'}`);

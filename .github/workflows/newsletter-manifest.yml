@@ -8,6 +8,8 @@ on:
     paths:
       - "newsletter/issues/*.md"
       - "newsletter/build-manifest.mjs"
+      - "newsletter/newsletter-app.js"
+      - "newsletter/newsletter-styles.css"
 
 permissions:
   contents: write
@@ -25,14 +27,14 @@ jobs:
       - name: Build the manifest
         run: node newsletter/build-manifest.mjs
 
-      - name: Commit the manifest if it changed
+      - name: Commit the manifest and asset versions if they changed
         run: |
-          if git diff --quiet -- newsletter/issues.json; then
-            echo "issues.json is already up to date"
+          if git diff --quiet -- newsletter/issues.json newsletter/index.html; then
+            echo "issues.json and index.html are already up to date"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add newsletter/issues.json
-          git commit -m "Update newsletter manifest"
+          git add newsletter/issues.json newsletter/index.html
+          git commit -m "Update newsletter manifest and asset versions"
           git push
