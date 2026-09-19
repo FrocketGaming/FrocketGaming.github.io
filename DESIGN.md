@@ -264,6 +264,8 @@ Corners are consistently soft and small: 3px on primary/ghost buttons and small 
 - **Do** keep shadows as ambient, non-directional glows tinted from theme tokens — never a fixed black/gray shadow that ignores the active theme.
 - **Do** make every new themeable component render correctly across all 8 existing palettes via the CSS custom-property contract; don't hardcode a color that only looks right in the Default theme.
 
+- **Do** put `--bg-primary` on text that sits on an `--accent-primary` or `--accent-secondary` fill, never `--text-primary` or a literal white. Accents are light-to-mid in every theme (Dunder's yellow is the extreme case at about 1.4:1 with white text), and dark ink on the accent is also higher contrast on every other theme.
+
 ### Don't:
 - **Don't** introduce a second typeface without treating it as a deliberate, site-wide system change (see The One-Voice Type Rule) — don't drop one in for a single new component.
 - **Don't** treat the landing-card's gradient-clipped headline or top-edge accent-stripe-on-hover as the system's default card/heading treatment; they're documented here as incumbent facts, not as patterns to repeat elsewhere.
