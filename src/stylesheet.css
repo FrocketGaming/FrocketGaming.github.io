@@ -698,6 +698,60 @@ input[type="checkbox"]:checked {
     padding: 7.5px 0;
 }
 
+/* Newsletter link: pinned to the far left of the header, deliberately separate
+   from the tool rail. It is out of flow so it never widens the centered row.
+   Below 1100px it drops its text; below 640px there is no spare margin, so it
+   joins the row as an icon-only pill. */
+.newsletter-link {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--accent-primary);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.newsletter-link:hover,
+.newsletter-link:focus-visible,
+.newsletter-link.active {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+@media (max-width: 1100px) {
+    .newsletter-link {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .newsletter-link-text {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .newsletter-link {
+        position: static;
+        transform: none;
+        flex-shrink: 0;
+    }
+}
+
 /* Nav icon rail — hover-expand pills. Icons stay compact at rest; hovering,
    focusing, or landing on a page widens that item to reveal the tool's
    name, so nothing has to be memorized from the icon alone. */
