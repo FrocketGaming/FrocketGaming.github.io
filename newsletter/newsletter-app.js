@@ -245,7 +245,8 @@ class NewsletterApp {
 
         const link = inline[0];
         const url = (link.href || '').trim();
-        const title = (link.tokens || []).map((token) => token.text || token.raw).join('').trim();
+        // Marked escapes token text, so read the plain text back out of the rendered inline HTML
+        const title = this.plainText(marked.parseInline(link.text)).trim();
         if (!url) throw new Error(`${where}: the link needs a URL.`);
         if (!/^https?:\/\//i.test(url)) throw new Error(`${where}: the link must be an http(s) URL.`);
         if (!title) throw new Error(`${where}: the link needs a title.`);

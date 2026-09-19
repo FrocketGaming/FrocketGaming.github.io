@@ -177,6 +177,18 @@
     text-wrap: pretty;
 }
 
+.nl-intro a,
+.nl-item-summary a {
+    color: var(--info-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.nl-intro a:hover,
+.nl-item-summary a:hover {
+    color: var(--accent-primary);
+}
+
 /* Inline code inside intro, summaries, and article text */
 .nl code {
     padding: 1px 5px;
@@ -491,6 +503,28 @@
     margin: 32px 0;
     border: 0;
     border-top: 1px solid var(--border-color);
+}
+
+.nl-article table {
+    width: 100%;
+    margin: 0 0 20px;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.nl-article th,
+.nl-article td {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    text-align: left;
+    vertical-align: top;
+}
+
+.nl-article th {
+    background-color: var(--bg-secondary);
+    font-weight: 700;
 }
 
 .nl-article pre {
