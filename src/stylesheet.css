@@ -190,17 +190,17 @@
 
 [data-theme="dunder"] {
     --bg-primary: #0a0a0a;
-    --bg-secondary: #111111;
-    --bg-tertiary: #1a1a1a;
-    --bg-hover: #161616;
+    --bg-secondary: #161616;
+    --bg-tertiary: #222222;
+    --bg-hover: #1c1c1c;
     --accent-primary: #ffd43b;
-    --accent-secondary: #4b8bbe;
+    --accent-secondary: #5a9dd6;
     --text-primary: #ededed;
     --text-secondary: #a1a1a1;
-    --border-color: #262626;
+    --border-color: #333333;
     --shadow-color: #000000;
     --error-color: #ff7b72;
-    --warning-color: #ffd43b;
+    --warning-color: #f0883e;
     --info-color: #6cb6ff;
     --syntax-keyword: #ff7b72;
     --syntax-string: #a5d6ff;
@@ -216,6 +216,24 @@
     --band-2: #4b8bbe;
     --band-3: #3ddc97;
     --band-4: #ff6ba9;
+}
+
+/* Browser surfaces that would otherwise ship default-colored: follow the active theme */
+::selection {
+    background-color: color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    color: var(--text-primary);
+}
+
+input,
+textarea {
+    caret-color: var(--accent-primary);
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+progress {
+    accent-color: var(--accent-primary);
 }
 
 body {
