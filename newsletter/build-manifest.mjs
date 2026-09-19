@@ -21,6 +21,7 @@ function fail(file, message) {
 // Plain text for the archive: drop link URLs, emphasis markers, and backticks
 function plain(text) {
     return text
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
         .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
         .replace(/[`*]/g, '')
         .replace(/\s+/g, ' ')

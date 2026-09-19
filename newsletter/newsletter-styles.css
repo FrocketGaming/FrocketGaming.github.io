@@ -229,6 +229,18 @@
     color: var(--accent-primary);
 }
 
+/* Images: never wider than the column; an image alone in its paragraph sits on its own line */
+.nl img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.nl-article p > img:only-child {
+    display: block;
+    border: 1px solid var(--border-color);
+}
+
 /* Inline code inside intro, summaries, and article text */
 .nl code {
     padding: 1px 5px;

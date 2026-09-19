@@ -38,7 +38,13 @@ class NewsletterApp {
                 // Authoring comments stay invisible; any other raw HTML is shown as text
                 html: (html) => (html.trimStart().startsWith('<!--') ? '' : this.escapeHtml(html)),
                 // Drop links with unsafe schemes (javascript:, data:) and keep their text
-                link: (href, title, text) => (this.isSafeUrl(href) ? false : text)
+                link: (href, title, text) => (this.isSafeUrl(href) ? false : text),
+                // Marked has already escaped the alt text and title; images load lazily and never block rendering
+                image: (href, title, text) => {
+                    if (!href || !this.isSafeUrl(href)) return text;
+                    const tooltip = title ? ` title="${title}"` : '';
+                    return `<img src="${href}" alt="${text}"${tooltip} loading="lazy" decoding="async">`;
+                }
             }
         });
     }
@@ -571,8 +577,10 @@ class NewsletterApp {
         }
     }
 
+    // Relative paths and #anchors are fine; a scheme other than http(s)/mailto (javascript:, data:) is not
     isSafeUrl(url) {
-        return /^(https?:|mailto:|#|\/|\.{0,2}\/)/i.test((url || '').trim());
+        const scheme = /^([a-z][a-z0-9+.-]*):/i.exec((url || '').trim());
+        return !scheme || ['http', 'https', 'mailto'].includes(scheme[1].toLowerCase());
     }
 
     countNewlines(text) {

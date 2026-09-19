@@ -35,6 +35,11 @@ title: "Issue title"
   4. Comments: HTML comments like this one must start on their own line with a
      blank line around them. Other raw HTML is shown as visible text, not rendered.
 
+  4b. Images: ![alt text](images/name.png "optional tooltip"). Put files in
+     newsletter/images/. The path is relative to the newsletter PAGE, not to this
+     file, so always write images/name.png (or an https:// URL). Images fit the
+     column and load lazily; always write alt text.
+
   5. Name gotcha: Markdown renders __dunder__ as bold. Write the name as `__dunder__`
      (in backticks) anywhere it appears in prose.
 
