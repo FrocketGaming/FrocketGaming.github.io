@@ -21,6 +21,7 @@ class NewsletterApp {
         this.stamp = null;
         this.issueNav = null;
         this.jump = null;
+        this.spyObservers = [];
     }
 
     init() {
@@ -30,6 +31,14 @@ class NewsletterApp {
         this.issueNav = document.getElementById('nlIssueNav');
         this.configureMarked();
         this.load();
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (this.jump && this.main.querySelector('.nl-section')) this.observeSections();
+            }, 200);
+        });
     }
 
     configureMarked() {
@@ -208,7 +217,8 @@ class NewsletterApp {
             kind: 'article',
             items: [],
             errors: [],
-            bodyHtml: ''
+            bodyHtml: '',
+            subheadings: []
         };
         const where = `line ${raw.line} (section '${raw.heading}')`;
 
@@ -226,6 +236,10 @@ class NewsletterApp {
         }
 
         section.bodyHtml = marked.parser(raw.blocks.map((block) => block.token));
+        // Top-level ### headings become quick-navigation entries under this section
+        section.subheadings = raw.blocks
+            .filter((block) => block.token.type === 'heading' && block.token.depth === 3)
+            .map((block) => marked.parseInline(block.token.text));
         return section;
     }
 
@@ -318,6 +332,7 @@ class NewsletterApp {
         if (this.main.querySelector('pre code')) {
             this.highlightCode();
         }
+        this.labelSubheadings(issue);
         this.renderJump(issue);
     }
 
@@ -446,17 +461,37 @@ class NewsletterApp {
                 </a>
             </li>` : '';
 
-        this.jump.querySelector('.nl-jump-list').innerHTML = issue.sections.map((section, index) => `
+        this.jump.querySelector('.nl-jump-list').innerHTML = issue.sections.map((section, index) => {
+            const band = this.bandOf(index);
+            const subs = section.subheadings.map((headingHtml, sub) => `
+                    <li>
+                        <a class="nl-jump-sublink" data-band="${band}" data-parent="${index}" href="#section-${index + 1}-${sub + 1}">${headingHtml}</a>
+                    </li>`).join('');
+            return `
             <li>
-                <a class="nl-jump-link" data-band="${this.bandOf(index)}" href="#section-${index + 1}">
+                <a class="nl-jump-link" data-band="${band}" href="#section-${index + 1}">
                     <span class="nl-jump-num">${this.pad(index + 1)}</span>
                     <span class="nl-jump-name">${section.headingHtml}</span>
-                </a>
-            </li>`).join('') + past;
+                </a>${subs ? `
+                <ol class="nl-jump-sub">${subs}
+                </ol>` : ''}
+            </li>`;
+        }).join('') + past;
 
         this.observeSections();
         // Fade in on the next frame so the opacity transition runs
         requestAnimationFrame(() => this.jump.classList.add('is-visible'));
+    }
+
+    // Give each top-level ### heading an id (section-2-1, section-2-2, ...) so the navigator can link to it
+    labelSubheadings(issue) {
+        issue.sections.forEach((section, index) => {
+            const article = this.main.querySelector(`#section-${index + 1} .nl-article`);
+            if (!article) return;
+            article.querySelectorAll(':scope > h3').forEach((heading, sub) => {
+                heading.id = `section-${index + 1}-${sub + 1}`;
+            });
+        });
     }
 
     buildJump() {
@@ -492,26 +527,51 @@ class NewsletterApp {
         this.jump.querySelector('.nl-jump-toggle').setAttribute('aria-expanded', String(open));
     }
 
+    // Highlights the section and sub-heading the reader is currently under. A heading counts as reached once it
+    // is inside a thin band just below the fixed header or has scrolled above it, so the lit entry is the last
+    // heading passed rather than the next one coming. The band is measured from the viewport height, so it is
+    // rebuilt on resize (see init).
     observeSections() {
+        (this.spyObservers || []).forEach((observer) => observer.disconnect());
+        this.spyObservers = [];
+
         const sections = [...this.main.querySelectorAll('.nl-section')];
         const links = [...this.jump.querySelectorAll('.nl-jump-link')];
-        const inBand = new Set();
+        const subLinks = [...this.jump.querySelectorAll('.nl-jump-sublink')];
+        const subTargets = subLinks.map((link) => document.getElementById(link.getAttribute('href').slice(1)));
+        const sectionsReached = new Set();
+        const subsReached = new Set();
+        const rootMargin = `-150px 0px -${Math.max(0, window.innerHeight - 220)}px 0px`;
 
-        // Highlight the lowest section touching the band between the header and 45% down the viewport
-        const sectionObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                const index = sections.indexOf(entry.target);
-                if (entry.isIntersecting) inBand.add(index);
-                else inBand.delete(index);
-            });
-            if (!inBand.size) return;
-            const active = Math.max(...inBand);
-            links.forEach((link, index) => {
-                if (index === active) link.setAttribute('aria-current', 'true');
-                else link.removeAttribute('aria-current');
-            });
-        }, { rootMargin: '-150px 0px -55% 0px' });
-        sections.forEach((section) => sectionObserver.observe(section));
+        const mark = (link, current) => {
+            if (current) link.setAttribute('aria-current', 'true');
+            else link.removeAttribute('aria-current');
+        };
+
+        const apply = () => {
+            const section = sectionsReached.size ? Math.max(...sectionsReached) : -1;
+            const sub = subsReached.size ? Math.max(...subsReached) : -1;
+            links.forEach((link, index) => mark(link, index === section));
+            // A sub-heading only lights while the reader is still inside the section it belongs to
+            subLinks.forEach((link, index) => mark(link, index === sub && Number(link.dataset.parent) === section));
+        };
+
+        const watch = (targets, reached) => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const index = targets.indexOf(entry.target);
+                    const bandTop = entry.rootBounds ? entry.rootBounds.top : 0;
+                    if (entry.isIntersecting || entry.boundingClientRect.top < bandTop) reached.add(index);
+                    else reached.delete(index);
+                });
+                apply();
+            }, { rootMargin });
+            targets.forEach((target) => target && observer.observe(target));
+            this.spyObservers.push(observer);
+        };
+
+        watch(sections, sectionsReached);
+        watch(subTargets, subsReached);
     }
 
     // ---------- External links ----------

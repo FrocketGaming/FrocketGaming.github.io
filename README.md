@@ -49,7 +49,7 @@ A Markdown note-taking tool with Firebase sync. Linked from the main nav and the
 A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, stdlib updates, and long-form deep dives with code. It is linked from the far left of every page header, separate from the tool nav. Issues are individual Markdown files rendered in the browser (no build step, no email), and its colors follow whichever site theme is selected. With no saved theme it opens in the Dunder theme.
 
 - `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
-- A section navigator follows you down the page: a side rail on wide screens, a floating "Sections" button on narrow ones. Previous and next arrows beside the issue number step through issues, and the navigator's "Past issues" entry jumps to the archive at the bottom.
+- A section navigator follows you down the page, listing each section's `###` sub-headings too and highlighting the one you are reading: a side rail on wide screens, a floating "Sections" button on narrow ones. Previous and next arrows beside the issue number step through issues, and the navigator's "Past issues" entry jumps to the archive at the bottom.
 - Writing rules and a starting point live in `newsletter/template.md`.
 - The repo root has an empty `.nojekyll` file. Do not delete it: without it GitHub Pages runs Jekyll, which converts any Markdown file that starts with front matter into HTML, so the issue `.md` files would return 404.
 - Links that leave the site open in a new tab (with `rel="noopener noreferrer"`); links within the site stay in the same tab.

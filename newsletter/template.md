@@ -26,7 +26,8 @@ title: "Issue title"
 
      ARTICLE SECTION - anything else: paragraphs, "###" subheadings, lists,
        block quotes, and fenced code blocks. Put the language after the fence
-       (```python) to get syntax highlighting.
+       (```python) to get syntax highlighting. Each "###" subheading also appears,
+       indented, under its section in the "On this page" navigator.
 
      A section with a paragraph or heading next to its bullet list is an ARTICLE,
      so its bullets render as a plain list, not as link cards. To get link cards,
