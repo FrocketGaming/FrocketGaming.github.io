@@ -51,6 +51,7 @@ A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, std
 - `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
 - A section navigator follows you down the page: a side rail on wide screens, a floating "Sections" button on narrow ones. Previous and next arrows beside the issue number step through issues, and the navigator's "Past issues" entry jumps to the archive at the bottom.
 - Writing rules and a starting point live in `newsletter/template.md`.
+- The repo root has an empty `.nojekyll` file. Do not delete it: without it GitHub Pages runs Jekyll, which converts any Markdown file that starts with front matter into HTML, so the issue `.md` files would return 404.
 - Links that leave the site open in a new tab (with `rel="noopener noreferrer"`); links within the site stay in the same tab.
 - Code blocks get a copy button on hover (always visible on touch, and revealed by keyboard focus).
 - Markdown images work: `![alt text](images/name.png "optional tooltip")`, with files in `newsletter/images/`. The path is relative to the newsletter page, not the `.md` file. Images fit the column and load lazily.
