@@ -185,6 +185,13 @@
     background-color: var(--band-1);
 }
 
+/* One line. "__dunder__ Review" is about 9.35em wide (17 monospace characters at 0.6em with -0.05em
+   tracking), so where container units are supported the size comes from the hero's own width, up to
+   72px, and the heading never wraps. Older browsers keep the fixed 72px. */
+.nl-hero {
+    container-type: inline-size;
+}
+
 .nl-masthead {
     margin-top: 40px;
     color: var(--text-primary);
@@ -194,8 +201,11 @@
     line-height: 0.95;
 }
 
-.nl-masthead span {
-    display: block;
+@supports (font-size: 1cqi) {
+    .nl-masthead {
+        font-size: min(72px, calc(100cqi / 9.5));
+        white-space: nowrap;
+    }
 }
 
 /* :first-child as well as the class, so the name stays highlighted even if an older cached script
@@ -203,11 +213,6 @@
 .nl-masthead span:first-child,
 .nl-masthead-name {
     color: var(--band-1);
-}
-
-/* Set by alignMasthead(): nudges the second line so its R lines up optically with the first line's underscore */
-.nl-masthead-word {
-    margin-left: var(--nl-masthead-shift, 0);
 }
 
 .nl-issue-title {
@@ -1022,7 +1027,6 @@
         margin-right: 24px;
     }
 
-    .nl-masthead { font-size: 2.5em; }
     .nl-band-heading { font-size: 28px; }
     .nl-band-number { font-size: 48px; }
     .nl-item-num { width: 32px; }
