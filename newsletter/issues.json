@@ -2,10 +2,10 @@
     {
         "date": "2026-09-19",
         "number": 1,
-        "title": "Lazy imports and a first round of reviews",
-        "intro": "Welcome to the first issue: a couple of package reviews, a new repo worth a star, and what's landed in the stdlib lately.",
+        "title": "Python 3.15 Updates",
+        "intro": "Welcome to the first issue: We'll review some cool python updates for 3.15 which releases on Oct 1st, 2026, showcase a few repos worth checking out, packages you should consider adopting now, and add a few tips/tricks for beginners!",
         "sections": [
-            "Upcoming Python 3.15",
+            "Upcoming Python 3.15 Changes",
             "Package Reviews",
             "New Repos",
             "Updates"
