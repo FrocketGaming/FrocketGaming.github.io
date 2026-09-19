@@ -52,10 +52,17 @@ A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, std
 - A section navigator follows you down the page: a side rail on wide screens, a floating "Sections" button on narrow ones.
 - Writing rules and a starting point live in `newsletter/template.md`.
 
-To add an issue, copy the template, write it, then add an entry to `newsletter/issues.json` (newest issue first is easiest to read, but the page sorts by date):
+To add an issue, copy the template and write it. The `.md` file is the only thing you edit: a GitHub Action rebuilds `newsletter/issues.json` (the archive manifest) from the issue files when they land on `main`.
 
 ```nu
 cp newsletter/template.md newsletter/issues/2026-10-02.md
+```
+
+To preview an issue locally before pushing, regenerate the manifest yourself and serve the site:
+
+```nu
+node newsletter/build-manifest.mjs
+npx serve .
 ```
 
 ---
@@ -102,7 +109,8 @@ Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.
 │   ├── index.html
 │   ├── newsletter-app.js
 │   ├── newsletter-styles.css
-│   ├── issues.json         Archive manifest (edit by hand per issue)
+│   ├── issues.json         Archive manifest (generated from issues/)
+│   ├── build-manifest.mjs  Generates issues.json; run by a GitHub Action
 │   ├── template.md         Authoring rules and starting point
 │   └── issues/             One Markdown file per issue (YYYY-MM-DD.md)
 └── tools/

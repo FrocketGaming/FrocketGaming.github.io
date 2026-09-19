@@ -38,9 +38,10 @@ title: "Issue title"
   5. Name gotcha: Markdown renders __dunder__ as bold. Write the name as `__dunder__`
      (in backticks) anywhere it appears in prose.
 
-  6. Publishing: add an entry for the issue to newsletter/issues.json (newest first
-     or last, the page sorts by date). GitHub Pages can take about 10 minutes to
-     show a new file to repeat visitors.
+  6. Publishing: commit the file. A GitHub Action rebuilds newsletter/issues.json
+     from the issue files when it lands on main, so nothing else needs editing.
+     Preview locally first with `node newsletter/build-manifest.mjs`. GitHub Pages
+     can take about 10 minutes to show new files to repeat visitors.
 
   Replace everything below with the real content. Delete sections you do not need.
 -->
