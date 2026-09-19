@@ -234,7 +234,7 @@
 }
 
 .data-profile-content .csv-table td {
-    font-family: "Courier New", monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 13px;
 }
 
@@ -298,7 +298,7 @@
     cursor: pointer;
     transition: all 0.3s;
     font-size: 12px;
-    font-family: "Courier New", monospace;
+    font-family: Consolas, Monaco, monospace;
 }
 
 .sql-example-btn:hover {
@@ -325,7 +325,7 @@
     background: transparent;
     border: 1px solid transparent;
     border-radius: 5px;
-    font-family: "Courier New", monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     line-height: normal;
     white-space: pre-wrap;
@@ -375,7 +375,7 @@
     caret-color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-    font-family: "Courier New", monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     resize: none;
     overflow: hidden;
@@ -426,7 +426,7 @@
     border-radius: 5px;
     color: var(--error-color);
     font-size: 13px;
-    font-family: "Courier New", monospace;
+    font-family: Consolas, Monaco, monospace;
     display: none;
 }
 

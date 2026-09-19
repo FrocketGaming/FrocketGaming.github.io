@@ -144,7 +144,7 @@
     background: var(--accent-primary);
     color: var(--bg-primary);
     border: none;
-    border-radius: 0 7px 7px 0;
+    border-radius: 0 8px 8px 0;
     cursor: pointer;
     font-size: 16px;
     transition: background 0.2s;
@@ -369,7 +369,7 @@
     background: var(--bg-tertiary);
     padding: 1px 4px;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--accent-secondary);
 }
 
@@ -445,14 +445,14 @@
 .stat-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     padding: 10px 8px;
     text-align: center;
 }
 
 .stat-label {
     color: var(--text-secondary);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
@@ -460,7 +460,7 @@
 
 .stat-value {
     color: var(--accent-secondary);
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
 }
 
@@ -476,7 +476,7 @@
     padding: 8px 12px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     margin-bottom: 12px;
     transition: border-color 0.2s;
 }
@@ -557,7 +557,7 @@
 }
 
 .filter-count {
-    font-size: 10px;
+    font-size: 11px;
     opacity: 0.7;
     margin-left: 2px;
 }
@@ -708,7 +708,7 @@
 }
 
 .rail-section-count {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
     opacity: 0.7;
     background: var(--bg-tertiary);
@@ -717,7 +717,7 @@
 }
 
 .rail-section-chevron {
-    font-size: 9px;
+    font-size: 11px;
     color: var(--text-secondary);
     transition: transform 0.2s;
     margin-left: auto;
@@ -888,7 +888,7 @@
     left: 0;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     padding: 8px 10px;
     font-size: 12px;
     color: var(--text-primary);
@@ -910,7 +910,7 @@
 
 /* Recurring badge */
 .recurring-badge {
-    font-size: 10px;
+    font-size: 11px;
     color: #9b59b6;
     display: inline-flex;
     align-items: center;
@@ -918,7 +918,7 @@
 }
 
 .recurring-badge span {
-    font-size: 9px;
+    font-size: 11px;
     opacity: 0.8;
 }
 
@@ -926,7 +926,7 @@
 .deadline-badge {
     padding: 2px 6px;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -964,7 +964,7 @@
 .priority-badge {
     padding: 4px 10px;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1113,7 +1113,7 @@
 }
 
 .detail-field label {
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-secondary);
@@ -1251,7 +1251,7 @@
 }
 
 .detail-drawer-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
     line-height: 1.4;
@@ -1312,7 +1312,7 @@
 }
 
 .project-progress-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
 }
 
@@ -1320,7 +1320,7 @@
 .collapse-chevron {
     cursor: pointer;
     color: var(--accent-primary);
-    font-size: 10px;
+    font-size: 11px;
     transition: transform 0.2s;
     padding: 2px;
     flex-shrink: 0;
@@ -1339,7 +1339,7 @@
     border-radius: 3px;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 10px;
+    font-size: 11px;
     transition: all 0.2s;
     opacity: 0;
 }
@@ -1386,7 +1386,7 @@
 }
 
 .inline-subtask-hint {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
     white-space: nowrap;
 }
@@ -1395,7 +1395,7 @@
 .completed-section {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     margin-bottom: 20px;
 }
 
@@ -1406,7 +1406,7 @@
     padding: 10px 14px;
     cursor: pointer;
     transition: background 0.2s;
-    border-radius: 6px;
+    border-radius: 5px;
     user-select: none;
 }
 
@@ -1415,7 +1415,7 @@
 }
 
 .completed-chevron {
-    font-size: 10px;
+    font-size: 11px;
     transition: transform 0.2s;
     color: var(--text-secondary);
 }
@@ -1466,7 +1466,7 @@
 }
 
 .empty-state-icon {
-    font-size: 36px;
+    font-size: 28px;
     margin-bottom: 12px;
     opacity: 0.4;
     color: var(--text-secondary);
@@ -1563,7 +1563,7 @@
 .import-choice-content h3 {
     color: var(--text-primary);
     margin: 0 0 8px 0;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .import-choice-content p {
@@ -1655,7 +1655,7 @@
 .shortcuts-content h3 {
     color: var(--accent-secondary);
     margin: 0 0 16px 0;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .shortcut-row {
@@ -1711,7 +1711,7 @@ kbd {
     position: fixed;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 5px;
     padding: 8px 12px;
     font-size: 12px;
     color: var(--text-primary);
@@ -1790,7 +1790,7 @@ kbd {
     }
 
     .agenda-main-stat {
-        font-size: 36px;
+        font-size: 28px;
     }
 
     .detail-drawer-panel-wrap {

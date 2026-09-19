@@ -73,7 +73,7 @@
 }
 
 .upload-zone i {
-    font-size: 2rem;
+    font-size: 28px;
     margin-bottom: 10px;
     display: block;
     color: var(--accent-primary);
@@ -108,7 +108,7 @@
     border: 1px solid var(--border-color);
     border-radius: 5px;
     color: var(--text-primary);
-    font-family: 'Courier New', monospace;
+    font-family: Consolas, Monaco, monospace;
     font-size: 0.85rem;
     resize: vertical;
     outline: none;
@@ -198,7 +198,7 @@
 
 .config-card h3 {
     color: var(--accent-secondary);
-    font-size: 0.95rem;
+    font-size: 16px;
     margin: 0 0 12px 0;
     display: flex;
     align-items: center;
@@ -551,7 +551,7 @@
 .chart-placeholder {
     color: var(--text-secondary);
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 16px;
 }
 
 .chart-placeholder i {
@@ -713,7 +713,7 @@
 
 .preview-header h3 {
     color: var(--accent-secondary);
-    font-size: 0.95rem;
+    font-size: 16px;
     margin: 0;
     display: flex;
     align-items: center;
