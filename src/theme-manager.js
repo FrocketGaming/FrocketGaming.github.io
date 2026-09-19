@@ -12,7 +12,7 @@ const ThemeManager = {
         { id: 'nord', name: 'Nord' },
         { id: 'solarized', name: 'Solarized Dark' },
         { id: 'synthwave', name: "SynthWave '84" },
-        { id: 'dunder', name: 'Dunder' }
+        { id: 'canary', name: 'Canary' }
     ],
 
     init() {
@@ -28,9 +28,17 @@ const ThemeManager = {
         }
     },
 
+    // Theme ids that were renamed; a visitor's saved value is mapped forward once
+    LEGACY_THEME_IDS: { dunder: 'canary' },
+
     getSavedTheme() {
         try {
-            return localStorage.getItem(this.STORAGE_KEY) || this.DEFAULT_THEME;
+            const saved = localStorage.getItem(this.STORAGE_KEY);
+            if (saved && this.LEGACY_THEME_IDS[saved]) {
+                this.saveTheme(this.LEGACY_THEME_IDS[saved]);
+                return this.LEGACY_THEME_IDS[saved];
+            }
+            return saved || this.DEFAULT_THEME;
         } catch (e) {
             console.warn('Could not access localStorage:', e);
             return this.DEFAULT_THEME;

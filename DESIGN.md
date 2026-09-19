@@ -110,7 +110,7 @@ components:
 
 **Creative North Star: "The Developer's Workbench"**
 
-QoL Tools is a dark, utilitarian dashboard of small browser-based dev utilities, built by its own owner for daily personal use. Nothing here performs for a first-time visitor — every surface is designed to be glanced at, used, and left alone. The system is deliberately unadorned at rest: flat panels, hairline borders, a single accent color per active theme. The whole site ships 8 interchangeable palettes (Default/green, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder), all driven by one shared CSS custom-property contract — the visual "shape" of the site never changes across themes, only its color values do.
+QoL Tools is a dark, utilitarian dashboard of small browser-based dev utilities, built by its own owner for daily personal use. Nothing here performs for a first-time visitor — every surface is designed to be glanced at, used, and left alone. The system is deliberately unadorned at rest: flat panels, hairline borders, a single accent color per active theme. The whole site ships 8 interchangeable palettes (Default/green, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary), all driven by one shared CSS custom-property contract — the visual "shape" of the site never changes across themes, only its color values do.
 
 The system currently carries a few generic-AI-interface tells worth naming rather than hiding: a gradient-clipped hero headline on the landing page, and colored top/side accent stripes on cards. This is descriptive of what ships today, not a prescription to keep it that way.
 
@@ -122,7 +122,7 @@ The system currently carries a few generic-AI-interface tells worth naming rathe
 
 ## Colors
 
-Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder) restates the same roles with different hues — describe by role, not by one theme's hex. All eight live in `src/stylesheet.css` under `[data-theme="…"]`; that file is the single source of truth for exact per-theme hex — this table exists so a new theme can be sized up by character before opening it:
+Each theme swaps one primary/secondary accent pair and one neutral ramp; the palette character is "dark ground, single loud accent, everything else quiet." Values below are the Default theme; every other theme (Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) restates the same roles with different hues — describe by role, not by one theme's hex. All eight live in `src/stylesheet.css` under `[data-theme="…"]`; that file is the single source of truth for exact per-theme hex — this table exists so a new theme can be sized up by character before opening it:
 
 | Theme | Accent pair | Character |
 |---|---|---|
@@ -133,7 +133,7 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 | Nord | `#88c0d0` → `#81a1c1` (frost → blue) | Coolest, lowest-contrast palette; two blues instead of a hue jump |
 | Solarized Dark | `#268bd2` → `#2aa198` (blue → cyan) | The most muted ground (`#002b36`) of any theme |
 | SynthWave '84 | `#ff7edb` → `#36f9f6` (pink → cyan) | The one theme where the *neutrals* break "everything else quiet" too — secondary text and syntax colors stay saturated instead of settling into gray |
-| Dunder | `#ffd43b` → `#4b8bbe` (Python yellow → Python blue) | The `__dunder__ Review` newsletter's own palette on a near-black ground (`#0a0a0a`). The only theme that overrides the `--band-*` tokens, and the default for `/newsletter/` when a visitor has no saved theme |
+| Canary | `#ffd43b` → `#4b8bbe` (yellow → blue) | The Snake Charmer newsletter's own palette on a near-black ground (`#0a0a0a`). The only theme that overrides the `--band-*` tokens, and the default for `/newsletter/` when a visitor has no saved theme |
 
 A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the eight above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
@@ -159,7 +159,7 @@ A new theme should pick an accent pair with a clear identity of its own — not 
 - **Scrim** (`rgba(0, 0, 0, 0.4)`): the neutral black overlay-separation shadow used by floating tooltips/modals (see Elevation & Depth). Theme-independent by design — a scrim dims what's behind it regardless of which palette is active, so it deliberately does not use a theme token.
 
 ### Newsletter Bands
-The newsletter page (`newsletter/`) colors its sections with four bands, one per section in rotation, so it needs four distinct colors where a theme has two accents. `src/stylesheet.css` defines `--band-1` to `--band-4` in `:root`, defaulting to `--accent-primary`, `--accent-secondary`, `--info-color`, and `--warning-color`, so every theme works without its own values. Only `[data-theme="dunder"]` overrides them (yellow, blue, mint, pink). `--error-color` is deliberately never a band, so no theme produces a red section.
+The newsletter page (`newsletter/`) colors its sections with four bands, one per section in rotation, so it needs four distinct colors where a theme has two accents. `src/stylesheet.css` defines `--band-1` to `--band-4` in `:root`, defaulting to `--accent-primary`, `--accent-secondary`, `--info-color`, and `--warning-color`, so every theme works without its own values. Only `[data-theme="canary"]` overrides them (yellow, blue, mint, pink). `--error-color` is deliberately never a band, so no theme produces a red section.
 
 Two page-local values sit on top of the bands in `newsletter-styles.css`, both derived with `color-mix()` rather than hardcoded:
 - **`--band-ink`** (`--bg-primary` at 40% mixed with black): text on a band. A plain `--bg-primary` fails 4.5:1 on mid-tone bands in Nord and Solarized; this reaches 4.5:1 on every band of every theme except Solarized band 4 (4.2:1, its orange-red is at the ceiling for dark text).
@@ -167,7 +167,7 @@ Two page-local values sit on top of the bands in `newsletter-styles.css`, both d
 
 ### Known Exceptions (not systemized)
 A handful of literal colors exist outside the token list above, each for a specific reason rather than by drift. These are intentionally *not* promoted to named tokens — each is scoped to one job:
-- **Timezone hour-coding** (`tools/timezone/timezone-styles.css`, `.tz-hour-good/ok/bad`: `#2d5a2d`/`#5a4a1a`/`#5a1a1a` backgrounds with `#a8e6a8`/`#f0d68a`/`#f0a0a0` text, plus a Dracula-specific override `#264a26`/`#4a3a10`/`#4a1010` and a Dunder-specific one `#153829`/`#3b3214`/`#3b211f` with `#9bf0c8`/`#ffe38a`/`#ffb4ac` text, because the defaults read muddy on Dunder's pure-black ground): fixed business-hours/early-late/night semantics, deliberately theme-invariant so "green means business hours" reads the same on every palette — the opposite intent of a theme token.
+- **Timezone hour-coding** (`tools/timezone/timezone-styles.css`, `.tz-hour-good/ok/bad`: `#2d5a2d`/`#5a4a1a`/`#5a1a1a` backgrounds with `#a8e6a8`/`#f0d68a`/`#f0a0a0` text, plus a Dracula-specific override `#264a26`/`#4a3a10`/`#4a1010` and a Canary-specific one `#153829`/`#3b3214`/`#3b211f` with `#9bf0c8`/`#ffe38a`/`#ffb4ac` text, because the defaults read muddy on Canary's pure-black ground): fixed business-hours/early-late/night semantics, deliberately theme-invariant so "green means business hours" reads the same on every palette — the opposite intent of a theme token.
 - **JSON viewer SynthWave contrast fix** (`tools/json-viewer/json-viewer-styles.css`, `[data-theme="synthwave"] .json-children`: `#6c5a9e`): `--border-color` is nearly invisible against `--bg-primary` in that one theme, so the tree's nesting guide gets a manual, theme-scoped bump. The pattern to follow for a future theme with the same problem: a scoped `[data-theme="…"]` override with a comment stating the contrast issue, not a global change.
 - **Error-row tint** (`tools/csv-viewer/csv-styles.css`, `tools/regex-tester/regex-styles.css`: `#3d1f1f`): predates this project's `color-mix()` usage; new code with the same need should use `color-mix(in srgb, var(--error-color) 15%, transparent)` instead.
 - **Firebase auth amber** (`src/firebase-sync.css`: `#f0ad4e`): matches Firebase/Google's own warning-state amber inside their auth popup UI, intentionally not themed since it lives inside a third-party-styled surface this project doesn't control.
@@ -266,7 +266,7 @@ The two steps beyond the original six were already in wide use and are now docum
 - **Do** keep shadows as ambient, non-directional glows tinted from theme tokens — never a fixed black/gray shadow that ignores the active theme.
 - **Do** make every new themeable component render correctly across all 8 existing palettes via the CSS custom-property contract; don't hardcode a color that only looks right in the Default theme.
 
-- **Do** put `--bg-primary` on text that sits on an `--accent-primary` or `--accent-secondary` fill, never `--text-primary` or a literal white. Accents are light-to-mid in every theme (Dunder's yellow is the extreme case at about 1.4:1 with white text), and dark ink on the accent is also higher contrast on every other theme.
+- **Do** put `--bg-primary` on text that sits on an `--accent-primary` or `--accent-secondary` fill, never `--text-primary` or a literal white. Accents are light-to-mid in every theme (Canary's yellow is the extreme case at about 1.4:1 with white text), and dark ink on the accent is also higher contrast on every other theme.
 
 ### Don't:
 - **Don't** introduce a second typeface without treating it as a deliberate, site-wide system change (see The One-Voice Type Rule) — don't drop one in for a single new component.

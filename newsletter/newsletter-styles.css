@@ -1,7 +1,7 @@
-/* ========== __dunder__ Review ==========
+/* ========== Snake Charmer ==========
    Every color is a theme token from src/stylesheet.css, so switching the theme
    recolors the page. The four section bands use --band-1..4, which fall back to
-   existing tokens on every theme except Dunder. */
+   existing tokens on every theme except Canary. */
 
 .nl,
 .nl-jump {
@@ -1015,14 +1015,14 @@
     }
 }
 
-/* The top-bar name gains " Newsletter" where there is room; phones keep just "__dunder__ Review" on one line */
+/* The top-bar name gains " Newsletter" where there is room; phones keep just "Snake Charmer" on one line */
 @media (max-width: 540px) {
     .nl-wordmark-suffix {
         display: none;
     }
 }
 
-/* Narrow phones: the 14px step keeps "__dunder__ Review" on one line beside the issue arrows down to 360px */
+/* Narrow phones: the 14px step keeps "Snake Charmer" on one line beside the issue arrows down to 360px */
 @media (max-width: 400px) {
     .nl-wordmark {
         font-size: 14px;

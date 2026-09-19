@@ -1,4 +1,4 @@
-// __dunder__ Review - renders a Markdown issue from newsletter/issues/ into the page.
+// Snake Charmer - renders a Markdown issue from newsletter/issues/ into the page.
 // Issue rules (the authoring notes live in newsletter/template.md):
 //   - File name is the date (2026-10-02.md); front matter has only issue_number and title.
 //   - The intro is ONE paragraph before the first "##".
@@ -292,7 +292,7 @@ class NewsletterApp {
         const articleCount = issue.sections.filter((section) => section.kind === 'article').length;
         const number = this.pad(issue.number);
 
-        document.title = `${issue.title} - No. ${number} - __dunder__ Review`;
+        document.title = `${issue.title} - No. ${number} - Snake Charmer`;
         const description = document.querySelector('meta[name="description"]');
         if (description && issue.intro) description.setAttribute('content', issue.intro.text);
         this.stamp.textContent = `No. ${number}`;

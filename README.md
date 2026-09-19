@@ -45,8 +45,8 @@ A Markdown note-taking tool with Firebase sync. Linked from the main nav and the
 
 ## Newsletter
 
-### `__dunder__ Review`
-A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, stdlib updates, and long-form deep dives with code. It is linked from the far left of every page header, separate from the tool nav. Issues are individual Markdown files rendered in the browser (no build step, no email), and its colors follow whichever site theme is selected. With no saved theme it opens in the Dunder theme.
+### Snake Charmer
+A bi-weekly Python newsletter at `/newsletter/`: package reviews, new repos, stdlib updates, and long-form deep dives with code. It is linked from the far left of every page header, separate from the tool nav. Issues are individual Markdown files rendered in the browser (no build step, no email), and its colors follow whichever site theme is selected. With no saved theme it opens in the Canary theme.
 
 - `/newsletter/` shows the latest issue and an archive; `/newsletter/?issue=2026-09-18` shows a specific issue.
 - A section navigator follows you down the page, listing each section's `###` sub-headings too and highlighting the one you are reading: a side rail on wide screens, a floating "Sections" button on narrow ones. Previous and next arrows beside the issue number step through issues, and the navigator's "Past issues" entry jumps to the archive at the bottom.
@@ -76,7 +76,7 @@ npx serve .
 - **Static site** hosted on GitHub Pages — no server, no build step
 - **Local persistence** via IndexedDB (`QoLToolsDB`) using a shared `StorageManager` wrapper
 - **Cloud sync** (Snippets, Notes) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners
-- **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Dunder) applied via `data-theme` on `<html>` with no flash on load
+- **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>` with no flash on load
 - No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK)
 
 ---
@@ -109,7 +109,7 @@ Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.
 │   ├── storage-manager.js  IndexedDB wrapper
 │   ├── firebase-config.js  Firebase project config
 │   └── firebase-sync.js    Firestore sync service
-├── newsletter/             __dunder__ Review newsletter
+├── newsletter/             Snake Charmer newsletter
 │   ├── index.html
 │   ├── newsletter-app.js
 │   ├── newsletter-styles.css

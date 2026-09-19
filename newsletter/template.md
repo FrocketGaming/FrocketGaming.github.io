@@ -9,7 +9,7 @@ title: "Issue title"
   ISSUE STRUCTURE (comments like this one never appear on the page)
 
   1. Front matter (top of file): issue_number and title. The newsletter's own name,
-     __dunder__ Review, is part of the page, so the title here is this issue's headline.
+     Snake Charmer, is part of the page, so the title here is this issue's headline.
 
   2. Intro: ONE paragraph directly below the front matter, before the first "##".
      It shows under the issue title. Inline `code`, *emphasis* and
@@ -41,10 +41,7 @@ title: "Issue title"
      file, so always write images/name.png (or an https:// URL). Images fit the
      column and load lazily; always write alt text.
 
-  5. Name gotcha: Markdown renders __dunder__ as bold. Write the name as `__dunder__`
-     (in backticks) anywhere it appears in prose.
-
-  6. Publishing: commit the file. A GitHub Action rebuilds newsletter/issues.json
+  5. Publishing: commit the file. A GitHub Action rebuilds newsletter/issues.json
      from the issue files when it lands on main, so nothing else needs editing.
      Preview locally first with `node newsletter/build-manifest.mjs`. GitHub Pages
      can take about 10 minutes to show new files to repeat visitors.

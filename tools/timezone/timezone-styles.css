@@ -492,10 +492,10 @@ input[type="datetime-local"]:focus {
 [data-theme="dracula"] .tz-hour-ok  { background: #4a3a10; color: #f0d68a; }
 [data-theme="dracula"] .tz-hour-bad { background: #4a1010; color: #f0a0a0; }
 
-/* Dunder's ground is pure black, where the default olive/brown/maroon read muddy: same meanings, tinted from its mint/yellow/coral */
-[data-theme="dunder"] .tz-hour-good { background: #153829; color: #9bf0c8; }
-[data-theme="dunder"] .tz-hour-ok  { background: #3b3214; color: #ffe38a; }
-[data-theme="dunder"] .tz-hour-bad { background: #3b211f; color: #ffb4ac; }
+/* Canary's ground is pure black, where the default olive/brown/maroon read muddy: same meanings, tinted from its mint/yellow/coral */
+[data-theme="canary"] .tz-hour-good { background: #153829; color: #9bf0c8; }
+[data-theme="canary"] .tz-hour-ok  { background: #3b3214; color: #ffe38a; }
+[data-theme="canary"] .tz-hour-bad { background: #3b211f; color: #ffb4ac; }
 
 /* Legend */
 .tz-planner-legend {
