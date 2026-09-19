@@ -1009,3 +1009,17 @@
         display: none;
     }
 }
+
+/* The top-bar name gains " Newsletter" where there is room; phones keep just "__dunder__ Review" on one line */
+@media (max-width: 540px) {
+    .nl-wordmark-suffix {
+        display: none;
+    }
+}
+
+/* Narrow phones: the 14px step keeps "__dunder__ Review" on one line beside the issue arrows down to 360px */
+@media (max-width: 400px) {
+    .nl-wordmark {
+        font-size: 14px;
+    }
+}
