@@ -183,7 +183,7 @@
 /* The issue title is the page heading: the Stat step (48px, 28px on phones) in the heavy display mono,
    balanced across lines when the title is long. The newsletter's own name lives in the top bar. */
 .nl-issue-title {
-    margin-top: 40px;
+    margin-top: 44px;
     color: var(--text-primary);
     font-size: 36px;
     font-weight: 800;
