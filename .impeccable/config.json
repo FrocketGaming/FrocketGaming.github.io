@@ -29,6 +29,18 @@
         ],
         "createdAt": "2026-09-19T15:52:26.997Z",
         "reason": "Blockquote rule in the Notes preview: conventional quote styling, not a card accent; same call as the newsletter and Markdown tool blockquotes. Decided by the assistant, not confirmed on this specific finding."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#9b59b6",
+        "createdAt": "2026-09-19T16:25:24.357Z",
+        "reason": "Documented exception in DESIGN.md (Known Exceptions, To-do priority colors): the purple someday tag keeps one meaning across themes. Recorded by the assistant from the design doc, not confirmed on this specific finding."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#f4d35e",
+        "createdAt": "2026-09-19T16:25:24.457Z",
+        "reason": "Documented exception in DESIGN.md (Known Exceptions, To-do priority colors): the yellow flag keeps one meaning across themes. Recorded by the assistant from the design doc, not confirmed on this specific finding."
       }
     ]
   }
