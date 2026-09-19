@@ -302,7 +302,7 @@ class NewsletterApp {
                     <p class="nl-repl-out">${stats}</p>
                     <p><span class="nl-repl-prompt">&gt;&gt;&gt;</span> <span class="nl-cursor"></span></p>
                 </div>
-                <h1 class="nl-masthead"><span>__dunder__</span>Review</h1>
+                <h1 class="nl-masthead"><span class="nl-masthead-name">__dunder__</span><span class="nl-masthead-word">Review</span></h1>
                 <p class="nl-issue-title">${this.escapeHtml(issue.title)}</p>
                 ${issue.intro ? `<p class="nl-intro">${issue.intro.html}</p>` : ''}
             </section>
@@ -315,6 +315,7 @@ class NewsletterApp {
         `;
 
         this.markExternalLinks();
+        this.alignMasthead();
         this.addCopyButtons();
         if (this.main.querySelector('pre code')) {
             this.highlightCode();
@@ -514,6 +515,59 @@ class NewsletterApp {
             });
         }, { rootMargin: '-150px 0px -55% 0px' });
         sections.forEach((section) => sectionObserver.observe(section));
+    }
+
+    // ---------- Masthead alignment ----------
+    // The underscore and the "R" have different left side-bearings, and how much they differ depends on the
+    // font build and the display scale. So measure the real ink edges in the font actually in use and nudge
+    // the second line so its "R" starts exactly under the first line's underscore.
+
+    alignMasthead() {
+        const heading = this.main.querySelector('.nl-masthead');
+        if (!heading) return;
+
+        const style = getComputedStyle(heading);
+        const fontPx = parseFloat(style.fontSize);
+        const font = `${style.fontWeight} ${fontPx}px ${style.fontFamily}`;
+        const first = heading.querySelector('.nl-masthead-name').textContent.charAt(0);
+        const second = heading.querySelector('.nl-masthead-word').textContent.charAt(0);
+
+        const align = () => {
+            const shift = this.inkLeft(first, style, fontPx) - this.inkLeft(second, style, fontPx);
+            heading.style.setProperty('--nl-masthead-shift', `${(shift / fontPx).toFixed(4)}em`);
+        };
+
+        // Measure only once the web font is loaded; if loading fails the default (no shift) stays
+        if (document.fonts && document.fonts.load) {
+            document.fonts.load(font, first + second).then(align, () => {});
+        } else {
+            align();
+        }
+    }
+
+    // Distance from a glyph's origin to its leftmost painted pixel, in CSS px, measured at 8x for precision
+    inkLeft(glyph, style, fontPx) {
+        const scale = 8;
+        const size = fontPx * scale;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(size * 1.6);
+        canvas.height = Math.ceil(size * 1.6);
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+        const origin = Math.round(size * 0.3);
+        context.fillText(glyph, origin, Math.round(size * 1.1));
+
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let left = canvas.width;
+        for (let row = 0; row < canvas.height; row++) {
+            for (let column = 0; column < left; column++) {
+                if (pixels[(row * canvas.width + column) * 4 + 3] > 127) {
+                    left = column;
+                    break;
+                }
+            }
+        }
+        return (left - origin) / scale;
     }
 
     // ---------- External links ----------

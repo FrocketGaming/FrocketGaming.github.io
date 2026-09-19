@@ -196,7 +196,15 @@
 
 .nl-masthead span {
     display: block;
+}
+
+.nl-masthead-name {
     color: var(--band-1);
+}
+
+/* Set by alignMasthead(): nudges the second line so its R lines up optically with the first line's underscore */
+.nl-masthead-word {
+    margin-left: var(--nl-masthead-shift, 0);
 }
 
 .nl-issue-title {
