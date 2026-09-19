@@ -302,8 +302,7 @@ class NewsletterApp {
                     <p class="nl-repl-out">${stats}</p>
                     <p><span class="nl-repl-prompt">&gt;&gt;&gt;</span> <span class="nl-cursor"></span></p>
                 </div>
-                <h1 class="nl-masthead"><span class="nl-masthead-name">__dunder__</span> Review</h1>
-                <p class="nl-issue-title">${this.escapeHtml(issue.title)}</p>
+                <h1 class="nl-issue-title">${this.escapeHtml(issue.title)}</h1>
                 ${issue.intro ? `<p class="nl-intro">${issue.intro.html}</p>` : ''}
             </section>
             ${notices}

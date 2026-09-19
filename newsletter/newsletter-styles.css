@@ -147,7 +147,7 @@
     pointer-events: none;
 }
 
-/* Hero: REPL box, masthead, issue title, intro */
+/* Hero: REPL box, issue title, intro */
 .nl-hero {
     padding: 56px 40px;
 }
@@ -185,48 +185,21 @@
     background-color: var(--band-1);
 }
 
-/* One line. "__dunder__ Review" is about 9.35em wide (17 monospace characters at 0.6em with -0.05em
-   tracking), so where container units are supported the size comes from the hero's own width, up to
-   72px, and the heading never wraps. Older browsers keep the fixed 72px. */
-.nl-hero {
-    container-type: inline-size;
-}
-
-.nl-masthead {
+/* The issue title is the page heading: the Stat step (48px, 28px on phones) in the heavy display mono,
+   balanced across lines when the title is long. The newsletter's own name lives in the top bar. */
+.nl-issue-title {
     margin-top: 40px;
     color: var(--text-primary);
-    font-size: 72px;
+    font-size: 48px;
     font-weight: 800;
-    letter-spacing: -0.05em;
-    line-height: 0.95;
-}
-
-@supports (font-size: 1cqi) {
-    .nl-masthead {
-        font-size: min(72px, calc(100cqi / 9.5));
-        white-space: nowrap;
-    }
-}
-
-/* :first-child as well as the class, so the name stays highlighted even if an older cached script
-   builds the heading without the class */
-.nl-masthead span:first-child,
-.nl-masthead-name {
-    color: var(--band-1);
-}
-
-.nl-issue-title {
-    margin-top: 24px;
-    color: var(--text-primary);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.25;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
     text-wrap: balance;
+    overflow-wrap: anywhere;
 }
 
 .nl-intro {
-    margin-top: 16px;
+    margin-top: 20px;
     color: var(--nl-muted);
     font-size: 16px;
     line-height: 1.6;
@@ -1027,6 +1000,7 @@
         margin-right: 24px;
     }
 
+    .nl-issue-title { font-size: 28px; }
     .nl-band-heading { font-size: 28px; }
     .nl-band-number { font-size: 48px; }
     .nl-item-num { width: 32px; }
