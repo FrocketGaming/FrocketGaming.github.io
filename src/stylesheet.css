@@ -24,6 +24,12 @@
     --syntax-tag: #e06c75;
     --syntax-addition: #74a12e;
     --syntax-deletion: #ff6b6b;
+
+    /* Newsletter section bands. Default to existing tokens so every theme works without its own values. */
+    --band-1: var(--accent-primary);
+    --band-2: var(--accent-secondary);
+    --band-3: var(--info-color);
+    --band-4: var(--warning-color);
 }
 
 [data-theme="dracula"] {
@@ -180,6 +186,36 @@
     --syntax-tag: #72f1b8;
     --syntax-addition: #72f1b8;
     --syntax-deletion: #fe4450;
+}
+
+[data-theme="dunder"] {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #111111;
+    --bg-tertiary: #1a1a1a;
+    --bg-hover: #161616;
+    --accent-primary: #ffd43b;
+    --accent-secondary: #4b8bbe;
+    --text-primary: #ededed;
+    --text-secondary: #a1a1a1;
+    --border-color: #262626;
+    --shadow-color: #000000;
+    --error-color: #ff7b72;
+    --warning-color: #ffd43b;
+    --info-color: #6cb6ff;
+    --syntax-keyword: #ff7b72;
+    --syntax-string: #a5d6ff;
+    --syntax-comment: #8b949e;
+    --syntax-function: #d2a8ff;
+    --syntax-number: #a5d6ff;
+    --syntax-type: #f0883e;
+    --syntax-variable: #79c0ff;
+    --syntax-tag: #7ee787;
+    --syntax-addition: #56d364;
+    --syntax-deletion: #ffa198;
+    --band-1: #ffd43b;
+    --band-2: #4b8bbe;
+    --band-3: #3ddc97;
+    --band-4: #ff6ba9;
 }
 
 body {
