@@ -31,6 +31,7 @@ class NewsletterApp {
         this.issueNav = document.getElementById('nlIssueNav');
         this.configureMarked();
         this.load();
+        this.initBackToTop();
 
         let resizeTimer;
         window.addEventListener('resize', () => {
@@ -39,6 +40,21 @@ class NewsletterApp {
                 if (this.jump && this.main.querySelector('.nl-section')) this.observeSections();
             }, 200);
         });
+    }
+
+    // Bottom-left button that returns to the top. It appears once the reader is a screen or so down; the smooth
+    // scroll (and its reduced-motion opt-out) comes from the CSS scroll-behavior rule, so no behavior is set here.
+    initBackToTop() {
+        const button = document.getElementById('nlToTop');
+        if (!button) return;
+        button.hidden = false;
+
+        const update = () => {
+            button.classList.toggle('is-visible', window.scrollY > window.innerHeight * 0.75);
+        };
+        window.addEventListener('scroll', update, { passive: true });
+        button.addEventListener('click', () => window.scrollTo({ top: 0 }));
+        update();
     }
 
     configureMarked() {

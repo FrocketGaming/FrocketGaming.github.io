@@ -901,6 +901,54 @@
     }
 }
 
+/* Back to top: bottom-left, clear of the Sections button (bottom-right) and the wide-screen rail.
+   Shown once the reader has scrolled; smooth scrolling comes from the rule above. */
+.nl-to-top {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--accent-primary);
+    color: var(--band-ink);
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.15s ease;
+}
+
+.nl-to-top[hidden] {
+    display: none;
+}
+
+.nl-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.nl-to-top:hover {
+    background-color: var(--accent-secondary);
+}
+
+.nl-to-top:focus-visible {
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nl-to-top {
+        transition: none;
+    }
+}
+
 /* Loading and error states */
 .nl-main {
     min-height: 480px;
