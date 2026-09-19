@@ -885,6 +885,44 @@ input[type="checkbox"]:checked {
     }
 }
 
+/* Phones (640px and below): line one holds the newsletter icon and the theme selector at opposite ends,
+   and the rail wraps below them across the full width, so the three can never overlap. The header is at
+   most two rail rows tall (about 165px), so pages reserve 172px instead of the old 100px/140px. */
+@media (max-width: 640px) {
+    .header .header-icon-row {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .header .theme-selector {
+        position: static;
+        padding-right: 0;
+        order: 2;
+    }
+
+    .header .nav-pill-rail {
+        order: 3;
+        flex: 0 0 100%;
+        justify-content: center;
+    }
+
+    body {
+        padding-top: 172px;
+    }
+}
+
+/* On the narrowest phones a long current-page label would push the rail onto a third row, so the
+   current page's pill stays icon-only there (it still expands on tap or focus). */
+@media (max-width: 340px) {
+    .nav-pill-item.active:not(:hover):not(:focus-visible) .nav-pill-label {
+        grid-template-columns: 0fr;
+        opacity: 0;
+        margin-left: 0;
+    }
+}
+
 /* Nav icon rail — hover-expand pills. Icons stay compact at rest; hovering,
    focusing, or landing on a page widens that item to reveal the tool's
    name, so nothing has to be memorized from the icon alone. */
