@@ -216,10 +216,8 @@
     --syntax-tag: #7ee787;
     --syntax-addition: #56d364;
     --syntax-deletion: #ffa198;
-    --band-1: #ffd43b;
-    --band-2: #4b8bbe;
     --band-3: #3ddc97;
-    --band-4: #ff6ba9;
+    --band-4: #c792ea;
 }
 
 /* Browser surfaces that would otherwise ship default-colored: follow the active theme */

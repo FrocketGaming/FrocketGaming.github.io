@@ -133,7 +133,7 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 | Nord | `#88c0d0` → `#81a1c1` (frost → blue) | Coolest, lowest-contrast palette; two blues instead of a hue jump |
 | Solarized Dark | `#268bd2` → `#2aa198` (blue → cyan) | The most muted ground (`#002b36`) of any theme |
 | SynthWave '84 | `#ff7edb` → `#36f9f6` (pink → cyan) | The one theme where the *neutrals* break "everything else quiet" too — secondary text and syntax colors stay saturated instead of settling into gray |
-| Canary | `#ffd43b` → `#4b8bbe` (yellow → blue) | The Snake Charmer newsletter's own palette on a near-black ground (`#0a0a0a`). The only theme that overrides the `--band-*` tokens, and the default for `/newsletter/` when a visitor has no saved theme |
+| Canary | `#ffd43b` → `#5a9dd6` (yellow → blue) | The Snake Charmer newsletter's own palette on a near-black ground (`#0a0a0a`). The only theme that overrides `--band-3` and `--band-4`, and the default for `/newsletter/` when a visitor has no saved theme |
 
 A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the eight above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
@@ -159,7 +159,7 @@ A new theme should pick an accent pair with a clear identity of its own — not 
 - **Scrim** (`rgba(0, 0, 0, 0.4)`): the neutral black overlay-separation shadow used by floating tooltips/modals (see Elevation & Depth). Theme-independent by design — a scrim dims what's behind it regardless of which palette is active, so it deliberately does not use a theme token.
 
 ### Newsletter Bands
-The newsletter page (`newsletter/`) colors its sections with four bands, one per section in rotation, so it needs four distinct colors where a theme has two accents. `src/stylesheet.css` defines `--band-1` to `--band-4` in `:root`, defaulting to `--accent-primary`, `--accent-secondary`, `--info-color`, and `--warning-color`, so every theme works without its own values. Only `[data-theme="canary"]` overrides them (yellow, blue, mint, pink). `--error-color` is deliberately never a band, so no theme produces a red section.
+The newsletter page (`newsletter/`) colors its sections with four bands, one per section in rotation, so it needs four distinct colors where a theme has two accents. `src/stylesheet.css` defines `--band-1` to `--band-4` in `:root`, defaulting to `--accent-primary`, `--accent-secondary`, `--info-color`, and `--warning-color`, so every theme works without its own values. Only `[data-theme="canary"]` overrides any of them, and only `--band-3` and `--band-4` (mint, violet); its bands 1 and 2 follow the yellow and blue accents. Violet rather than pink for band 4 keeps it well clear of `--error-color` (hue 349). `--error-color` is deliberately never a band, so no theme produces a red section.
 
 Two page-local values sit on top of the bands in `newsletter-styles.css`, both derived with `color-mix()` rather than hardcoded:
 - **`--band-ink`** (`--bg-primary` at 40% mixed with black): text on a band. A plain `--bg-primary` fails 4.5:1 on mid-tone bands in Nord and Solarized; this reaches 4.5:1 on every band of every theme except Solarized band 4 (4.2:1, its orange-red is at the ceiling for dark text).
