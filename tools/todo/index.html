@@ -6,8 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List - QoL Tools</title>
     <script>
+        // Pre-paint: apply the visitor's theme before first render so there is no flash of the
+        // wrong palette. Mirrors ThemeManager.getSavedTheme() in src/theme-manager.js.
         (function() {
-            var theme = localStorage.getItem('qol-tools-theme');
+            var theme = document.documentElement.getAttribute('data-default-theme') || 'canary';
+            try {
+                theme = localStorage.getItem('qol-tools-theme') || theme;
+            } catch (e) {}
+            if (theme === 'dunder') { theme = 'canary'; }
             if (theme && theme !== 'default') {
                 document.documentElement.setAttribute('data-theme', theme);
             }

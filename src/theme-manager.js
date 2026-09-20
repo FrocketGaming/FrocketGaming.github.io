@@ -1,8 +1,9 @@
 // Theme Manager - Handles theme switching with localStorage caching
 const ThemeManager = {
     STORAGE_KEY: 'qol-tools-theme',
-    // A page can set data-default-theme on <html> to change what a visitor with no saved theme sees
-    DEFAULT_THEME: document.documentElement.getAttribute('data-default-theme') || 'default',
+    // Canary is what a visitor with no saved theme sees; a page can override with data-default-theme
+    // on <html>. Keep this in step with the pre-paint script in each page's <head>.
+    DEFAULT_THEME: document.documentElement.getAttribute('data-default-theme') || 'canary',
 
     themes: [
         { id: 'default', name: 'Green' },
