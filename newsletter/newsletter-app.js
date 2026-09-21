@@ -7,6 +7,7 @@
 
 const HLJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
 const ISSUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ISSUE_NUMBER_PATTERN = /^\d{1,4}$/;
 const FRONT_MATTER_PATTERN = /^---\n([\s\S]*?)\n---[ \t]*(?:\n|$)/;
 const ALLOWED_FRONT_MATTER_KEYS = ['issue_number', 'title'];
 const BAND_COUNT = 4;
@@ -81,18 +82,29 @@ class NewsletterApp {
         // A direct link only needs its own file; the manifest loads alongside for the archive
         const manifestRequest = this.fetchManifest();
 
+        let date = requested;
+
         try {
-            if (requested !== null && !ISSUE_DATE_PATTERN.test(requested)) {
-                throw new Error(`'${requested}' is not an issue date. Use ?issue=YYYY-MM-DD.`);
+            const isNumber = requested !== null && ISSUE_NUMBER_PATTERN.test(requested);
+            if (requested !== null && !isNumber && !ISSUE_DATE_PATTERN.test(requested)) {
+                throw new Error(`'${requested}' is not an issue. Use ?issue=YYYY-MM-DD or ?issue=<number>.`);
             }
 
-            let date = requested;
-            if (date === null) {
+            // A number needs the manifest to find its date; so does the no-parameter default
+            if (requested === null || isNumber) {
                 await manifestRequest;
                 if (!this.manifest.length) {
                     throw new Error('No issues have been published yet.');
                 }
-                date = this.manifest[0].date;
+                if (isNumber) {
+                    const match = this.manifest.find((entry) => entry.number === Number(requested));
+                    if (!match) {
+                        throw new Error(`There is no issue number ${Number(requested)}.`);
+                    }
+                    date = match.date;
+                } else {
+                    date = this.manifest[0].date;
+                }
             }
 
             const [text] = await Promise.all([this.fetchIssueText(date), manifestRequest]);
@@ -102,7 +114,7 @@ class NewsletterApp {
         } catch (error) {
             this.renderFatal(error.message);
             await manifestRequest;
-            this.renderArchive(requested);
+            this.renderArchive(date);
         } finally {
             this.main.setAttribute('aria-busy', 'false');
         }
