@@ -87,7 +87,7 @@ body {
 
 .header-section {
     width: 100%;
-    max-width: 1600px;
+    max-width: 2200px;
     margin: 0 auto 20px auto;
 }
 
@@ -146,7 +146,7 @@ body {
 
 .snippets-container {
     width: 100%;
-    max-width: 1600px;
+    max-width: 2200px;
     margin: 0 auto;
     flex: 1;
     display: flex;

@@ -14,7 +14,7 @@
 
 .nl {
     width: 100%;
-    max-width: 800px;
+    max-width: 960px;
     box-sizing: border-box;
     margin-bottom: 20px;
     background-color: var(--bg-primary);
@@ -878,15 +878,15 @@
     font-size: 1em;
 }
 
-@media (min-width: 1320px) {
+@media (min-width: 1480px) {
     .nl-jump {
         /* Matches the body's 100px top padding, so the rail starts level with the top of .nl */
         top: 100px;
         right: auto;
         bottom: auto;
-        left: calc(50% + 432px);
-        /* Grows with the free space beside the 800px column, up to 264px */
-        width: min(264px, calc(50vw - 452px));
+        left: calc(50% + 512px);
+        /* Grows with the free space beside the 960px column, up to 264px */
+        width: min(264px, calc(50vw - 532px));
         display: block;
     }
 
@@ -1038,7 +1038,7 @@
 }
 
 /* Where the side rail shows the same section list, the in-page contents would only repeat it */
-@media (min-width: 1320px) {
+@media (min-width: 1480px) {
     .nl-toc-block {
         display: none;
     }
