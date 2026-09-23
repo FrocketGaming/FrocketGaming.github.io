@@ -604,6 +604,100 @@ class JsonGraphView {
         this.applySearchHighlight();
     }
 
+    // ─── Export ─────────────────────────────────────────────────
+    // Renders the current model (respecting whatever rows are presently
+    // expanded/collapsed) as a standalone SVG string, using live theme colors.
+
+    buildExportSVG() {
+        if (!this.model || !this.contentBounds) return null;
+
+        const cs = getComputedStyle(document.documentElement);
+        const col = (name, fallback) => (cs.getPropertyValue(name) || fallback || '').trim() || fallback;
+        const colors = {
+            bg: col('--bg-primary', '#1e1e1e'),
+            nodeBg: col('--bg-secondary', '#2a2a2a'),
+            border: col('--border-color', '#444'),
+            muted: col('--text-secondary', '#999'),
+            key: col('--accent-primary', '#6cf'),
+            string: col('--syntax-string', '#9c6'),
+            number: col('--syntax-number', '#c96'),
+            boolean: col('--syntax-keyword', '#c6f')
+        };
+        const typeColor = (type) => {
+            if (type === 'string') return colors.string;
+            if (type === 'number') return colors.number;
+            if (type === 'boolean') return colors.boolean;
+            return colors.muted; // null, object, array
+        };
+
+        let edgesMarkup = '';
+        const drawEdges = (node) => {
+            node.rows.forEach((row, rowIdx) => {
+                if (!row.childIds || row.collapsed) return;
+                const sy = node.y + this.padY + rowIdx * this.rowH + this.rowH / 2;
+                row.childIds.forEach(cid => {
+                    const child = this.nodesById.get(cid);
+                    let sx0, sy0, ex, ey, d;
+                    if (this.direction === 'LR') {
+                        sx0 = node.x + node.width; sy0 = sy;
+                        ex = child.x; ey = child.y + child.height / 2;
+                        const mx = (sx0 + ex) / 2;
+                        d = `M ${sx0} ${sy0} C ${mx} ${sy0}, ${mx} ${ey}, ${ex} ${ey}`;
+                    } else {
+                        sx0 = node.x + node.width / 2; sy0 = node.y + node.height;
+                        ex = child.x + child.width / 2; ey = child.y;
+                        const my = (sy0 + ey) / 2;
+                        d = `M ${sx0} ${sy0} C ${sx0} ${my}, ${ex} ${my}, ${ex} ${ey}`;
+                    }
+                    edgesMarkup += `<path d="${d}" fill="none" stroke="${colors.border}" stroke-width="1.5"/>`;
+                    if (row.key !== undefined) {
+                        const lx = (sx0 + ex) / 2;
+                        const ly = this.direction === 'LR' ? (sy0 + ey) / 2 - 6 : (sy0 + ey) / 2;
+                        edgesMarkup += `<text x="${lx}" y="${ly}" text-anchor="middle" font-family="Consolas, Monaco, monospace" font-size="11" fill="${colors.muted}">${this.esc(row.key)}</text>`;
+                    }
+                    drawEdges(child);
+                });
+            });
+        };
+        drawEdges(this.model);
+
+        let nodesMarkup = '';
+        const drawNode = (node) => {
+            nodesMarkup += `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" fill="${colors.nodeBg}" stroke="${colors.border}"/>`;
+            node.rows.forEach((row, idx) => {
+                const ry = node.y + this.padY + idx * this.rowH;
+                if (idx > 0) nodesMarkup += `<line x1="${node.x}" y1="${ry}" x2="${node.x + node.width}" y2="${ry}" stroke="${colors.border}" stroke-width="1"/>`;
+                const ty = ry + this.rowH * 0.65;
+                const tx = node.x + this.padX;
+                nodesMarkup += `<text x="${tx}" y="${ty}" font-family="Consolas, Monaco, monospace" font-size="12">`;
+                if (row.isEmpty) {
+                    if (row.key !== undefined) nodesMarkup += `<tspan fill="${colors.key}">${this.esc(row.key)}</tspan><tspan fill="${colors.muted}">: </tspan>`;
+                    nodesMarkup += `<tspan fill="${colors.muted}">${this.esc(row.label)}</tspan>`;
+                } else if (row.childIds) {
+                    const arrow = row.collapsed ? '▸' : '▾';
+                    nodesMarkup += `<tspan fill="${colors.muted}">${arrow} </tspan>`;
+                    if (row.key !== undefined) nodesMarkup += `<tspan fill="${colors.key}">${this.esc(row.key)}</tspan><tspan fill="${colors.muted}">: </tspan>`;
+                    nodesMarkup += `<tspan fill="${colors.muted}">${this.esc(row.preview || row.label)}</tspan>`;
+                } else if (row.key !== undefined) {
+                    nodesMarkup += `<tspan fill="${colors.key}">${this.esc(row.key)}</tspan><tspan fill="${colors.muted}">: </tspan><tspan fill="${typeColor(row.type)}">${this.esc(this.formatVal(row.value))}</tspan>`;
+                } else {
+                    nodesMarkup += `<tspan fill="${typeColor(row.type)}">${this.esc(this.formatVal(row.value))}</tspan>`;
+                }
+                nodesMarkup += '</text>';
+            });
+            this.visibleChildren(node).forEach(drawNode);
+        };
+        drawNode(this.model);
+
+        const width = this.contentBounds.w;
+        const height = this.contentBounds.h;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+            `<rect width="100%" height="100%" fill="${colors.bg}"/>` +
+            edgesMarkup + nodesMarkup +
+            `</svg>`;
+        return { svg, width, height };
+    }
+
     // ─── Helpers ────────────────────────────────────────────────
 
     copyPathFor(node) {

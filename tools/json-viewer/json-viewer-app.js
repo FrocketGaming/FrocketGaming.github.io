@@ -1,3 +1,5 @@
+const JSON_VIEWER_TABS_STORAGE_KEY = 'json-viewer-tabs-v1';
+
 class JsonViewerApp {
     constructor() {
         this.jsonInput     = document.getElementById('jsonInput');
@@ -8,6 +10,8 @@ class JsonViewerApp {
         this.expandAllBtn  = document.getElementById('expandAllBtn');
         this.collapseAllBtn= document.getElementById('collapseAllBtn');
         this.copyFormattedBtn = document.getElementById('copyFormattedBtn');
+        this.downloadBtn   = document.getElementById('downloadViewBtn');
+        this.downloadLabel = document.getElementById('downloadViewLabel');
         this.clearBtn      = document.getElementById('clearBtn');
         this.copyNotif     = document.getElementById('copyNotification');
         this.searchInput   = document.getElementById('searchInput');
@@ -19,6 +23,7 @@ class JsonViewerApp {
         this.searchIndex   = -1;
         this.parsed        = null;
         this.debounceTimer = null;
+        this.saveTabsTimer = null;
 
         this.currentView   = 'tree';
         this.treeViewBtn   = document.getElementById('treeViewBtn');
@@ -28,18 +33,33 @@ class JsonViewerApp {
             onCopyPath: (path) => this.copyPath(path)
         });
 
+        // Tabs
+        this.tabsBar       = document.getElementById('jsonTabs');
+        this.addTabBtn     = document.getElementById('addTabBtn');
+        this.tabs          = [];
+        this.activeTabId   = null;
+        this.tabIdCounter  = 0;
+
         this.init();
+        this.initTabs();
     }
 
     init() {
         this.treeViewBtn.addEventListener('click', () => this.switchView('tree'));
         this.graphViewBtn.addEventListener('click', () => this.switchView('graph'));
-        this.jsonInput.addEventListener('input', () => this.scheduleRender());
+        this.jsonInput.addEventListener('input', () => {
+            const tab = this.getActiveTab();
+            if (tab) tab.input = this.jsonInput.value;
+            this.scheduleRender();
+            this.scheduleSaveTabs();
+        });
         this.formatBtn.addEventListener('click', () => this.formatInput());
         this.expandAllBtn.addEventListener('click', () => this.expandAll());
         this.collapseAllBtn.addEventListener('click', () => this.collapseAll());
         this.copyFormattedBtn.addEventListener('click', () => this.copyFormatted());
+        this.downloadBtn.addEventListener('click', () => this.downloadCurrentView());
         this.clearBtn.addEventListener('click', () => this.clear());
+        this.addTabBtn.addEventListener('click', () => this.addTab());
         this.jsonInput.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -85,11 +105,13 @@ class JsonViewerApp {
             this.graphView.render(this.parsed);
             this.renderStats(this.parsed);
             if (this.currentView === 'graph') this.graphView.ensureFit();
+            this.downloadBtn.disabled = false;
         } catch (e) {
             this.parsed = null;
             this.jsonTree.innerHTML = '';
             this.showError(e.message);
             this.jsonStats.textContent = '';
+            this.downloadBtn.disabled = true;
         }
     }
 
@@ -256,6 +278,7 @@ class JsonViewerApp {
         this.graphViewBtn.classList.toggle('active', view === 'graph');
         this.jsonTree.classList.toggle('jg-hidden-view', view !== 'tree');
         this.jsonGraphEl.classList.toggle('jg-active', view === 'graph');
+        this.downloadLabel.textContent = view === 'graph' ? 'Graph' : 'Tree';
         if (view === 'graph') this.graphView.ensureFit();
         if (this.searchInput.value.trim()) this.performSearch();
     }
@@ -368,6 +391,9 @@ class JsonViewerApp {
         try {
             const parsed = JSON.parse(raw);
             this.jsonInput.value = JSON.stringify(parsed, null, 2);
+            const tab = this.getActiveTab();
+            if (tab) tab.input = this.jsonInput.value;
+            this.saveTabsToStorage();
             this.render();
         } catch (e) {
             this.showError(e.message);
@@ -417,7 +443,12 @@ class JsonViewerApp {
     }
 
     clear(resetInput = true) {
-        if (resetInput) this.jsonInput.value = '';
+        if (resetInput) {
+            this.jsonInput.value = '';
+            const tab = this.getActiveTab();
+            if (tab) tab.input = '';
+            this.saveTabsToStorage();
+        }
         this.parsed = null;
         this.jsonTree.innerHTML = '<div class="json-empty-state"><i class="fa-solid fa-code"></i><p>Paste JSON on the left to explore it here</p></div>';
         this.jsonError.textContent = '';
@@ -428,6 +459,7 @@ class JsonViewerApp {
         this.searchCount.textContent = '';
         this.searchPrev.disabled = true;
         this.searchNext.disabled = true;
+        this.downloadBtn.disabled = true;
         this.graphView.reset();
     }
 
@@ -479,6 +511,308 @@ class JsonViewerApp {
             .replace(/\n/g, '\\n')
             .replace(/\r/g, '\\r')
             .replace(/\t/g, '\\t');
+    }
+
+    // ─── Download (Tree / Graph → PNG) ────────────────────────
+
+    downloadCurrentView() {
+        if (!this.parsed) return;
+        const result = this.currentView === 'graph'
+            ? this.graphView.buildExportSVG()
+            : this.buildTreeExportSVG();
+        if (!result) return;
+        this.rasterizeSVGAndDownload(result.svg, result.width, result.height, `json-${this.currentView}-view.png`);
+    }
+
+    // Walks the live tree DOM (respecting whatever nodes are currently
+    // expanded/collapsed on screen) and renders it as a standalone SVG.
+    buildTreeExportSVG() {
+        const rootEl = this.jsonTree.querySelector('.json-root');
+        if (!rootEl) return null;
+
+        const rowH = 20, indentW = 20, charW = 7.4, padX = 14, padY = 14;
+        const lines = [];
+        let maxChars = 0;
+
+        const rowToSegments = (rowEl, prefix) => {
+            const segs = [];
+            if (prefix) segs.push({ text: prefix, cls: 'muted' });
+            Array.from(rowEl.children).forEach(el => {
+                if (el.classList.contains('json-toggle')) return;
+                let cls = 'text';
+                if (el.classList.contains('json-key')) cls = 'key';
+                else if (el.classList.contains('json-colon')) cls = 'muted';
+                else if (el.classList.contains('json-bracket')) cls = 'bracket';
+                else if (el.classList.contains('json-count-badge')) cls = 'muted';
+                else if (el.classList.contains('json-string')) cls = 'string';
+                else if (el.classList.contains('json-number')) cls = 'number';
+                else if (el.classList.contains('json-boolean')) cls = 'boolean';
+                else if (el.classList.contains('json-null')) cls = 'null';
+                segs.push({ text: el.textContent, cls });
+            });
+            return segs;
+        };
+
+        const addLine = (depth, segs) => {
+            lines.push({ depth, segs });
+            const len = depth * (indentW / charW) + segs.reduce((n, s) => n + s.text.length, 0);
+            maxChars = Math.max(maxChars, len);
+        };
+
+        const walk = (nodeEl, depth) => {
+            const expandable = nodeEl.querySelector(':scope > .json-expandable');
+            if (expandable) {
+                const collapsed = expandable.classList.contains('collapsed');
+                const row = expandable.querySelector(':scope > .json-row');
+                addLine(depth, rowToSegments(row, collapsed ? '▸ ' : '▾ '));
+                const childrenEl = expandable.querySelector(':scope > .json-children');
+                if (childrenEl && !collapsed) {
+                    Array.from(childrenEl.children).forEach(childNode => walk(childNode, depth + 1));
+                }
+                const closingEl = expandable.querySelector(':scope > .json-closing');
+                if (closingEl && !collapsed) {
+                    addLine(depth, [{ text: closingEl.textContent, cls: 'bracket' }]);
+                }
+            } else {
+                const row = nodeEl.querySelector(':scope > .json-row');
+                if (row) addLine(depth, rowToSegments(row, null));
+            }
+        };
+        Array.from(rootEl.children).forEach(child => walk(child, 0));
+
+        if (lines.length === 0) return null;
+
+        const cs = getComputedStyle(document.documentElement);
+        const col = (name, fallback) => (cs.getPropertyValue(name) || fallback || '').trim() || fallback;
+        const colors = {
+            bg: col('--bg-secondary', '#2a2a2a'),
+            text: col('--text-primary', '#eee'),
+            muted: col('--text-secondary', '#999'),
+            key: col('--accent-primary', '#6cf'),
+            string: col('--syntax-string', '#9c6'),
+            number: col('--syntax-number', '#c96'),
+            boolean: col('--syntax-keyword', '#c6f'),
+            null: col('--text-secondary', '#999'),
+            bracket: col('--text-secondary', '#999')
+        };
+
+        const width = Math.round(padX * 2 + maxChars * charW);
+        const height = Math.round(padY * 2 + lines.length * rowH);
+
+        let body = '';
+        lines.forEach((line, i) => {
+            const y = padY + i * rowH + rowH * 0.75;
+            const x = padX + line.depth * indentW;
+            body += `<text x="${x}" y="${y}" font-family="Consolas, Monaco, monospace" font-size="13">`;
+            line.segs.forEach(seg => {
+                body += `<tspan fill="${colors[seg.cls] || colors.text}">${this.escXML(seg.text)}</tspan>`;
+            });
+            body += '</text>';
+        });
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+            `<rect width="100%" height="100%" fill="${colors.bg}"/>${body}</svg>`;
+        return { svg, width, height };
+    }
+
+    escXML(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    rasterizeSVGAndDownload(svgString, width, height, filename) {
+        const scale = 2;
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(width * scale));
+            canvas.height = Math.max(1, Math.round(height * scale));
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(blob => {
+                if (!blob) return;
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            }, 'image/png');
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            this.showCopyNotif('Failed to export image');
+        };
+        img.src = url;
+    }
+
+    // ─── Tabs ──────────────────────────────────────────────────
+
+    createTab(input) {
+        this.tabIdCounter += 1;
+        return { id: 'tab-' + this.tabIdCounter, title: 'Tab ' + this.tabIdCounter, input: input || '' };
+    }
+
+    getActiveTab() {
+        return this.tabs.find(t => t.id === this.activeTabId);
+    }
+
+    initTabs() {
+        if (!this.loadTabsFromStorage() || this.tabs.length === 0) {
+            const first = this.createTab('');
+            this.tabs = [first];
+            this.activeTabId = first.id;
+        }
+        this.renderTabs();
+        this.loadActiveTabIntoInput();
+    }
+
+    loadActiveTabIntoInput() {
+        const tab = this.getActiveTab();
+        this.jsonInput.value = tab ? tab.input : '';
+        this.render();
+    }
+
+    addTab() {
+        const cur = this.getActiveTab();
+        if (cur) cur.input = this.jsonInput.value;
+        const tab = this.createTab('');
+        this.tabs.push(tab);
+        this.activeTabId = tab.id;
+        this.renderTabs();
+        this.loadActiveTabIntoInput();
+        this.saveTabsToStorage();
+        this.jsonInput.focus();
+    }
+
+    switchTab(id) {
+        if (id === this.activeTabId) return;
+        const cur = this.getActiveTab();
+        if (cur) cur.input = this.jsonInput.value;
+        this.activeTabId = id;
+        this.renderTabs();
+        this.loadActiveTabIntoInput();
+        this.saveTabsToStorage();
+    }
+
+    closeTab(id) {
+        const idx = this.tabs.findIndex(t => t.id === id);
+        if (idx === -1) return;
+        const tab = this.tabs[idx];
+        if (id === this.activeTabId) tab.input = this.jsonInput.value;
+        if (tab.input && tab.input.trim() && !confirm(`Close "${tab.title}"? Its contents will be lost.`)) return;
+
+        this.tabs.splice(idx, 1);
+        if (this.tabs.length === 0) this.tabs.push(this.createTab(''));
+
+        if (this.activeTabId === id) {
+            const newIdx = Math.min(idx, this.tabs.length - 1);
+            this.activeTabId = this.tabs[newIdx].id;
+            this.loadActiveTabIntoInput();
+        }
+        this.renderTabs();
+        this.saveTabsToStorage();
+    }
+
+    renderTabs() {
+        this.tabsBar.querySelectorAll('.json-tab').forEach(el => el.remove());
+        this.tabs.forEach(tab => {
+            const el = document.createElement('div');
+            el.className = 'json-tab' + (tab.id === this.activeTabId ? ' active' : '');
+            el.dataset.id = tab.id;
+
+            const title = document.createElement('span');
+            title.className = 'json-tab-title';
+            title.textContent = tab.title;
+            title.title = tab.title;
+            title.addEventListener('dblclick', e => {
+                e.stopPropagation();
+                this.beginRenameTab(tab.id, title);
+            });
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'json-tab-close';
+            closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            closeBtn.title = 'Close tab';
+            closeBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                this.closeTab(tab.id);
+            });
+
+            el.appendChild(title);
+            el.appendChild(closeBtn);
+            el.addEventListener('click', () => this.switchTab(tab.id));
+
+            this.tabsBar.insertBefore(el, this.addTabBtn);
+        });
+    }
+
+    beginRenameTab(id, titleEl) {
+        const tab = this.tabs.find(t => t.id === id);
+        if (!tab) return;
+        titleEl.contentEditable = 'true';
+        titleEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(titleEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        const finish = () => {
+            titleEl.contentEditable = 'false';
+            const newTitle = titleEl.textContent.trim() || tab.title;
+            tab.title = newTitle;
+            titleEl.textContent = newTitle;
+            titleEl.title = newTitle;
+            this.saveTabsToStorage();
+            titleEl.removeEventListener('blur', finish);
+            titleEl.removeEventListener('keydown', onKey);
+        };
+        const onKey = e => {
+            if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+            if (e.key === 'Escape') { titleEl.textContent = tab.title; titleEl.blur(); }
+        };
+        titleEl.addEventListener('blur', finish);
+        titleEl.addEventListener('keydown', onKey);
+    }
+
+    loadTabsFromStorage() {
+        try {
+            const raw = localStorage.getItem(JSON_VIEWER_TABS_STORAGE_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            if (!data || !Array.isArray(data.tabs) || data.tabs.length === 0) return false;
+            this.tabs = data.tabs.map(t => ({
+                id: String(t.id),
+                title: t.title || 'Tab',
+                input: typeof t.input === 'string' ? t.input : ''
+            }));
+            this.tabIdCounter = this.tabs.reduce((max, t) => {
+                const n = parseInt(String(t.id).replace('tab-', ''), 10);
+                return isNaN(n) ? max : Math.max(max, n);
+            }, 0);
+            this.activeTabId = (data.activeTabId && this.tabs.some(t => t.id === data.activeTabId))
+                ? data.activeTabId : this.tabs[0].id;
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    saveTabsToStorage() {
+        try {
+            localStorage.setItem(JSON_VIEWER_TABS_STORAGE_KEY, JSON.stringify({
+                tabs: this.tabs,
+                activeTabId: this.activeTabId
+            }));
+        } catch (e) {}
+    }
+
+    scheduleSaveTabs() {
+        clearTimeout(this.saveTabsTimer);
+        this.saveTabsTimer = setTimeout(() => this.saveTabsToStorage(), 500);
     }
 }
 

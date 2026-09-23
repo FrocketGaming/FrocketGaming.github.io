@@ -57,6 +57,10 @@
 
     <div class="json-container">
 
+        <div class="json-tabs" id="jsonTabs">
+            <button class="json-tab-add" id="addTabBtn" title="New tab"><i class="fa-solid fa-plus"></i></button>
+        </div>
+
         <div class="json-toolbar">
             <button class="format-btn" id="formatBtn">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Format
@@ -69,6 +73,9 @@
             </button>
             <button class="toolbar-btn" id="copyFormattedBtn" title="Copy formatted JSON">
                 <i class="fa-solid fa-copy"></i> Copy JSON
+            </button>
+            <button class="toolbar-btn" id="downloadViewBtn" title="Download current view as PNG" disabled>
+                <i class="fa-solid fa-download"></i> Download <span id="downloadViewLabel">Tree</span>
             </button>
             <button class="toolbar-btn toolbar-btn-clear" id="clearBtn">Clear</button>
             <span class="json-stats" id="jsonStats"></span>
