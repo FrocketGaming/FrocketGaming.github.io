@@ -198,7 +198,7 @@
     --bg-tertiary: #2e2c28;
     --bg-hover: #24221f;
     --accent-primary: #ffd43b;
-    --accent-secondary: #5a9dd6;
+    --accent-secondary: #765ad3;
     --text-primary: #ecebe6;
     --text-secondary: #a8a59c;
     --border-color: #3a3731;
@@ -209,11 +209,11 @@
     --syntax-keyword: #c792ea;
     --syntax-string: #3ddc97;
     --syntax-comment: #9a968c;
-    --syntax-function: #ffd43b;
+    --syntax-function: #eed168;
     --syntax-number: #f0883e;
     --syntax-type: #4cc9e6;
-    --syntax-variable: #5a9dd6;
-    --syntax-tag: #ff7a8e;
+    --syntax-variable: #765ad3;
+    --syntax-tag: #fb6ac6;
     --syntax-addition: #3ddc97;
     --syntax-deletion: #ff5c7a;
     --band-3: #3ddc97;
