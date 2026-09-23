@@ -291,7 +291,7 @@ sub {
 /* ========== Formatter Layout ========== */
 .formatter-layout {
     width: 100%;
-    max-width: 1400px;
+    max-width: 2200px;
     display: flex;
     flex-direction: column;
     gap: 0;

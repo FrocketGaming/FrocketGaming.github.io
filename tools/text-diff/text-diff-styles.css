@@ -1,7 +1,7 @@
 /* Text Diff Styles */
 .diff-container {
     width: 100%;
-    max-width: 1600px;
+    max-width: 2200px;
     display: flex;
     flex-direction: column;
     gap: 15px;
