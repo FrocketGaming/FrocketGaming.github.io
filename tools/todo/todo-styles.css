@@ -189,6 +189,94 @@
    second row once they'd drop below 240px — no horizontal scrollbar for the
    common case (4-5 columns fits one row on any normal-width screen), and a
    wrapped row still stretches to equal height within itself. */
+/* ===== Project Filter Row =====
+   One toggle pill per project, colored to match its cards' tab. A declutter
+   filter, not a per-column collapse — turning a pill off drops that
+   project's cards from every column, in both Date and Project view. */
+.project-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.project-filter-row:empty {
+    margin-bottom: 0;
+}
+
+.project-filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, border-color 0.2s;
+}
+
+.project-filter-pill:hover {
+    border-color: var(--accent-primary);
+}
+
+.project-filter-pill.off {
+    opacity: 0.4;
+}
+
+.project-filter-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ===== Card Context Menu (right-click) =====
+   One shared floating menu positioned at the cursor — built fresh per
+   right-click by showCardContextMenu(), never a per-card element. */
+.card-context-menu {
+    position: fixed;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    min-width: 160px;
+    padding: 4px;
+    z-index: 500;
+}
+
+.card-context-menu[hidden] {
+    display: none;
+}
+
+.card-context-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'Raleway', sans-serif;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.card-context-menu-item:hover,
+.card-context-menu-item:focus-visible {
+    background: var(--bg-hover);
+    outline: none;
+}
+
+.card-context-menu-item.danger:hover,
+.card-context-menu-item.danger:focus-visible {
+    color: var(--error-color);
+}
+
 .board-columns {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -254,6 +342,17 @@
 .board-column-header-project { border-bottom-color: var(--accent-secondary); color: var(--accent-secondary); }
 .board-column-header-project .board-column-count { color: var(--accent-secondary); background: color-mix(in srgb, var(--accent-secondary) 18%, var(--bg-tertiary)); }
 .board-column-header-neutral { border-bottom-color: var(--border-color); color: var(--text-secondary); }
+
+/* A project column's header is its only interactive surface now that its
+   own card is gone — double-click to edit, right-click to delete. */
+.board-column-header[data-project-id] {
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.board-column-header[data-project-id]:hover {
+    opacity: 0.8;
+}
 
 .board-column-progress {
     height: 4px;
@@ -930,11 +1029,31 @@
     white-space: nowrap;
 }
 
+/* No drag-handle icon any more — the whole card is draggable
+   (setupDragListeners binds to .todo-item itself, never to a handle), so a
+   plain grab cursor over the card's own empty space is affordance enough;
+   the checkbox, dot and title keep their own more specific cursors. */
+.todo-item:not(.completed) {
+    cursor: grab;
+}
+
+.todo-item.dragging {
+    cursor: grabbing;
+}
+
 .todo-row-main {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+}
+
+/* Top-right corner line: a task's date (or a project's progress), pulled
+   out of the main row so the title has the full row width to itself. */
+.todo-row-top {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
 }
 
 /* ===== Date text (replaces the old circular date-rail node) ===== */
@@ -961,25 +1080,6 @@
 
 .todo-date-soon {
     color: var(--warning-color);
-}
-
-/* Drag Handle */
-.drag-handle {
-    color: var(--text-secondary);
-    font-size: 12px;
-    cursor: grab;
-    opacity: 0;
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-}
-
-.todo-item:hover .drag-handle {
-    opacity: 0.5;
-}
-
-.drag-handle:hover {
-    opacity: 1 !important;
-    color: var(--accent-primary);
 }
 
 .todo-item.dragging {
@@ -1122,86 +1222,6 @@
 .priority-low {
     background: var(--info-color);
     box-shadow: 0 0 5px color-mix(in srgb, var(--info-color) 60%, transparent);
-}
-
-/* Overflow menu — one button replaces the old row of separate
-   move/expand/delete buttons. */
-.todo-menu-wrap {
-    position: relative;
-    flex-shrink: 0;
-}
-
-.todo-menu-btn {
-    padding: 3px 5px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-    border-radius: 3px;
-}
-
-.todo-item:hover .todo-menu-btn,
-.todo-item:focus-within .todo-menu-btn,
-.todo-menu-btn[aria-expanded="true"] {
-    opacity: 1;
-}
-
-.todo-menu-btn:hover,
-.todo-menu-btn[aria-expanded="true"] {
-    color: var(--accent-primary);
-}
-
-.todo-menu-btn:focus-visible {
-    opacity: 1;
-    outline: none;
-    box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-primary);
-}
-
-.todo-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 4px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 16px var(--shadow-color);
-    min-width: 132px;
-    padding: 4px;
-    z-index: 20;
-}
-
-.todo-menu[hidden] {
-    display: none;
-}
-
-.todo-menu-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 6px 10px;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-family: 'Raleway', sans-serif;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.todo-menu-item:hover,
-.todo-menu-item:focus-visible {
-    background: var(--bg-hover);
-    outline: none;
-}
-
-.todo-menu-item-danger:hover,
-.todo-menu-item-danger:focus-visible {
-    color: var(--error-color);
 }
 
 /* ===== Inline Editing ===== */
@@ -1915,10 +1935,6 @@ kbd {
     .detail-row {
         flex-direction: column;
         gap: 8px;
-    }
-
-    .drag-handle {
-        display: none;
     }
 
     .agenda-main {

@@ -199,6 +199,12 @@
             </div>
         </div>
 
+        <!-- Project filter row: one toggle pill per project, colored to match
+             its cards' tab. Off hides that project's cards everywhere on the
+             board (Date and Project view alike) — a declutter filter, not a
+             per-column collapse. Populated by renderProjectFilterRow(). -->
+        <div class="project-filter-row" id="projectFilterRow"></div>
+
         <!-- Flow Board: a real kanban instead of one scrolling column. Date
              mode's columns are Overdue/Today/Upcoming/Later(/No Deadline);
              Project mode's columns are each project plus "No Project" — same

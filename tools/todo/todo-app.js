@@ -28,7 +28,8 @@ class TodoApp {
         // UI state (persisted)
         this.uiState = {
             viewMode: 'date',
-            collapsedDateGroups: []
+            collapsedDateGroups: [],
+            hiddenProjects: []
         };
         this._draggedColumnEl = null;
         this._completedOverlayOpen = false;
@@ -58,6 +59,7 @@ class TodoApp {
             this.setupEventListeners();
             this.setupKeyboardShortcuts();
             this.setupDescriptionTooltip();
+            this.setupCardContextMenu();
             this.render();
 
             // Initialize Firebase sync if available
@@ -280,6 +282,28 @@ class TodoApp {
             el.addEventListener('click', (e) => this.handleTaskClick(e));
             el.addEventListener('keydown', (e) => this.handleTaskKeydown(e));
             el.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
+            el.addEventListener('contextmenu', (e) => this.handleTaskContextMenu(e));
+        });
+
+        // A project's column header (Project view) is its only remaining
+        // surface now that its own card is gone — double-click opens the
+        // same edit modal a task's card does, right-click offers to delete it.
+        const boardColumns = document.getElementById('boardColumns');
+        boardColumns.addEventListener('dblclick', (e) => {
+            const header = e.target.closest('.board-column-header[data-project-id]');
+            if (!header) return;
+            this.openTaskEditModal(parseInt(header.dataset.projectId));
+        });
+        boardColumns.addEventListener('contextmenu', (e) => {
+            const header = e.target.closest('.board-column-header[data-project-id]');
+            if (!header) return;
+            e.preventDefault();
+            const id = parseInt(header.dataset.projectId);
+            const project = this.todos.find(t => t.id === id);
+            if (!project) return;
+            this.showCardContextMenu(e.clientX, e.clientY, [
+                { label: `Delete "${project.text}"`, danger: true, action: () => this.deleteTodo(id) }
+            ]);
         });
 
         // Detail drawer close affordances
@@ -295,10 +319,15 @@ class TodoApp {
             detailDrawerClose.addEventListener('click', closeDrawer);
         }
 
-        // Overflow menus close on any click outside them
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.todo-menu-wrap')) this.closeAllTodoMenus();
-        });
+        // Project filter pills
+        const projectFilterRow = document.getElementById('projectFilterRow');
+        if (projectFilterRow) {
+            projectFilterRow.addEventListener('click', (e) => {
+                const pill = e.target.closest('.project-filter-pill');
+                if (!pill) return;
+                this.toggleProjectFilter(parseInt(pill.dataset.projectId));
+            });
+        }
     }
 
     setupKeyboardShortcuts() {
@@ -1179,27 +1208,6 @@ class TodoApp {
         this.render();
     }
 
-    // Keyboard-reachable alternative to drag-and-drop reordering.
-    async moveTodo(id, direction) {
-        const todo = this.todos.find(t => t.id === id);
-        if (!todo || todo.completed) return;
-
-        const siblings = this.todos
-            .filter(t => t.parentId === todo.parentId && !t.completed)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        const idx = siblings.findIndex(t => t.id === id);
-        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-        if (swapIdx < 0 || swapIdx >= siblings.length) return;
-
-        [siblings[idx], siblings[swapIdx]] = [siblings[swapIdx], siblings[idx]];
-        siblings.forEach((t, i) => { t.order = i; });
-
-        await this.saveTodos();
-        siblings.forEach(t => this._syncTodo(t));
-        this.render();
-    }
-
     // ===== Project Helpers =====
     getSubtasks(projectId) {
         return this.todos.filter(t => t.parentId === projectId);
@@ -1215,6 +1223,40 @@ class TodoApp {
     getProjectColor(projectId) {
         const palette = ['#a78bfa', '#5eead4', '#f0abfc', '#bef264', '#fde047'];
         return palette[Math.abs(projectId) % palette.length];
+    }
+
+    // ===== Project Filter (declutter toggles) =====
+    isHiddenByProjectFilter(todo) {
+        const projectId = todo.isProject ? todo.id : todo.parentId;
+        return !!projectId && this.uiState.hiddenProjects.includes(projectId);
+    }
+
+    toggleProjectFilter(projectId) {
+        const idx = this.uiState.hiddenProjects.indexOf(projectId);
+        if (idx >= 0) this.uiState.hiddenProjects.splice(idx, 1);
+        else this.uiState.hiddenProjects.push(projectId);
+        this.saveUIState();
+        this.render();
+    }
+
+    renderProjectFilterRow() {
+        const row = document.getElementById('projectFilterRow');
+        if (!row) return;
+        const projects = this.todos.filter(t => t.isProject && !t.completed).sort(this.getSortFn());
+        if (projects.length === 0) {
+            row.innerHTML = '';
+            return;
+        }
+        row.innerHTML = projects.map(p => {
+            const hidden = this.uiState.hiddenProjects.includes(p.id);
+            const color = this.getProjectColor(p.id);
+            return `
+                <button class="project-filter-pill${hidden ? ' off' : ''}" data-project-id="${p.id}" aria-pressed="${!hidden}" title="${hidden ? 'Show' : 'Hide'} ${this.escapeAttr(p.text)}'s tasks">
+                    <span class="project-filter-dot" style="background:${color};"></span>
+                    ${this.escapeHtml(p.text)}
+                </button>
+            `;
+        }).join('');
     }
 
     // ===== Date Group Collapse =====
@@ -1288,42 +1330,6 @@ class TodoApp {
         });
     }
 
-    // ===== Overflow Menu =====
-    toggleTodoMenu(btn) {
-        const wrap = btn.closest('.todo-menu-wrap');
-        const menu = wrap.querySelector('.todo-menu');
-        const isOpen = !menu.hidden;
-        this.closeAllTodoMenus();
-        if (!isOpen) {
-            menu.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-        }
-    }
-
-    closeAllTodoMenus() {
-        document.querySelectorAll('.todo-menu:not([hidden])').forEach(menu => {
-            menu.hidden = true;
-            const btn = menu.closest('.todo-menu-wrap').querySelector('.todo-menu-btn');
-            if (btn) btn.setAttribute('aria-expanded', 'false');
-        });
-    }
-
-    // "Add subtask" (project card's menu) hands off to the main composer
-    // with ::p[Name] prefilled, instead of a bespoke inline input — a
-    // project's subtasks aren't a nested list under it any more, so there's
-    // no nested slot left to insert an inline row into.
-    startSubtaskComposer(projectId) {
-        const project = this.todos.find(t => t.id === projectId);
-        if (!project) return;
-        const input = document.getElementById('todoInput');
-        document.getElementById('composer').classList.add('expanded');
-        input.value = `::p[${project.text}] `;
-        input.focus();
-        const end = input.value.length;
-        input.setSelectionRange(end, end);
-        this.updateComposerHighlight('todoInput', 'composerInputHighlight');
-    }
-
     // ===== Description Tooltip =====
     setupDescriptionTooltip() {
         const tooltip = document.createElement('div');
@@ -1351,6 +1357,58 @@ class TodoApp {
                 tooltip.dataset.forId = '';
             });
         });
+    }
+
+    // ===== Card Context Menu (right-click) =====
+    // One shared floating menu, positioned at the cursor and rebuilt with
+    // whatever items the caller passes — used by both a task's right-click
+    // (handleTaskContextMenu) and a project column header's.
+    setupCardContextMenu() {
+        const menu = document.createElement('div');
+        menu.className = 'card-context-menu';
+        menu.hidden = true;
+        document.body.appendChild(menu);
+        this._contextMenuEl = menu;
+
+        document.addEventListener('click', () => this.closeCardContextMenu());
+        // Right-clicking a task or a project header opens (or replaces) the
+        // menu itself via their own contextmenu handlers — this only needs
+        // to close it when right-clicking somewhere that ISN'T one of those,
+        // otherwise it would immediately close the menu the same event just
+        // opened, since both listeners see the same bubbling event.
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.todo-item, .board-column-header[data-project-id], .card-context-menu')) return;
+            this.closeCardContextMenu();
+        });
+    }
+
+    showCardContextMenu(x, y, items) {
+        const menu = this._contextMenuEl;
+        if (!menu) return;
+        menu.innerHTML = items.map((item, i) =>
+            `<button class="card-context-menu-item${item.danger ? ' danger' : ''}" data-index="${i}">${this.escapeHtml(item.label)}</button>`
+        ).join('');
+        menu.querySelectorAll('.card-context-menu-item').forEach((btn, i) => {
+            btn.addEventListener('click', () => {
+                items[i].action();
+                this.closeCardContextMenu();
+            });
+        });
+
+        menu.hidden = false;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        // Measure only after it's visible and positioned once, then clamp
+        // to the viewport so it never opens off-screen near an edge.
+        const rect = menu.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width - 8;
+        const maxY = window.innerHeight - rect.height - 8;
+        menu.style.left = Math.max(4, Math.min(x, maxX)) + 'px';
+        menu.style.top = Math.max(4, Math.min(y, maxY)) + 'px';
+    }
+
+    closeCardContextMenu() {
+        if (this._contextMenuEl) this._contextMenuEl.hidden = true;
     }
 
     // ===== Detail Panel =====
@@ -1481,28 +1539,6 @@ class TodoApp {
             return;
         }
 
-        // Overflow menu toggle
-        const menuBtn = e.target.closest('.todo-menu-btn');
-        if (menuBtn) {
-            e.stopPropagation();
-            this.toggleTodoMenu(menuBtn);
-            return;
-        }
-
-        // Overflow menu item
-        const menuItem = e.target.closest('.todo-menu-item');
-        if (menuItem) {
-            e.stopPropagation();
-            this.closeAllTodoMenus();
-            switch (menuItem.dataset.action) {
-                case 'move-up': this.moveTodo(id, 'up'); break;
-                case 'move-down': this.moveTodo(id, 'down'); break;
-                case 'add-subtask': this.startSubtaskComposer(id); break;
-                case 'delete': this.deleteTodo(id); break;
-            }
-            return;
-        }
-
         // Click on the row → toggle detail panel, delayed just long enough
         // that a following dblclick (rename) can cancel it instead
         if (e.target.closest('.todo-row-main')) {
@@ -1512,6 +1548,22 @@ class TodoApp {
             }, 250);
             return;
         }
+    }
+
+    // Right-click opens a small options menu at the cursor rather than
+    // deleting outright — a stray right-click shouldn't be one accidental
+    // click away from removing a task, even though deleteTodo() is itself
+    // undoable.
+    handleTaskContextMenu(e) {
+        const item = e.target.closest('.todo-item');
+        if (!item) return;
+        e.preventDefault();
+        const id = parseInt(item.dataset.id);
+        const todo = this.todos.find(t => t.id === id);
+        if (!todo) return;
+        this.showCardContextMenu(e.clientX, e.clientY, [
+            { label: `Delete "${todo.text}"`, danger: true, action: () => this.deleteTodo(id) }
+        ]);
     }
 
     // Enter/Space activation for elements that aren't native buttons
@@ -1529,8 +1581,8 @@ class TodoApp {
 
     // ===== Close Everything =====
     closeAllPanels() {
-        if (document.querySelector('.todo-menu:not([hidden])')) {
-            this.closeAllTodoMenus();
+        if (this._contextMenuEl && !this._contextMenuEl.hidden) {
+            this.closeCardContextMenu();
             return;
         }
 
@@ -1713,15 +1765,18 @@ class TodoApp {
             ? `<i class="fa-solid fa-folder project-icon"></i>`
             : `<span class="priority-dot priority-${priority}${priorityAnimClass}" tabindex="0" role="button" aria-label="Priority: ${priority}. Click to cycle." title="Click to cycle priority"></span>`;
 
-        // Trailing text: a project's own row shows its progress instead of a date
-        let trailingHtml;
+        // Top-right corner: a project's own row shows its progress there
+        // instead of a date. Skipped entirely when there's nothing to show,
+        // so a dateless standalone task doesn't reserve an empty line.
+        let topHtml = '';
         if (isProject) {
             const progress = this.getProjectProgress(todo.id);
-            trailingHtml = progress.total > 0
+            const cornerText = progress.total > 0
                 ? `<span class="todo-date-text">${progress.completed}/${progress.total}</span>`
                 : this.renderDateText(todo);
-        } else {
-            trailingHtml = this.renderDateText(todo);
+            topHtml = `<div class="todo-row-top">${cornerText}</div>`;
+        } else if (todo.deadline) {
+            topHtml = `<div class="todo-row-top">${this.renderDateText(todo)}</div>`;
         }
 
         const recurringHtml = todo.recurrence
@@ -1731,40 +1786,24 @@ class TodoApp {
         // Checkbox class for animation
         const checkboxClass = (this._animCheckId === todo.id && todo.completed) ? 'anim-check-bounce' : '';
 
-        // Overflow menu — one button replaces the old row of separate buttons
-        const menuItems = [];
-        if (isProject) {
-            menuItems.push(`<button class="todo-menu-item" data-action="add-subtask" role="menuitem">Add subtask</button>`);
-        }
-        if (!todo.completed) {
-            menuItems.push(`<button class="todo-menu-item" data-action="move-up" role="menuitem">Move up</button>`);
-            menuItems.push(`<button class="todo-menu-item" data-action="move-down" role="menuitem">Move down</button>`);
-        }
-        menuItems.push(`<button class="todo-menu-item todo-menu-item-danger" data-action="delete" role="menuitem">Delete</button>`);
-        const menuHtml = `
-            <div class="todo-menu-wrap">
-                <button class="todo-menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="More actions">&#8943;</button>
-                <div class="todo-menu" role="menu" hidden>${menuItems.join('')}</div>
-            </div>
-        `;
-
         const descHtml = todo.description
             ? `<div class="todo-desc-preview">${this.escapeHtml(this.truncateDescription(todo.description))}</div>`
             : '';
 
-        const dragHandle = todo.completed ? '' : `<i class="fa-solid fa-grip-vertical drag-handle"></i>`;
-
+        // No move buttons, no expand/delete buttons, no drag-handle icon —
+        // the whole card is already draggable (setupDragListeners binds to
+        // .todo-item itself, not to any handle), and right-click deletes
+        // (handleTaskContextMenu), so none of that chrome needs to live on
+        // the row any more, leaving the title and description more room.
         let html = `
             <li class="${classes}" data-id="${todo.id}" draggable="${!todo.completed}"${todo.description ? ` data-description="${this.escapeAttr(todo.description)}"` : ''}>
                 ${tabHtml}
+                ${topHtml}
                 <div class="todo-row-main">
-                    ${dragHandle}
                     <input type="checkbox" class="${checkboxClass}" ${todo.completed ? 'checked' : ''}>
                     ${leadIcon}
                     <span class="todo-text">${this.escapeHtml(todo.text)}</span>
                     ${recurringHtml}
-                    ${trailingHtml}
-                    ${menuHtml}
                 </div>
                 ${descHtml}
             </li>
@@ -1913,16 +1952,17 @@ class TodoApp {
     // accent (overdue/today/upcoming/later/project/neutral) via CSS class,
     // not an inline color, so it still adapts across all 8 themes.
     renderColumn(opts) {
-        const { key, icon, label, count, tasks, suppressTab, colorRole, animSettle, progressPct } = opts;
+        const { key, icon, label, count, tasks, suppressTab, colorRole, animSettle, progressPct, projectId } = opts;
         const rowsHtml = tasks.length
             ? this.renderTaskRows(tasks, suppressTab)
             : `<li class="board-column-empty">Nothing here</li>`;
         const progressHtml = progressPct !== undefined
             ? `<div class="board-column-progress"><div class="board-column-progress-fill" style="transform:scaleX(${progressPct / 100})"></div></div>`
             : '';
+        const headerAttr = projectId !== undefined ? ` data-project-id="${projectId}" title="Double-click to edit, right-click to delete"` : '';
         return `
             <div class="board-column" data-column-key="${key}">
-                <div class="board-column-header board-column-header-${colorRole}">
+                <div class="board-column-header board-column-header-${colorRole}"${headerAttr}>
                     <i class="fa-solid ${icon}"></i>
                     <span class="board-column-label">${this.escapeHtml(label)}</span>
                     <span class="board-column-count${animSettle ? ' anim-settle' : ''}">${count}</span>
@@ -1944,15 +1984,19 @@ class TodoApp {
         if (!board) return;
 
         this.populateParentProjectDropdown();
+        this.renderProjectFilterRow();
         const sortFn = this.getSortFn();
         const isSearchActive = this.searchTerm.length > 0;
-        const activeTasks = this.todos.filter(t => !t.completed);
+        // A hidden project's own card and its subtasks are dropped from the
+        // board entirely (not just collapsed) — search bypasses this, since
+        // searching is an explicit request to see everything.
+        const activeTasks = this.todos.filter(t => !t.completed && !this.isHiddenByProjectFilter(t));
 
         const archiveCountEl = document.getElementById('archiveCount');
         if (archiveCountEl) archiveCountEl.textContent = this.todos.filter(t => t.completed && !t.parentId).length;
 
         if (isSearchActive) {
-            const results = activeTasks.filter(t => this.matchesSearch(t)).sort(sortFn);
+            const results = this.todos.filter(t => !t.completed && this.matchesSearch(t)).sort(sortFn);
             board.innerHTML = this.renderColumn({
                 key: 'search', icon: 'fa-magnifying-glass', label: 'Search results',
                 count: results.length, tasks: results, colorRole: 'neutral'
@@ -1968,12 +2012,19 @@ class TodoApp {
             const projects = activeTasks.filter(t => t.isProject).sort(sortFn);
             const standalone = activeTasks.filter(t => !t.isProject && !t.parentId).sort(sortFn);
 
+            // The project's own card is gone — every task already carries a
+            // colored tab naming its project, and this column's own header
+            // (label + progress bar) already says which project it is, so a
+            // leading folder-icon card here would just repeat both. The
+            // header is the project's one remaining surface: double-click
+            // opens its edit modal, right-click offers to delete it.
             projects.forEach(p => {
                 const progress = this.getProjectProgress(p.id);
                 const activeSubtasks = this.getSubtasks(p.id).filter(t => !t.completed).sort(sortFn);
                 columns.push({
                     key: 'project-' + p.id, icon: 'fa-folder', label: p.text,
-                    count: activeSubtasks.length, tasks: [p, ...activeSubtasks], suppressTab: true, colorRole: 'project',
+                    count: activeSubtasks.length, tasks: activeSubtasks, suppressTab: true, colorRole: 'project',
+                    projectId: p.id,
                     progressPct: progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
                 });
             });
@@ -1984,11 +2035,13 @@ class TodoApp {
                 });
             }
         } else {
-            // Every active task — project, standalone, or subtask — is now a
-            // flat card bucketed by its own deadline; a subtask no longer
-            // has to sit nested under its parent to be visible here.
+            // Every active task is bucketed by its own deadline — except a
+            // project itself, which no longer renders as a board card at
+            // all (see the Project-mode branch above); it still exists as
+            // data (its subtasks' tabs read its name and color from it),
+            // just with no card of its own anywhere on the board.
             const groups = { overdue: [], today: [], upcoming: [], later: [], nodeadline: [] };
-            activeTasks.forEach(t => groups[this.getDeadlineGroup(t.deadline)].push(t));
+            activeTasks.forEach(t => { if (!t.isProject) groups[this.getDeadlineGroup(t.deadline)].push(t); });
             Object.keys(groups).forEach(k => groups[k].sort(sortFn));
 
             const todayCount = groups.today.length;
