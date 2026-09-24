@@ -37,10 +37,52 @@
         "reason": "Documented exception in DESIGN.md (Known Exceptions, To-do priority colors): the purple someday tag keeps one meaning across themes. Recorded by the assistant from the design doc, not confirmed on this specific finding."
       },
       {
-        "rule": "design-system-color",
-        "value": "#f4d35e",
-        "createdAt": "2026-09-19T16:25:24.457Z",
-        "reason": "Documented exception in DESIGN.md (Known Exceptions, To-do priority colors): the yellow flag keeps one meaning across themes. Recorded by the assistant from the design doc, not confirmed on this specific finding."
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "tools/todo/*"
+        ],
+        "createdAt": "2026-09-24T00:06:10.950Z",
+        "reason": "Documented site-wide tokens (--text-secondary on --bg-secondary), confirmed systemic not todo-specific by this session's Assessment B run"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "tools/todo/*"
+        ],
+        "createdAt": "2026-09-24T00:06:28.191Z",
+        "reason": "accent-primary hover/focus glow is DESIGN.md's documented Ambient-Glow Rule, used repeatedly in todo-styles.css; confirmed false positive by this session's Assessment B detector run"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "tools/todo/index.html"
+        ],
+        "createdAt": "2026-09-24T00:20:19.137Z",
+        "reason": "Investigated during to-do overhaul: #composer's own padding is 0 by design, but #todoInput and .composer-add-btn each carry 18px padding on every edge, giving a consistent visual inset on all sides including the top; confirmed visually in-browser, not actually flush against the container edge"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "checkbounce",
+        "createdAt": "2026-09-24T01:02:51.043Z",
+        "reason": "Deliberate: user approved a bigger visual swing this session, and research (Things 3 breakdown) specifically named spring/overshoot completion motion as the signature interaction to add. Not a name-match false positive this time -- the easing is genuinely elastic on purpose."
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "createdAt": "2026-09-24T01:02:51.136Z",
+        "reason": "Same deliberate Things-3-inspired spring motion, applied to both the checkbox-complete pop and the Today-count settle animation; user explicitly asked to take a bigger swing on visual/motion polish this session."
+      },
+      {
+        "rule": "tiny-text",
+        "value": "*",
+        "files": [
+          "tools/todo/index.html"
+        ],
+        "createdAt": "2026-09-24T11:17:57.416Z",
+        "reason": "Matches DESIGN.md's documented Fixed-Step Rule: 11px is the sanctioned 'Micro' type tier (badges, tags, copy-count chips), used deliberately and pervasively across this page (priority badges, date-rail weekday labels, board-column-count pills, composer hint tags) -- not an accidental small size."
       }
     ]
   }

@@ -89,17 +89,49 @@
         </div>
     </div>
 
-    <div class="todo-container">
+    <div class="todo-layout">
+        <!-- Board header: Date/Project toggle switches what the kanban columns
+             mean, search filters across the whole board, the archive icon
+             opens completed tasks in an overlay instead of a 5th column. -->
+        <div class="board-header">
+            <div class="view-toggle" id="viewToggle" role="tablist" aria-label="Group board by">
+                <button type="button" class="view-toggle-btn active" data-mode="date" role="tab" aria-selected="true">Date</button>
+                <button type="button" class="view-toggle-btn" data-mode="project" role="tab" aria-selected="false">Project</button>
+            </div>
+            <div class="board-header-right">
+                <div class="search-bar" id="searchBar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Search tasks..." autocomplete="off">
+                    <button class="search-clear" id="searchClear" title="Clear search">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button class="archive-btn" id="archiveBtn" title="Completed tasks" aria-label="Completed tasks">
+                    <i class="fa-solid fa-box-archive"></i>
+                    <span class="archive-count" id="archiveCount">0</span>
+                </button>
+                <button class="shortcuts-trigger-btn" id="shortcutsBtn" title="Keyboard shortcuts (?)" aria-label="Show keyboard shortcuts">
+                    <i class="fa-solid fa-circle-question"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Smart Composer -->
         <div class="composer" id="composer">
             <div class="composer-main">
-                <input type="text" id="todoInput" placeholder="Add a new task... (N or / to focus)" autocomplete="off">
+                <span class="composer-prompt" aria-hidden="true">&gt;</span>
+                <div class="composer-input-wrap">
+                    <div class="composer-input-highlight" id="composerInputHighlight" aria-hidden="true"></div>
+                    <input type="text" id="todoInput" placeholder="Add a new task... (N or / to focus)" autocomplete="off" spellcheck="false">
+                    <div class="composer-suggestions" id="composerSuggestions" role="listbox" aria-label="Project suggestions"></div>
+                </div>
                 <button id="addBtn" class="composer-add-btn" title="Add task">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
             <div class="composer-preview" id="composerPreview"></div>
             <div class="composer-tray" id="composerTray">
+              <div class="composer-tray-inner">
                 <div class="composer-row">
                     <div class="composer-field composer-field-auto">
                         <label>Priority</label>
@@ -113,123 +145,66 @@
                         <label for="deadlineInput">Deadline</label>
                         <input type="date" id="deadlineInput" class="composer-date">
                     </div>
-                    <div class="composer-field">
-                        <label for="recurrenceSelect">Recurrence</label>
-                        <select id="recurrenceSelect" class="composer-select">
-                            <option value="">None</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="custom">Custom (days)</option>
-                        </select>
-                    </div>
-                    <div class="composer-field composer-field-auto" id="customIntervalField" style="display:none;">
-                        <label for="customIntervalInput">Every N days</label>
-                        <input type="number" id="customIntervalInput" class="composer-date" min="1" value="3" style="width:80px;">
-                    </div>
+                    <button type="button" class="composer-more-toggle" id="composerMoreToggle" aria-expanded="false" aria-controls="composerMore">
+                        <i class="fa-solid fa-ellipsis"></i> <span id="composerMoreToggleLabel">More</span>
+                    </button>
                 </div>
-                <div class="composer-row">
-                    <div class="composer-field">
-                        <label for="parentProjectSelect">Project</label>
-                        <select id="parentProjectSelect" class="composer-select">
-                            <option value="">None</option>
-                        </select>
+                <div class="composer-more" id="composerMore">
+                  <div class="composer-more-inner">
+                    <div class="composer-row">
+                        <div class="composer-field">
+                            <label for="recurrenceSelect">Recurrence</label>
+                            <select id="recurrenceSelect" class="composer-select">
+                                <option value="">None</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="custom">Custom (days)</option>
+                            </select>
+                        </div>
+                        <div class="composer-field composer-field-auto" id="customIntervalField" style="display:none;">
+                            <label for="customIntervalInput">Every N days</label>
+                            <input type="number" id="customIntervalInput" class="composer-date" min="1" value="3" style="width:80px;">
+                        </div>
                     </div>
-                    <div class="composer-field composer-field-auto">
-                        <label class="composer-checkbox-label">
-                            <input type="checkbox" id="projectCheckbox">
-                            <span><i class="fa-solid fa-folder"></i> Create as project</span>
-                        </label>
+                    <div class="composer-row">
+                        <div class="composer-field">
+                            <label for="parentProjectSelect">Project</label>
+                            <select id="parentProjectSelect" class="composer-select">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                        <div class="composer-field composer-field-auto">
+                            <label class="composer-checkbox-label">
+                                <input type="checkbox" id="projectCheckbox">
+                                <span><i class="fa-solid fa-folder"></i> Create as project</span>
+                            </label>
+                        </div>
                     </div>
-                </div>
-                <div class="composer-row">
-                    <div class="composer-field">
-                        <label for="descriptionInput">Description</label>
-                        <textarea id="descriptionInput" placeholder="Notes or details..." rows="2"></textarea>
+                    <div class="composer-row">
+                        <div class="composer-field">
+                            <label for="descriptionInput">Description</label>
+                            <textarea id="descriptionInput" placeholder="Notes or details..." rows="2"></textarea>
+                        </div>
                     </div>
+                  </div>
                 </div>
                 <div class="composer-hints">
-                    <span class="hint-tag"><code>::h</code> <code>::m</code> <code>::l</code> priority</span>
-                    <span class="hint-tag"><code>::today</code> <code>::tomorrow</code> <code>::3d</code> deadline</span>
-                    <span class="hint-tag"><code>::p[Name]</code> project</span>
-                    <span class="hint-tag"><code>::daily</code> <code>::weekly</code> <code>::every:Xd</code> recurrence</span>
+                    <span class="hint-tag">priority <code>::h</code> <code>::m</code> <code>::l</code></span>
+                    <span class="hint-tag">deadline <code>::today</code> <code>::tomorrow</code> <code>::3d</code></span>
+                    <span class="hint-tag">project <code>::p[Name]</code></span>
+                    <span class="hint-tag">recurrence <code>::daily</code> <code>::weekly</code> <code>::every:Xd</code></span>
                 </div>
+              </div>
             </div>
         </div>
 
-        <!-- Progress Strip -->
-        <div class="progress-strip" id="progressStrip">
-            <div class="progress-strip-bar">
-                <div class="progress-strip-fill" id="progressStripFill"></div>
-            </div>
-            <span class="progress-strip-label" id="progressStripLabel">0/0 tasks</span>
-            <button class="progress-strip-toggle" id="statsToggleBtn" title="Toggle stats">
-                <i class="fa-solid fa-chart-simple"></i>
-            </button>
-        </div>
-
-        <!-- Stats Panel (slides down) -->
-        <div class="stats-panel" id="statsPanel">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Total</div>
-                    <div class="stat-value" id="statTotal">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Active</div>
-                    <div class="stat-value" id="statActive">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Done</div>
-                    <div class="stat-value" id="statCompleted">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Rate</div>
-                    <div class="stat-value" id="statCompletionRate">0%</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Overdue</div>
-                    <div class="stat-value stat-overdue" id="statOverdue">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">High</div>
-                    <div class="stat-value" id="statHigh">0</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="search-bar" id="searchBar">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="searchInput" placeholder="Search tasks..." autocomplete="off">
-            <button class="search-clear" id="searchClear" title="Clear search">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <!-- Filter Buttons -->
-        <div class="filter-section" id="filterSection"></div>
-
-        <!-- Active Tasks -->
-        <div class="agenda-wrapper" id="activeSection">
-            <div class="agenda-layout" id="todoList"></div>
-        </div>
-
-        <!-- Completed Tasks -->
-        <div class="completed-section" id="completedSection">
-            <div class="completed-header" id="completedHeader">
-                <h3 class="section-title">
-                    <i class="fa-solid fa-chevron-down completed-chevron" id="completedChevron"></i>
-                    Completed
-                    <span id="completedCount" class="completed-count">(0)</span>
-                </h3>
-                <button id="clearCompleted" class="clear-completed-btn">Clear All</button>
-            </div>
-            <div class="completed-list-wrapper" id="completedWrapper">
-                <ul id="completedList"></ul>
-            </div>
-        </div>
-    </div>
+        <!-- Flow Board: a real kanban instead of one scrolling column. Date
+             mode's columns are Overdue/Today/Upcoming/Later(/No Deadline);
+             Project mode's columns are each project plus "No Project" — same
+             board mechanic, different grouping axis. Exactly one live at a
+             time, built and populated by renderBoard(). -->
+        <div class="board-columns" id="boardColumns"></div>
 
     <!-- Task Detail Drawer -->
     <div class="detail-drawer" id="detailDrawer">
@@ -243,6 +218,60 @@
             </div>
             <div class="detail-drawer-body" id="detailDrawerBody"></div>
         </div>
+    </div>
+
+    <!-- Completed tasks: an overlay opened from the archive icon, not a 5th
+         board column nobody wants staring at them most of the time. -->
+    <div class="detail-drawer" id="completedOverlay">
+        <div class="detail-drawer-backdrop" id="completedOverlayBackdrop"></div>
+        <div class="detail-drawer-panel-wrap">
+            <div class="detail-drawer-header">
+                <span class="detail-drawer-title">Completed</span>
+                <div class="detail-drawer-header-actions">
+                    <button class="clear-completed-btn" id="clearCompletedBtn">Clear All</button>
+                    <button class="detail-drawer-close" id="completedOverlayClose" aria-label="Close completed tasks">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="detail-drawer-body" id="completedOverlayBody"></div>
+        </div>
+    </div>
+
+    <!-- Task Edit Modal: double-click anywhere on a card except its title
+         opens this instead of the side drawer — a shorthand quick-edit bar
+         (same live-colored ::h / ::p[Name] / ::daily syntax as the composer)
+         plus the same structured fields the side drawer uses, so changing
+         project/date/priority is one line to type or one click, not both. -->
+    <div class="task-edit-modal" id="taskEditModal">
+        <div class="task-edit-modal-backdrop" id="taskEditModalBackdrop"></div>
+        <div class="task-edit-modal-panel">
+            <div class="task-edit-modal-header">
+                <span class="detail-drawer-title">Edit Task</span>
+                <button class="detail-drawer-close" id="taskEditModalClose" aria-label="Close task editor">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="task-edit-modal-body">
+                <div class="composer-main task-edit-quickbar">
+                    <span class="composer-prompt" aria-hidden="true">&gt;</span>
+                    <div class="composer-input-wrap">
+                        <div class="composer-input-highlight" id="taskEditInputHighlight" aria-hidden="true"></div>
+                        <input type="text" id="taskEditInput" placeholder="Task title..." autocomplete="off" spellcheck="false">
+                        <div class="composer-suggestions" id="taskEditSuggestions" role="listbox" aria-label="Project suggestions"></div>
+                    </div>
+                </div>
+                <div class="composer-hints">
+                    <span class="hint-tag">priority <code>::h</code> <code>::m</code> <code>::l</code></span>
+                    <span class="hint-tag">deadline <code>::today</code> <code>::tomorrow</code> <code>::3d</code></span>
+                    <span class="hint-tag">project <code>::p[Name]</code></span>
+                    <span class="hint-tag">recurrence <code>::daily</code> <code>::weekly</code> <code>::every:Xd</code></span>
+                </div>
+                <div class="task-edit-hint">Press Enter to apply shorthand — fields below update live and save instantly either way.</div>
+                <div id="taskEditDetailBody"></div>
+            </div>
+        </div>
+    </div>
     </div>
 
     <!-- Undo Toast -->

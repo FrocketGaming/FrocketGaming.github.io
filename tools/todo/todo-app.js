@@ -8,14 +8,13 @@ class TodoApp {
         this.todos = [];
         this.expandedTaskId = null;
         this.inlineEditId = null;
-        this.inlineSubtaskProjectId = null;
         this._contentClickTimer = null; // pending click-to-expand, cancelled by a following dblclick
+        this._lastTodayCount = null; // drives the Today-count spring animation on change, not on first paint
 
         // Undo system
         this.pendingDelete = null; // { todos: [...], timer: timeoutId, message: string }
         this.pendingImportReplace = null; // { previousTodos: [...], importedCount, timer: timeoutId }
         this._infoToastTimer = null;
-        this._filtersExpanded = false; // project filter chips beyond the cap, shown on demand
 
         // Drag-and-drop
         this.draggedId = null;
@@ -28,12 +27,15 @@ class TodoApp {
 
         // UI state (persisted)
         this.uiState = {
-            collapsedProjects: [],
-            activeFilter: 'all',
-            statsOpen: false,
-            completedOpen: true,
+            viewMode: 'date',
             collapsedDateGroups: []
         };
+        this._draggedColumnEl = null;
+        this._completedOverlayOpen = false;
+        this._projectSuggestions = [];
+        this._projectSuggestionIndex = -1;
+        this._projectSuggestionRange = null;
+        this._taskEditId = null;
     }
 
     async init() {
@@ -104,9 +106,8 @@ class TodoApp {
         const composer = document.getElementById('composer');
         const priorityChips = document.getElementById('priorityChips');
         const projectCheckbox = document.getElementById('projectCheckbox');
-        const statsToggleBtn = document.getElementById('statsToggleBtn');
-        const completedHeader = document.getElementById('completedHeader');
-        const clearCompleted = document.getElementById('clearCompleted');
+        const shortcutsBtn = document.getElementById('shortcutsBtn');
+        const composerMoreToggle = document.getElementById('composerMoreToggle');
         const exportBtn = document.getElementById('exportBtn');
         const importBtn = document.getElementById('importBtn');
         const importFileInput = document.getElementById('importFileInput');
@@ -120,7 +121,7 @@ class TodoApp {
         // Composer: add task
         addBtn.addEventListener('click', () => this.addTodo());
         todoInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addTodo();
+            if (e.key === 'Enter' && this._projectSuggestionIndex < 0) this.addTodo();
         });
 
         // Composer: expand on focus
@@ -135,8 +136,20 @@ class TodoApp {
             }, 100);
         });
 
-        // Composer: live shorthand preview
-        todoInput.addEventListener('input', () => this.updateShorthandPreview());
+        // Composer: live shorthand preview + live syntax-colored mirror
+        todoInput.addEventListener('input', () => {
+            this.updateShorthandPreview();
+            this.updateComposerHighlight();
+            this.updateProjectSuggestions();
+        });
+        todoInput.addEventListener('scroll', () => {
+            const highlight = document.getElementById('composerInputHighlight');
+            if (highlight) highlight.scrollLeft = todoInput.scrollLeft;
+        });
+        todoInput.addEventListener('keydown', (e) => this.handleComposerSuggestionKeydown(e));
+        todoInput.addEventListener('blur', () => {
+            setTimeout(() => this.closeProjectSuggestions(), 150);
+        });
 
         // Priority chips
         priorityChips.addEventListener('click', (e) => {
@@ -158,25 +171,62 @@ class TodoApp {
             customField.style.display = recurrenceSelect.value === 'custom' ? 'flex' : 'none';
         });
 
-        // Stats toggle
-        statsToggleBtn.addEventListener('click', () => {
-            this.uiState.statsOpen = !this.uiState.statsOpen;
-            this.applyStatsState();
-            this.saveUIState();
+        // Keyboard-shortcuts overlay trigger (also reachable via the "?" key)
+        shortcutsBtn.addEventListener('click', () => this.toggleShortcuts());
+
+        // Board header: Date/Project view toggle
+        document.getElementById('viewToggle').querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-toggle-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                btn.classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                this.setViewMode(btn.dataset.mode);
+            });
         });
 
-        // Completed section toggle
-        completedHeader.addEventListener('click', (e) => {
-            if (e.target.closest('.clear-completed-btn')) return;
-            this.uiState.completedOpen = !this.uiState.completedOpen;
-            this.applyCompletedState();
-            this.saveUIState();
-        });
+        // Completed tasks overlay (archive icon replaces the old rail item)
+        document.getElementById('archiveBtn').addEventListener('click', () => this.openCompletedOverlay());
+        document.getElementById('completedOverlayClose').addEventListener('click', () => this.closeCompletedOverlay());
+        document.getElementById('completedOverlayBackdrop').addEventListener('click', () => this.closeCompletedOverlay());
+        document.getElementById('clearCompletedBtn').addEventListener('click', () => this.clearCompleted());
 
-        // Clear completed
-        clearCompleted.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.clearCompleted();
+        // Task edit modal: shorthand quick-edit bar, same mechanism as the composer
+        const taskEditInput = document.getElementById('taskEditInput');
+        taskEditInput.addEventListener('input', () => {
+            this.updateComposerHighlight('taskEditInput', 'taskEditInputHighlight');
+            this.updateProjectSuggestions('taskEditInput', 'taskEditSuggestions');
+        });
+        taskEditInput.addEventListener('scroll', () => {
+            const highlight = document.getElementById('taskEditInputHighlight');
+            if (highlight) highlight.scrollLeft = taskEditInput.scrollLeft;
+        });
+        taskEditInput.addEventListener('keydown', (e) => {
+            if (this._projectSuggestions.length > 0) {
+                this.handleComposerSuggestionKeydown(e, 'taskEditInput', 'taskEditSuggestions');
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.applyTaskEditShorthand();
+                this.closeTaskEditModal();
+            } else if (e.key === 'Escape') {
+                this.closeTaskEditModal();
+            }
+        });
+        document.getElementById('taskEditModalClose').addEventListener('click', () => this.closeTaskEditModal());
+        document.getElementById('taskEditModalBackdrop').addEventListener('click', () => this.closeTaskEditModal());
+
+        // Composer "More options" toggle (recurrence/project/description)
+        composerMoreToggle.addEventListener('click', () => {
+            const more = document.getElementById('composerMore');
+            const label = document.getElementById('composerMoreToggleLabel');
+            const isOpen = more.classList.toggle('open');
+            composerMoreToggle.classList.toggle('open', isOpen);
+            composerMoreToggle.setAttribute('aria-expanded', String(isOpen));
+            label.textContent = isOpen ? 'Less' : 'More';
         });
 
         // Export/Import
@@ -222,22 +272,14 @@ class TodoApp {
         if (signInBtn) signInBtn.addEventListener('click', () => this.handleSignIn());
         if (signOutBtn) signOutBtn.addEventListener('click', () => this.handleSignOut());
 
-        // Event delegation for task list interactions
-        document.getElementById('todoList').addEventListener('click', (e) => this.handleTaskClick(e));
-        document.getElementById('completedList').addEventListener('click', (e) => this.handleTaskClick(e));
-        document.getElementById('todoList').addEventListener('keydown', (e) => this.handleTaskKeydown(e));
-        document.getElementById('completedList').addEventListener('keydown', (e) => this.handleTaskKeydown(e));
-
-        // Double-click for inline edit
-        document.getElementById('todoList').addEventListener('dblclick', (e) => this.handleDoubleClick(e));
-
-        // Rail section header clicks (collapse/expand a rail section)
-        document.getElementById('todoList').addEventListener('click', (e) => {
-            const header = e.target.closest('.rail-section-header');
-            if (header) {
-                const group = header.dataset.group;
-                this.toggleDateGroupCollapse(group);
-            }
+        // Event delegation for task list interactions — the board and the
+        // completed overlay both use the same row markup, so one delegated
+        // listener per container covers all of it.
+        ['boardColumns', 'completedOverlayBody'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('click', (e) => this.handleTaskClick(e));
+            el.addEventListener('keydown', (e) => this.handleTaskKeydown(e));
+            el.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
         });
 
         // Detail drawer close affordances
@@ -252,6 +294,11 @@ class TodoApp {
             detailDrawerBackdrop.addEventListener('click', closeDrawer);
             detailDrawerClose.addEventListener('click', closeDrawer);
         }
+
+        // Overflow menus close on any click outside them
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.todo-menu-wrap')) this.closeAllTodoMenus();
+        });
     }
 
     setupKeyboardShortcuts() {
@@ -330,8 +377,151 @@ class TodoApp {
         }
     }
 
+    // Mirrors the input's text behind a transparent-text input so shorthand
+    // tokens (::h, ::p[Name], ::daily...) render live in the theme's own
+    // --syntax-* colors, the same roles used for code highlighting elsewhere
+    // on the site — the composer reads as a real command line, not a text
+    // box with a caption underneath.
+    // inputId/highlightId default to the composer's own elements; the task
+    // edit modal's quick-edit bar passes its own ids to reuse this exact
+    // mechanism instead of duplicating it.
+    updateComposerHighlight(inputId = 'todoInput', highlightId = 'composerInputHighlight') {
+        const highlight = document.getElementById(highlightId);
+        const inputEl = document.getElementById(inputId);
+        if (!highlight || !inputEl) return;
+        const text = inputEl.value;
+        const pattern = /(::[hmlHML]\b)|(::p\[[^\]]+\])|(::daily\b|::weekly\b|::monthly\b|::every:\d+d\b)|(::today\b|::tomorrow\b|::\d+d\b)/gi;
+        let result = '';
+        let lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            result += this.escapeHtml(text.slice(lastIndex, match.index));
+            const token = match[0];
+            let cls = 'hl-priority';
+            if (match[2]) cls = 'hl-project';
+            else if (match[3]) cls = 'hl-recurrence';
+            else if (match[4]) cls = 'hl-deadline';
+            result += `<span class="${cls}">${this.escapeHtml(token)}</span>`;
+            lastIndex = match.index + token.length;
+        }
+        result += this.escapeHtml(text.slice(lastIndex));
+        highlight.innerHTML = result;
+        highlight.scrollLeft = inputEl.scrollLeft;
+    }
+
+    // ===== Project Autocomplete (::p[...) =====
+    // Typing ::p[ opens a picker of existing projects instead of requiring
+    // you to remember and retype an exact name — the same "smart shorthand"
+    // idea as the live syntax coloring, just for the one token whose value
+    // isn't fixed vocabulary. Shared between the composer and the task edit
+    // modal's quick-edit bar via the id pair.
+    updateProjectSuggestions(inputId = 'todoInput', dropdownId = 'composerSuggestions') {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        const value = input.value;
+        const cursor = input.selectionStart;
+        const before = value.slice(0, cursor);
+        const match = before.match(/::p\[([^\]]*)$/i);
+        if (!match) {
+            this.closeProjectSuggestions(dropdownId);
+            return;
+        }
+
+        const partial = match[1].toLowerCase();
+        const start = match.index + match[0].indexOf('[') + 1;
+        const projects = this.todos.filter(t => t.isProject && !t.completed);
+        const matches = (partial
+            ? projects.filter(p => p.text.toLowerCase().includes(partial))
+            : projects
+        ).slice(0, 6);
+
+        this._projectSuggestionRange = { start, end: cursor };
+
+        if (matches.length === 0) {
+            this.closeProjectSuggestions(dropdownId);
+            return;
+        }
+
+        this._projectSuggestions = matches;
+        this._projectSuggestionIndex = 0;
+
+        dropdown.innerHTML = matches.map((p, i) => `
+            <div class="composer-suggestion-item${i === 0 ? ' active' : ''}" data-index="${i}" role="option">
+                <i class="fa-solid fa-folder"></i> ${this.escapeHtml(p.text)}
+            </div>
+        `).join('');
+        dropdown.classList.add('open');
+        dropdown.querySelectorAll('.composer-suggestion-item').forEach(el => {
+            // mousedown (not click) fires before the input blurs, so focus
+            // and the pending selection range are still intact when we act.
+            el.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                this.pickProjectSuggestion(parseInt(el.dataset.index), inputId, dropdownId);
+            });
+        });
+    }
+
+    closeProjectSuggestions(dropdownId = 'composerSuggestions') {
+        this._projectSuggestions = [];
+        this._projectSuggestionIndex = -1;
+        this._projectSuggestionRange = null;
+        const dropdown = document.getElementById(dropdownId);
+        if (dropdown) {
+            dropdown.classList.remove('open');
+            dropdown.innerHTML = '';
+        }
+    }
+
+    highlightProjectSuggestion(dropdownId = 'composerSuggestions') {
+        document.querySelectorAll(`#${dropdownId} .composer-suggestion-item`).forEach((el, i) => {
+            el.classList.toggle('active', i === this._projectSuggestionIndex);
+        });
+    }
+
+    pickProjectSuggestion(index, inputId = 'todoInput', dropdownId = 'composerSuggestions') {
+        const input = document.getElementById(inputId);
+        const suggestion = this._projectSuggestions[index];
+        if (!input || !suggestion || !this._projectSuggestionRange) return;
+
+        const { start, end } = this._projectSuggestionRange;
+        const value = input.value;
+        input.value = value.slice(0, start) + suggestion.text + ']' + value.slice(end);
+        const newCursor = start + suggestion.text.length + 1;
+        input.setSelectionRange(newCursor, newCursor);
+
+        this.closeProjectSuggestions(dropdownId);
+        const highlightId = inputId === 'todoInput' ? 'composerInputHighlight' : 'taskEditInputHighlight';
+        if (inputId === 'todoInput') this.updateShorthandPreview();
+        this.updateComposerHighlight(inputId, highlightId);
+        input.focus();
+    }
+
+    handleComposerSuggestionKeydown(e, inputId = 'todoInput', dropdownId = 'composerSuggestions') {
+        if (this._projectSuggestions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this._projectSuggestionIndex = (this._projectSuggestionIndex + 1) % this._projectSuggestions.length;
+            this.highlightProjectSuggestion(dropdownId);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this._projectSuggestionIndex = (this._projectSuggestionIndex - 1 + this._projectSuggestions.length) % this._projectSuggestions.length;
+            this.highlightProjectSuggestion(dropdownId);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (this._projectSuggestionIndex >= 0) {
+                e.preventDefault();
+                this.pickProjectSuggestion(this._projectSuggestionIndex, inputId, dropdownId);
+            }
+        } else if (e.key === 'Escape') {
+            this.closeProjectSuggestions(dropdownId);
+        }
+    }
+
     resetComposer() {
         document.getElementById('todoInput').value = '';
+        document.getElementById('composerInputHighlight').innerHTML = '';
+        this.closeProjectSuggestions();
         document.getElementById('descriptionInput').value = '';
         document.getElementById('deadlineInput').value = '';
         document.getElementById('projectCheckbox').checked = false;
@@ -342,6 +532,15 @@ class TodoApp {
         document.getElementById('customIntervalField').style.display = 'none';
         document.getElementById('composerPreview').innerHTML = '';
         document.getElementById('composerPreview').classList.remove('has-tags');
+
+        const moreToggle = document.getElementById('composerMoreToggle');
+        const more = document.getElementById('composerMore');
+        if (moreToggle && more) {
+            more.classList.remove('open');
+            moreToggle.classList.remove('open');
+            moreToggle.setAttribute('aria-expanded', 'false');
+            document.getElementById('composerMoreToggleLabel').textContent = 'More';
+        }
 
         const chips = document.querySelectorAll('.priority-chip');
         chips.forEach(c => c.classList.remove('active'));
@@ -390,17 +589,17 @@ class TodoApp {
         }
 
         if (/::today\b/i.test(text)) {
-            deadline = new Date().toISOString().split('T')[0];
+            deadline = this.toLocalDateString(new Date());
             cleanText = cleanText.replace(/::today\b/gi, '');
         } else if (/::tomorrow\b/i.test(text)) {
             const d = new Date(); d.setDate(d.getDate() + 1);
-            deadline = d.toISOString().split('T')[0];
+            deadline = this.toLocalDateString(d);
             cleanText = cleanText.replace(/::tomorrow\b/gi, '');
         } else {
             const daysMatch = cleanText.match(/::(\d+)d\b/i);
             if (daysMatch) {
                 const d = new Date(); d.setDate(d.getDate() + parseInt(daysMatch[1]));
-                deadline = d.toISOString().split('T')[0];
+                deadline = this.toLocalDateString(d);
                 cleanText = cleanText.replace(/::(\d+)d\b/gi, '');
             }
         }
@@ -567,7 +766,7 @@ class TodoApp {
                     date.setDate(date.getDate() + (todo.recurrence.interval || 1));
                     break;
             }
-            newDeadline = date.toISOString().split('T')[0];
+            newDeadline = this.toLocalDateString(date);
         } else {
             // No deadline — set relative to today
             const date = new Date();
@@ -585,7 +784,7 @@ class TodoApp {
                     date.setDate(date.getDate() + (todo.recurrence.interval || 1));
                     break;
             }
-            newDeadline = date.toISOString().split('T')[0];
+            newDeadline = this.toLocalDateString(date);
         }
 
         const maxOrder = this.todos.length > 0 ? Math.max(...this.todos.map(t => t.order || 0)) : 0;
@@ -770,10 +969,20 @@ class TodoApp {
     }
 
     // ===== Drag-and-Drop =====
+    // Listeners live at the column level (not per-item) so dropping in a
+    // column's empty space — not just onto an existing card — still counts.
+    // Three outcomes, decided in this order: drop onto a project card files
+    // the dragged task under it; drop onto a card in the SAME column
+    // reorders; drop anywhere in a DIFFERENT column reschedules (Date mode)
+    // or reassigns project (Project mode) to match that column.
     setupDragListeners(listEl) {
+        const column = listEl.closest('.board-column');
+        const columnKey = column ? column.dataset.columnKey : null;
+
         listEl.querySelectorAll('.todo-item[draggable="true"]').forEach(item => {
             item.addEventListener('dragstart', (e) => {
                 this.draggedId = parseInt(item.dataset.id);
+                this._draggedColumnEl = column;
                 item.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', item.dataset.id);
@@ -782,119 +991,192 @@ class TodoApp {
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 this.draggedId = null;
-                listEl.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-into-project').forEach(el => {
-                    el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
+                this._draggedColumnEl = null;
+                document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-into-project, .board-column-drop-target').forEach(el => {
+                    el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project', 'board-column-drop-target');
                 });
             });
+        });
 
-            item.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const targetId = parseInt(item.dataset.id);
-                if (this.draggedId === targetId) return;
+        if (!column) return;
 
-                const draggedTodo = this.todos.find(t => t.id === this.draggedId);
-                const targetTodo = this.todos.find(t => t.id === targetId);
-                if (!draggedTodo || !targetTodo) return;
+        // Attached to the whole column, not just the <ul> — the list only
+        // has content-sized height, so empty space below the last card
+        // (very short columns, or any column next to a taller one) would
+        // otherwise sit outside any drop listener entirely.
+        column.addEventListener('dragover', (e) => {
+            if (!this.draggedId) return;
+            e.preventDefault();
+            const draggedTodo = this.todos.find(t => t.id === this.draggedId);
+            if (!draggedTodo) return;
 
-                // Dropping a non-project onto a project it's not already in → "drop into project" zone
-                if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
-                    item.classList.remove('drag-over-top', 'drag-over-bottom');
-                    item.classList.add('drag-into-project');
-                    return;
-                }
+            document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-into-project').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
+            });
+            column.classList.remove('board-column-drop-target');
 
-                // Same-scope reordering
-                if (draggedTodo.parentId === targetTodo.parentId) {
-                    item.classList.remove('drag-into-project');
-                    const rect = item.getBoundingClientRect();
-                    const midY = rect.top + rect.height / 2;
-                    item.classList.remove('drag-over-top', 'drag-over-bottom');
-                    if (e.clientY < midY) {
-                        item.classList.add('drag-over-top');
-                    } else {
-                        item.classList.add('drag-over-bottom');
+            const itemEl = e.target.closest('.todo-item');
+            if (itemEl && parseInt(itemEl.dataset.id) !== this.draggedId) {
+                const targetTodo = this.todos.find(t => t.id === parseInt(itemEl.dataset.id));
+                if (targetTodo) {
+                    if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
+                        itemEl.classList.add('drag-into-project');
+                        return;
+                    }
+                    if (column === this._draggedColumnEl && draggedTodo.parentId === targetTodo.parentId) {
+                        const rect = itemEl.getBoundingClientRect();
+                        const midY = rect.top + rect.height / 2;
+                        itemEl.classList.add(e.clientY < midY ? 'drag-over-top' : 'drag-over-bottom');
+                        return;
                     }
                 }
+            }
+            if (column !== this._draggedColumnEl && this.isValidDropColumn(columnKey)) {
+                column.classList.add('board-column-drop-target');
+            }
+        });
+
+        column.addEventListener('dragleave', (e) => {
+            if (!column.contains(e.relatedTarget)) {
+                column.classList.remove('board-column-drop-target');
+            }
+        });
+
+        column.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            column.classList.remove('board-column-drop-target');
+            document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-into-project').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
             });
 
-            item.addEventListener('dragleave', () => {
-                item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
-            });
+            const draggedId = this.draggedId;
+            if (!draggedId) return;
+            const draggedTodo = this.todos.find(t => t.id === draggedId);
+            if (!draggedTodo) return;
 
-            item.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-into-project');
-
-                const draggedId = this.draggedId;
-                const targetId = parseInt(item.dataset.id);
-                if (!draggedId || draggedId === targetId) return;
-
-                const draggedTodo = this.todos.find(t => t.id === draggedId);
-                const targetTodo = this.todos.find(t => t.id === targetId);
-                if (!draggedTodo || !targetTodo) return;
-
-                // Drop into project folder
-                if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
-                    const oldParentId = draggedTodo.parentId;
-                    draggedTodo.parentId = targetTodo.id;
-
-                    // Update old parent completion status
-                    if (oldParentId) {
-                        const oldParent = this.todos.find(t => t.id === oldParentId);
-                        if (oldParent) {
-                            const remaining = this.getSubtasks(oldParentId);
-                            oldParent.completed = remaining.length > 0 && remaining.every(t => t.completed);
-                            await StorageManager.put('todos', oldParent);
-                            this._syncTodo(oldParent);
+            const itemEl = e.target.closest('.todo-item');
+            if (itemEl) {
+                const targetId = parseInt(itemEl.dataset.id);
+                if (targetId !== draggedId) {
+                    const targetTodo = this.todos.find(t => t.id === targetId);
+                    if (targetTodo) {
+                        if (targetTodo.isProject && !draggedTodo.isProject && draggedTodo.parentId !== targetTodo.id) {
+                            await this.reassignProject(draggedTodo, targetTodo);
+                            return;
+                        }
+                        if (column === this._draggedColumnEl && draggedTodo.parentId === targetTodo.parentId) {
+                            await this.reorderWithinScope(draggedTodo, targetTodo, e.clientY, itemEl);
+                            return;
                         }
                     }
-
-                    // Reopen project if it was completed
-                    if (targetTodo.completed && !draggedTodo.completed) {
-                        targetTodo.completed = false;
-                        await StorageManager.put('todos', targetTodo);
-                        this._syncTodo(targetTodo);
-                    }
-
-                    // Expand the target project so the moved item is visible
-                    const colIdx = this.uiState.collapsedProjects.indexOf(targetTodo.id);
-                    if (colIdx >= 0) this.uiState.collapsedProjects.splice(colIdx, 1);
-                    this.saveUIState();
-
-                    await StorageManager.put('todos', draggedTodo);
-                    this._syncTodo(draggedTodo);
-                    this.render();
-                    return;
                 }
+            }
 
-                // Same-scope reordering only
-                if (draggedTodo.parentId !== targetTodo.parentId) return;
-
-                const rect = item.getBoundingClientRect();
-                const midY = rect.top + rect.height / 2;
-                const insertBefore = e.clientY < midY;
-
-                // Get siblings in same scope sorted by order
-                const siblings = this.todos
-                    .filter(t => t.parentId === draggedTodo.parentId && !t.completed)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-                // Remove dragged from list
-                const filtered = siblings.filter(t => t.id !== draggedId);
-                // Find target index in filtered list
-                let targetIdx = filtered.findIndex(t => t.id === targetId);
-                if (!insertBefore) targetIdx++;
-
-                // Insert at position
-                filtered.splice(targetIdx, 0, draggedTodo);
-
-                // Reassign order values
-                filtered.forEach((t, i) => { t.order = i; });
-                await this.saveTodos();
-                filtered.forEach(t => this._syncTodo(t));
-                this.render();
-            });
+            if (column !== this._draggedColumnEl) {
+                await this.moveTodoToColumn(draggedTodo, columnKey);
+            }
         });
+    }
+
+    // 'overdue' isn't a valid drop target — manufacturing an overdue date by
+    // dragging doesn't mean anything — and the search pseudo-column isn't a
+    // real bucket or project to reassign into.
+    isValidDropColumn(columnKey) {
+        return columnKey && columnKey !== 'overdue' && columnKey !== 'search';
+    }
+
+    async reorderWithinScope(draggedTodo, targetTodo, clientY, itemEl) {
+        const rect = itemEl.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const insertBefore = clientY < midY;
+
+        const siblings = this.todos
+            .filter(t => t.parentId === draggedTodo.parentId && !t.completed)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const filtered = siblings.filter(t => t.id !== draggedTodo.id);
+        let targetIdx = filtered.findIndex(t => t.id === targetTodo.id);
+        if (!insertBefore) targetIdx++;
+        filtered.splice(targetIdx, 0, draggedTodo);
+        filtered.forEach((t, i) => { t.order = i; });
+
+        await this.saveTodos();
+        filtered.forEach(t => this._syncTodo(t));
+        this.render();
+    }
+
+    // Dropping a task onto a project card (in any column) files it under
+    // that project — same action whether you're in Date or Project mode.
+    async reassignProject(draggedTodo, targetProject) {
+        const oldParentId = draggedTodo.parentId;
+        draggedTodo.parentId = targetProject ? targetProject.id : null;
+
+        if (oldParentId) {
+            const oldParent = this.todos.find(t => t.id === oldParentId);
+            if (oldParent) {
+                const remaining = this.getSubtasks(oldParentId);
+                oldParent.completed = remaining.length > 0 && remaining.every(t => t.completed);
+                await StorageManager.put('todos', oldParent);
+                this._syncTodo(oldParent);
+            }
+        }
+
+        if (targetProject && targetProject.completed && !draggedTodo.completed) {
+            targetProject.completed = false;
+            await StorageManager.put('todos', targetProject);
+            this._syncTodo(targetProject);
+        }
+
+        await StorageManager.put('todos', draggedTodo);
+        this._syncTodo(draggedTodo);
+        this.render();
+    }
+
+    // Dropping a task into a DIFFERENT column changes what actually puts it
+    // there: in Date mode that's its deadline, in Project mode that's its
+    // parent project. Picks a representative date for each deadline bucket
+    // rather than an exact day — the detail panel is still there for
+    // precision; the board drag is for quick, approximate moves. A subtask
+    // is a flat card like any other now, so it's just as draggable between
+    // date buckets (updates its own deadline) or between project columns
+    // (reassigns it), same as dropping it onto a project card directly.
+    async moveTodoToColumn(draggedTodo, columnKey) {
+        if (!this.isValidDropColumn(columnKey)) return;
+
+        if (columnKey.startsWith('project-')) {
+            if (draggedTodo.isProject) return; // a project can't nest under another project
+            const projectId = parseInt(columnKey.slice('project-'.length));
+            const targetProject = this.todos.find(t => t.id === projectId && t.isProject);
+            if (!targetProject || draggedTodo.parentId === targetProject.id) return;
+            await this.reassignProject(draggedTodo, targetProject);
+            return;
+        }
+        if (columnKey === 'noproject') {
+            if (draggedTodo.isProject || draggedTodo.parentId === null) return;
+            await this.reassignProject(draggedTodo, null);
+            return;
+        }
+
+        const today = new Date();
+        let newDeadline;
+        if (columnKey === 'today') {
+            newDeadline = this.toLocalDateString(today);
+        } else if (columnKey === 'upcoming') {
+            const d = new Date(today); d.setDate(d.getDate() + 1);
+            newDeadline = this.toLocalDateString(d);
+        } else if (columnKey === 'later') {
+            const d = new Date(today); d.setDate(d.getDate() + 8);
+            newDeadline = this.toLocalDateString(d);
+        } else if (columnKey === 'nodeadline') {
+            newDeadline = null;
+        } else {
+            return;
+        }
+
+        if (draggedTodo.deadline === newDeadline) return;
+        draggedTodo.deadline = newDeadline;
+        await StorageManager.put('todos', draggedTodo);
+        this._syncTodo(draggedTodo);
+        this.render();
     }
 
     // Keyboard-reachable alternative to drag-and-drop reordering.
@@ -928,16 +1210,11 @@ class TodoApp {
         return { completed: subs.filter(t => t.completed).length, total: subs.length };
     }
 
-    isProjectCollapsed(projectId) {
-        return this.uiState.collapsedProjects.includes(projectId);
-    }
-
-    toggleProjectCollapse(projectId) {
-        const idx = this.uiState.collapsedProjects.indexOf(projectId);
-        if (idx >= 0) this.uiState.collapsedProjects.splice(idx, 1);
-        else this.uiState.collapsedProjects.push(projectId);
-        this.saveUIState();
-        this.render();
+    // A project's tab color: stable per project (hashed off its id), never
+    // stored, so no data migration or color picker is needed for it.
+    getProjectColor(projectId) {
+        const palette = ['#a78bfa', '#5eead4', '#f0abfc', '#bef264', '#fde047'];
+        return palette[Math.abs(projectId) % palette.length];
     }
 
     // ===== Date Group Collapse =====
@@ -957,7 +1234,19 @@ class TodoApp {
     // ===== Inline Editing =====
     handleDoubleClick(e) {
         const textEl = e.target.closest('.todo-text');
-        if (!textEl) return;
+        if (!textEl) {
+            // Double-click anywhere else on a card (not its own controls,
+            // which already have dedicated single-click behavior) opens the
+            // full quick-edit modal instead.
+            const item = e.target.closest('.todo-item');
+            if (!item || e.target.closest('input, button, .priority-dot')) return;
+            const id = parseInt(item.dataset.id);
+            const todo = this.todos.find(t => t.id === id);
+            if (!todo || todo.completed) return;
+            clearTimeout(this._contentClickTimer);
+            this.openTaskEditModal(id);
+            return;
+        }
         const item = textEl.closest('.todo-item');
         if (!item) return;
         const id = parseInt(item.dataset.id);
@@ -969,11 +1258,10 @@ class TodoApp {
         clearTimeout(this._contentClickTimer);
 
         this.inlineEditId = id;
-        const content = item.querySelector('.todo-content');
         const currentText = todo.text;
 
-        content.innerHTML = `<input type="text" class="inline-edit-input" value="${this.escapeAttr(currentText)}">`;
-        const inp = content.querySelector('.inline-edit-input');
+        textEl.outerHTML = `<input type="text" class="inline-edit-input" value="${this.escapeAttr(currentText)}">`;
+        const inp = item.querySelector('.inline-edit-input');
         inp.focus();
         inp.select();
 
@@ -1000,70 +1288,40 @@ class TodoApp {
         });
     }
 
-    // ===== Inline Subtask =====
-    showInlineSubtask(projectId) {
-        this.inlineSubtaskProjectId = projectId;
-        if (this.isProjectCollapsed(projectId)) {
-            const idx = this.uiState.collapsedProjects.indexOf(projectId);
-            if (idx >= 0) this.uiState.collapsedProjects.splice(idx, 1);
-            this.saveUIState();
+    // ===== Overflow Menu =====
+    toggleTodoMenu(btn) {
+        const wrap = btn.closest('.todo-menu-wrap');
+        const menu = wrap.querySelector('.todo-menu');
+        const isOpen = !menu.hidden;
+        this.closeAllTodoMenus();
+        if (!isOpen) {
+            menu.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
         }
-        this.render();
-
-        setTimeout(() => {
-            const inp = document.querySelector('.inline-subtask-input');
-            if (inp) inp.focus();
-        }, 50);
     }
 
-    setupInlineSubtaskInput(input, projectId) {
-        input.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                const text = input.value.trim();
-                if (text) {
-                    const parsed = this.parseShorthand(text);
-                    const maxOrder = this.todos.length > 0 ? Math.max(...this.todos.map(t => t.order || 0)) : 0;
-                    const subtask = {
-                        id: Date.now(),
-                        text: parsed.text,
-                        completed: false,
-                        priority: parsed.priority || 'medium',
-                        description: '',
-                        deadline: parsed.deadline || null,
-                        isProject: false,
-                        parentId: projectId,
-                        order: maxOrder + 1,
-                        recurrence: parsed.recurrence || null
-                    };
-                    this.todos.push(subtask);
-                    this.lastAddedId = subtask.id;
-                    await StorageManager.put('todos', subtask);
-                    this._syncTodo(subtask);
-
-                    const project = this.todos.find(t => t.id === projectId);
-                    if (project && project.completed) {
-                        project.completed = false;
-                        await StorageManager.put('todos', project);
-                        this._syncTodo(project);
-                    }
-
-                    input.value = '';
-                    this.render();
-                    // Re-show input for adding more
-                    this.showInlineSubtask(projectId);
-                }
-            } else if (e.key === 'Escape') {
-                this.inlineSubtaskProjectId = null;
-                this.render();
-            }
+    closeAllTodoMenus() {
+        document.querySelectorAll('.todo-menu:not([hidden])').forEach(menu => {
+            menu.hidden = true;
+            const btn = menu.closest('.todo-menu-wrap').querySelector('.todo-menu-btn');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         });
+    }
 
-        input.addEventListener('blur', () => {
-            setTimeout(() => {
-                this.inlineSubtaskProjectId = null;
-                this.render();
-            }, 150);
-        });
+    // "Add subtask" (project card's menu) hands off to the main composer
+    // with ::p[Name] prefilled, instead of a bespoke inline input — a
+    // project's subtasks aren't a nested list under it any more, so there's
+    // no nested slot left to insert an inline row into.
+    startSubtaskComposer(projectId) {
+        const project = this.todos.find(t => t.id === projectId);
+        if (!project) return;
+        const input = document.getElementById('todoInput');
+        document.getElementById('composer').classList.add('expanded');
+        input.value = `::p[${project.text}] `;
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+        this.updateComposerHighlight('todoInput', 'composerInputHighlight');
     }
 
     // ===== Description Tooltip =====
@@ -1072,7 +1330,7 @@ class TodoApp {
         tooltip.className = 'desc-tooltip';
         document.body.appendChild(tooltip);
 
-        const lists = [document.getElementById('todoList'), document.getElementById('completedList')];
+        const lists = [document.getElementById('boardColumns'), document.getElementById('completedOverlayBody')];
         lists.forEach(list => {
             list.addEventListener('mousemove', (e) => {
                 const item = e.target.closest('.todo-item');
@@ -1216,56 +1474,38 @@ class TodoApp {
             return;
         }
 
-        // Priority badge click -> cycle
-        if (e.target.closest('.priority-badge')) {
+        // Priority dot click -> cycle
+        if (e.target.closest('.priority-dot')) {
             e.stopPropagation();
             this.cyclePriority(id);
             return;
         }
 
-        // Expand button
-        if (e.target.closest('.expand-btn')) {
+        // Overflow menu toggle
+        const menuBtn = e.target.closest('.todo-menu-btn');
+        if (menuBtn) {
             e.stopPropagation();
-            this.toggleDetailPanel(id);
+            this.toggleTodoMenu(menuBtn);
             return;
         }
 
-        // Delete button
-        if (e.target.closest('.delete-btn')) {
+        // Overflow menu item
+        const menuItem = e.target.closest('.todo-menu-item');
+        if (menuItem) {
             e.stopPropagation();
-            this.deleteTodo(id);
+            this.closeAllTodoMenus();
+            switch (menuItem.dataset.action) {
+                case 'move-up': this.moveTodo(id, 'up'); break;
+                case 'move-down': this.moveTodo(id, 'down'); break;
+                case 'add-subtask': this.startSubtaskComposer(id); break;
+                case 'delete': this.deleteTodo(id); break;
+            }
             return;
         }
 
-        // Move up/down (keyboard-reachable alternative to drag-and-drop)
-        if (e.target.closest('.move-up-btn')) {
-            e.stopPropagation();
-            this.moveTodo(id, 'up');
-            return;
-        }
-        if (e.target.closest('.move-down-btn')) {
-            e.stopPropagation();
-            this.moveTodo(id, 'down');
-            return;
-        }
-
-        // Collapse chevron (project)
-        if (e.target.closest('.collapse-chevron')) {
-            e.stopPropagation();
-            this.toggleProjectCollapse(id);
-            return;
-        }
-
-        // Quick add subtask
-        if (e.target.closest('.quick-add-btn')) {
-            e.stopPropagation();
-            this.showInlineSubtask(id);
-            return;
-        }
-
-        // Click on content area → toggle detail panel, delayed just long
-        // enough that a following dblclick (rename) can cancel it instead
-        if (e.target.closest('.todo-content')) {
+        // Click on the row → toggle detail panel, delayed just long enough
+        // that a following dblclick (rename) can cancel it instead
+        if (e.target.closest('.todo-row-main')) {
             clearTimeout(this._contentClickTimer);
             this._contentClickTimer = setTimeout(() => {
                 this.toggleDetailPanel(id);
@@ -1275,20 +1515,25 @@ class TodoApp {
     }
 
     // Enter/Space activation for elements that aren't native buttons
-    // (the priority badge is a <span role="button"> so it needs this manually).
+    // (the priority dot is a <span role="button"> so it needs this manually).
     handleTaskKeydown(e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
-        const badge = e.target.closest('.priority-badge');
-        if (!badge) return;
+        const dot = e.target.closest('.priority-dot');
+        if (!dot) return;
 
         e.preventDefault();
-        const item = badge.closest('.todo-item');
+        const item = dot.closest('.todo-item');
         if (!item) return;
         this.cyclePriority(parseInt(item.dataset.id));
     }
 
     // ===== Close Everything =====
     closeAllPanels() {
+        if (document.querySelector('.todo-menu:not([hidden])')) {
+            this.closeAllTodoMenus();
+            return;
+        }
+
         const overlay = document.getElementById('shortcutsOverlay');
         if (overlay.classList.contains('visible')) {
             this.hideShortcuts();
@@ -1325,12 +1570,6 @@ class TodoApp {
             this.render();
             return;
         }
-
-        if (this.inlineSubtaskProjectId !== null) {
-            this.inlineSubtaskProjectId = null;
-            this.render();
-            return;
-        }
     }
 
     // ===== Shortcuts Overlay =====
@@ -1343,101 +1582,15 @@ class TodoApp {
         document.getElementById('shortcutsOverlay').classList.remove('visible');
     }
 
-    // ===== Apply UI State =====
-    applyStatsState() {
-        const panel = document.getElementById('statsPanel');
-        const btn = document.getElementById('statsToggleBtn');
-        if (this.uiState.statsOpen) {
-            panel.classList.add('open');
-            btn.classList.add('active');
-        } else {
-            panel.classList.remove('open');
-            btn.classList.remove('active');
-        }
-    }
-
-    applyCompletedState() {
-        const wrapper = document.getElementById('completedWrapper');
-        const chevron = document.getElementById('completedChevron');
-        if (this.uiState.completedOpen) {
-            wrapper.style.display = 'block';
-            chevron.classList.remove('collapsed');
-        } else {
-            wrapper.style.display = 'none';
-            chevron.classList.add('collapsed');
-        }
-    }
-
-    // ===== Filter =====
-    setFilter(filter) {
-        this.uiState.activeFilter = filter;
+    // ===== View Mode (Date / Project toggle) =====
+    // The board always shows every active column at once — this only
+    // decides what the columns MEAN, not which one is visible. Date mode's
+    // columns are the deadline buckets; Project mode's are each project
+    // plus "No Project". Same board mechanic, different grouping axis.
+    setViewMode(mode) {
+        this.uiState.viewMode = mode;
         this.saveUIState();
         this.render();
-    }
-
-    renderFilterButtons() {
-        const filterSection = document.getElementById('filterSection');
-        const projects = this.todos.filter(t => t.isProject);
-        const hasUngrouped = this.todos.some(t => !t.isProject && !t.parentId);
-
-        // Count active (non-completed) tasks per filter
-        const allCount = this.todos.filter(t => !t.completed).length;
-        const ungroupedCount = this.todos.filter(t => !t.isProject && !t.parentId && !t.completed).length;
-
-        let html = `<button class="filter-btn ${this.uiState.activeFilter === 'all' ? 'active' : ''}" data-filter="all">All <span class="filter-count">(${allCount})</span></button>`;
-
-        if (hasUngrouped) {
-            html += `<button class="filter-btn ${this.uiState.activeFilter === 'ungrouped' ? 'active' : ''}" data-filter="ungrouped">Ungrouped <span class="filter-count">(${ungroupedCount})</span></button>`;
-        }
-
-        // Cap visible project chips so this row can't grow unbounded — beyond
-        // the cap it becomes an unscannable wall of options (>4 choices).
-        // The active filter is always kept visible even past the cap.
-        const FILTER_CAP = 6;
-        let visibleProjects = projects;
-        let hiddenCount = 0;
-        if (!this._filtersExpanded && projects.length > FILTER_CAP) {
-            visibleProjects = projects.slice(0, FILTER_CAP);
-            const activeId = this.uiState.activeFilter;
-            if (typeof activeId === 'number' && !visibleProjects.some(p => p.id === activeId)) {
-                const activeProject = projects.find(p => p.id === activeId);
-                if (activeProject) {
-                    visibleProjects = visibleProjects.slice(0, FILTER_CAP - 1).concat(activeProject);
-                }
-            }
-            hiddenCount = projects.length - visibleProjects.length;
-        }
-
-        visibleProjects.forEach(p => {
-            const isActive = this.uiState.activeFilter === p.id;
-            const projectTaskCount = this.getSubtasks(p.id).filter(t => !t.completed).length;
-            html += `<button class="filter-btn ${isActive ? 'active' : ''}" data-filter="${p.id}">
-                <i class="fa-solid fa-folder"></i> ${this.escapeHtml(p.text)} <span class="filter-count">(${projectTaskCount})</span>
-            </button>`;
-        });
-
-        if (hiddenCount > 0) {
-            html += `<button class="filter-btn filter-btn-more" id="filterMoreBtn">+${hiddenCount} more</button>`;
-        } else if (this._filtersExpanded && projects.length > FILTER_CAP) {
-            html += `<button class="filter-btn filter-btn-more" id="filterMoreBtn">Show less</button>`;
-        }
-
-        filterSection.innerHTML = html;
-
-        filterSection.querySelectorAll('.filter-btn:not(.filter-btn-more)').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const f = btn.dataset.filter;
-                this.setFilter(f === 'all' || f === 'ungrouped' ? f : parseInt(f));
-            });
-        });
-
-        const moreBtn = document.getElementById('filterMoreBtn');
-        if (moreBtn) {
-            moreBtn.addEventListener('click', () => {
-                this._filtersExpanded = !this._filtersExpanded;
-                this.renderFilterButtons();
-            });
-        }
     }
 
     // ===== Search Helpers =====
@@ -1506,108 +1659,114 @@ class TodoApp {
         }
     }
 
+    // Compact "when" text (replaces the old circular date-rail node) —
+    // weekday + day, colored by urgency, no fixed-size badge to make room for.
+    renderDateText(todo) {
+        if (!todo.deadline) {
+            return `<span class="todo-date-text todo-date-none">&ndash;</span>`;
+        }
+        const status = this.getDeadlineStatus(todo.deadline);
+        const [y, m, d] = todo.deadline.split('-').map(Number);
+        const dd = new Date(y, m - 1, d);
+        const weekday = dd.toLocaleDateString('en-US', { weekday: 'short' });
+        return `<span class="todo-date-text todo-date-${status}" title="${this.formatDeadline(todo.deadline)}">${weekday} ${dd.getDate()}</span>`;
+    }
+
+    // Character-limited description preview — the full text is still
+    // available via the existing cursor-follow tooltip (setupDescriptionTooltip),
+    // driven by data-description on the <li>, not by this truncated text.
+    truncateDescription(text, limit = 60) {
+        if (text.length <= limit) return text;
+        return text.slice(0, limit).trimEnd() + '…';
+    }
+
     // ===== Unified Render =====
+    // Every task is a flat card — no nesting. A task that belongs to a
+    // project shows a small colored tab on its own corner instead (see
+    // getProjectColor); suppressTab skips it inside that project's own
+    // column in Project view, where the grouping is already the column.
     renderTask(todo, options = {}) {
         const priority = todo.priority || 'medium';
         const isExpanded = this.expandedTaskId === todo.id;
         const isProject = todo.isProject;
-        const isSubtask = options.isSubtask || false;
         const isNewlyAdded = this.lastAddedId === todo.id;
+        const hasTab = !isProject && !!todo.parentId && !options.suppressTab;
 
-        let classes = 'todo-item';
+        let classes = 'todo-item todo-priority-' + priority;
         if (todo.completed) classes += ' completed';
         if (isProject) classes += ' project-item';
-        if (isSubtask) classes += ' subtask-item';
         if (isNewlyAdded) classes += ' anim-add';
         if (isExpanded) classes += ' expanded-row';
+        if (hasTab) classes += ' has-tab';
 
-        // Content zone
-        let contentHtml = '';
-        contentHtml += `<span class="todo-text">${this.escapeHtml(todo.text)}</span>`;
-
-        // Meta row
-        const metaParts = [];
-        if (todo.deadline) {
-            const status = this.getDeadlineStatus(todo.deadline);
-            metaParts.push(`<span class="deadline-badge deadline-${status}">${this.formatDeadline(todo.deadline)}</span>`);
-        }
-        if (todo.recurrence) {
-            metaParts.push(`<span class="recurring-badge"><i class="fa-solid fa-repeat"></i> <span>${this.getRecurrenceLabel(todo.recurrence)}</span></span>`);
-        }
-        if (todo.description) {
-            metaParts.push(`<span class="todo-description-preview" data-tooltip="${this.escapeAttr(todo.description)}">${this.escapeHtml(todo.description)}</span>`);
-        }
-        if (isProject) {
-            const progress = this.getProjectProgress(todo.id);
-            if (progress.total > 0) {
-                const pct = Math.round((progress.completed / progress.total) * 100);
-                metaParts.push(`
-                    <div class="project-progress-bar"><div class="project-progress-fill" style="width:${pct}%"></div></div>
-                    <span class="project-progress-label">${progress.completed}/${progress.total}</span>
-                `);
+        let tabHtml = '';
+        if (hasTab) {
+            const project = this.todos.find(t => t.id === todo.parentId);
+            if (project) {
+                tabHtml = `<div class="project-tab" style="background:${this.getProjectColor(project.id)};">${this.escapeHtml(project.text)}</div>`;
             }
         }
 
-        let metaHtml = '';
-        if (metaParts.length > 0) {
-            metaHtml = `<div class="todo-meta">${metaParts.join('')}</div>`;
+        // Leading icon: priority dot for a normal task, folder for a project's own row
+        const priorityAnimClass = this._animPriorityId === todo.id ? ' anim-pulse' : '';
+        const leadIcon = isProject
+            ? `<i class="fa-solid fa-folder project-icon"></i>`
+            : `<span class="priority-dot priority-${priority}${priorityAnimClass}" tabindex="0" role="button" aria-label="Priority: ${priority}. Click to cycle." title="Click to cycle priority"></span>`;
+
+        // Trailing text: a project's own row shows its progress instead of a date
+        let trailingHtml;
+        if (isProject) {
+            const progress = this.getProjectProgress(todo.id);
+            trailingHtml = progress.total > 0
+                ? `<span class="todo-date-text">${progress.completed}/${progress.total}</span>`
+                : this.renderDateText(todo);
+        } else {
+            trailingHtml = this.renderDateText(todo);
         }
+
+        const recurringHtml = todo.recurrence
+            ? `<span class="recurring-badge"><i class="fa-solid fa-repeat"></i> <span>${this.getRecurrenceLabel(todo.recurrence)}</span></span>`
+            : '';
 
         // Checkbox class for animation
         const checkboxClass = (this._animCheckId === todo.id && todo.completed) ? 'anim-check-bounce' : '';
 
-        // Priority badge animation
-        const priorityAnimClass = this._animPriorityId === todo.id ? ' anim-pulse' : '';
-
-        // Actions zone
-        const moveButtons = todo.completed ? '' : `
-            <button class="move-btn move-up-btn" title="Move up" aria-label="Move task up">
-                <i class="fa-solid fa-chevron-up"></i>
-            </button>
-            <button class="move-btn move-down-btn" title="Move down" aria-label="Move task down">
-                <i class="fa-solid fa-chevron-down"></i>
-            </button>
-        `;
-        let actionsHtml = `
-            ${moveButtons}
-            <span class="priority-badge priority-${priority}${priorityAnimClass}" tabindex="0" role="button" aria-label="Priority: ${priority}. Press Enter to cycle." title="Click to cycle priority">${priority}</span>
-            <button class="expand-btn ${isExpanded ? 'open' : ''}" title="Details" aria-label="Task details">
-                <i class="fa-solid fa-ellipsis"></i>
-            </button>
-            <button class="delete-btn" title="Delete">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        `;
-
-        // Project-specific: collapse chevron and quick-add
-        let projectPrefix = '';
+        // Overflow menu — one button replaces the old row of separate buttons
+        const menuItems = [];
         if (isProject) {
-            const collapsed = this.isProjectCollapsed(todo.id);
-            projectPrefix = `
-                <i class="fa-solid fa-chevron-down collapse-chevron ${collapsed ? 'collapsed' : ''}"></i>
-                <i class="fa-solid fa-folder project-icon"></i>
-            `;
-            actionsHtml = `
-                <button class="quick-add-btn" title="Add subtask"><i class="fa-solid fa-plus"></i></button>
-                ${actionsHtml}
-            `;
+            menuItems.push(`<button class="todo-menu-item" data-action="add-subtask" role="menuitem">Add subtask</button>`);
         }
+        if (!todo.completed) {
+            menuItems.push(`<button class="todo-menu-item" data-action="move-up" role="menuitem">Move up</button>`);
+            menuItems.push(`<button class="todo-menu-item" data-action="move-down" role="menuitem">Move down</button>`);
+        }
+        menuItems.push(`<button class="todo-menu-item todo-menu-item-danger" data-action="delete" role="menuitem">Delete</button>`);
+        const menuHtml = `
+            <div class="todo-menu-wrap">
+                <button class="todo-menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="More actions">&#8943;</button>
+                <div class="todo-menu" role="menu" hidden>${menuItems.join('')}</div>
+            </div>
+        `;
 
-        // Drag handle
+        const descHtml = todo.description
+            ? `<div class="todo-desc-preview">${this.escapeHtml(this.truncateDescription(todo.description))}</div>`
+            : '';
+
         const dragHandle = todo.completed ? '' : `<i class="fa-solid fa-grip-vertical drag-handle"></i>`;
 
         let html = `
             <li class="${classes}" data-id="${todo.id}" draggable="${!todo.completed}"${todo.description ? ` data-description="${this.escapeAttr(todo.description)}"` : ''}>
-                ${dragHandle}
-                ${projectPrefix}
-                <input type="checkbox" class="${checkboxClass}" ${todo.completed ? 'checked' : ''}>
-                <div class="todo-content">
-                    ${contentHtml}
-                    ${metaHtml}
+                ${tabHtml}
+                <div class="todo-row-main">
+                    ${dragHandle}
+                    <input type="checkbox" class="${checkboxClass}" ${todo.completed ? 'checked' : ''}>
+                    ${leadIcon}
+                    <span class="todo-text">${this.escapeHtml(todo.text)}</span>
+                    ${recurringHtml}
+                    ${trailingHtml}
+                    ${menuHtml}
                 </div>
-                <div class="todo-actions">
-                    ${actionsHtml}
-                </div>
+                ${descHtml}
             </li>
         `;
 
@@ -1709,27 +1868,6 @@ class TodoApp {
         </div>`;
     }
 
-    // ===== Stats =====
-    updateStats() {
-        const total = this.todos.length;
-        const completed = this.todos.filter(t => t.completed).length;
-        const active = total - completed;
-        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        const overdue = this.todos.filter(t => !t.completed && t.deadline && this.getDeadlineStatus(t.deadline) === 'overdue').length;
-        const high = this.todos.filter(t => !t.completed && t.priority === 'high').length;
-
-        document.getElementById('statTotal').textContent = total;
-        document.getElementById('statActive').textContent = active;
-        document.getElementById('statCompleted').textContent = completed;
-        document.getElementById('statCompletionRate').textContent = `${rate}%`;
-        document.getElementById('statOverdue').textContent = overdue;
-        document.getElementById('statHigh').textContent = high;
-
-        // Progress strip
-        document.getElementById('progressStripFill').style.width = `${rate}%`;
-        document.getElementById('progressStripLabel').textContent = `${completed}/${total} tasks`;
-    }
-
     // ===== Populate Project Dropdown =====
     populateParentProjectDropdown() {
         const dropdown = document.getElementById('parentProjectSelect');
@@ -1762,196 +1900,157 @@ class TodoApp {
         };
     }
 
-    // ===== Agenda Render: Today dominates, everything else is a rail =====
-    // Rather than five equal-weight buckets side by side, this commits to a
-    // real hierarchy: Today is the page's one dominant zone (large scale,
-    // tinted surface), Overdue is an urgent banner above it, and
-    // Upcoming/Later/No Deadline recede into a narrow reference rail at a
-    // visibly smaller scale. nestSubtasks preserves project/subtask nesting
-    // for the normal view; search results render flat.
-    renderDateGrouped(tasks, nestSubtasks = true) {
-        const groups = {
-            overdue: { label: 'Overdue', tasks: [], icon: 'fa-triangle-exclamation' },
-            today: { label: 'Today', tasks: [], icon: 'fa-star' },
-            upcoming: { label: 'Upcoming', tasks: [], icon: 'fa-calendar-week' },
-            later: { label: 'Later', tasks: [], icon: 'fa-calendar' },
-            nodeadline: { label: 'No Deadline', tasks: [], icon: 'fa-inbox' }
-        };
+    // Every task renders as a flat, independent card — no nesting. A
+    // project's own card and its subtasks are just peers in the same list;
+    // what belongs together shows via the project tab on each card (see
+    // renderTask), not via a container.
+    renderTaskRows(list, suppressTab) {
+        return list.map(todo => this.renderTask(todo, { suppressTab })).join('');
+    }
 
+    // One column's markup: header (icon, label, count, optional project
+    // progress bar) plus its row list. `colorRole` picks the header's
+    // accent (overdue/today/upcoming/later/project/neutral) via CSS class,
+    // not an inline color, so it still adapts across all 8 themes.
+    renderColumn(opts) {
+        const { key, icon, label, count, tasks, suppressTab, colorRole, animSettle, progressPct } = opts;
+        const rowsHtml = tasks.length
+            ? this.renderTaskRows(tasks, suppressTab)
+            : `<li class="board-column-empty">Nothing here</li>`;
+        const progressHtml = progressPct !== undefined
+            ? `<div class="board-column-progress"><div class="board-column-progress-fill" style="transform:scaleX(${progressPct / 100})"></div></div>`
+            : '';
+        return `
+            <div class="board-column" data-column-key="${key}">
+                <div class="board-column-header board-column-header-${colorRole}">
+                    <i class="fa-solid ${icon}"></i>
+                    <span class="board-column-label">${this.escapeHtml(label)}</span>
+                    <span class="board-column-count${animSettle ? ' anim-settle' : ''}">${count}</span>
+                </div>
+                ${progressHtml}
+                <ul class="agenda-lane-list board-column-list">${rowsHtml}</ul>
+            </div>
+        `;
+    }
+
+    // ===== Board: a real kanban instead of one scrolling column =====
+    // Every active column renders at once — the Date/Project toggle only
+    // decides what the columns MEAN (deadline bucket vs. project), never
+    // which one is visible. Overdue and No Deadline only appear when they
+    // have something in them; Today/Upcoming/Later are the board's fixed
+    // anchors and always show, empty or not, so the structure stays stable.
+    renderBoard() {
+        const board = document.getElementById('boardColumns');
+        if (!board) return;
+
+        this.populateParentProjectDropdown();
         const sortFn = this.getSortFn();
-        tasks.forEach(t => {
-            const group = this.getDeadlineGroup(t.deadline);
-            groups[group].tasks.push(t);
-        });
-        Object.values(groups).forEach(g => g.tasks.sort(sortFn));
+        const isSearchActive = this.searchTerm.length > 0;
+        const activeTasks = this.todos.filter(t => !t.completed);
 
-        const renderTaskRows = (list) => {
-            let rows = '';
-            list.forEach(todo => {
-                if (nestSubtasks && todo.isProject) {
-                    rows += this.renderTask(todo);
-                    if (!this.isProjectCollapsed(todo.id)) {
-                        const subs = this.getSubtasks(todo.id).sort(sortFn);
-                        if (subs.length > 0 || this.inlineSubtaskProjectId === todo.id) {
-                            rows += '<div class="subtask-group">';
-                            subs.forEach(sub => {
-                                rows += this.renderTask(sub, { isSubtask: true });
-                            });
-                            if (this.inlineSubtaskProjectId === todo.id) {
-                                rows += `
-                                    <div class="inline-subtask-row">
-                                        <input type="text" class="inline-subtask-input" placeholder="Add subtask..." data-project-id="${todo.id}">
-                                        <span class="inline-subtask-hint">Enter to add, Esc to cancel</span>
-                                    </div>
-                                `;
-                            }
-                            rows += '</div>';
-                        }
-                    }
-                } else {
-                    rows += this.renderTask(todo);
-                }
+        const archiveCountEl = document.getElementById('archiveCount');
+        if (archiveCountEl) archiveCountEl.textContent = this.todos.filter(t => t.completed && !t.parentId).length;
+
+        if (isSearchActive) {
+            const results = activeTasks.filter(t => this.matchesSearch(t)).sort(sortFn);
+            board.innerHTML = this.renderColumn({
+                key: 'search', icon: 'fa-magnifying-glass', label: 'Search results',
+                count: results.length, tasks: results, colorRole: 'neutral'
             });
-            return rows;
-        };
-
-        const totalCount = tasks.length;
-        let html = '';
-
-        // Overdue: an urgent strip above everything, never buried in the rail.
-        if (groups.overdue.tasks.length > 0) {
-            html += `
-                <div class="agenda-overdue-banner">
-                    <div class="agenda-overdue-header">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span>${groups.overdue.tasks.length} overdue</span>
-                    </div>
-                    <ul class="agenda-lane-list">${renderTaskRows(groups.overdue.tasks)}</ul>
-                </div>
-            `;
+            this.finishBoardRender(board);
+            return;
         }
 
-        // Today: the one dominant zone — only when there's actually
-        // something due today. An empty hero would just be dead space above
-        // the rest of the list, so it's skipped entirely rather than shown
-        // as a placeholder.
-        if (groups.today.tasks.length > 0) {
-            html += `
-                <div class="agenda-main">
-                    <div class="agenda-main-header">
-                        <span class="agenda-main-stat">${groups.today.tasks.length}</span>
-                        <div class="agenda-main-heading">
-                            <span class="agenda-main-title">Today</span>
-                            <span class="agenda-main-sub">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-                        </div>
-                    </div>
-                    <ul class="agenda-lane-list agenda-main-list">${renderTaskRows(groups.today.tasks)}</ul>
-                </div>
-            `;
+        const mode = this.uiState.viewMode || 'date';
+        const columns = [];
+
+        if (mode === 'project') {
+            const projects = activeTasks.filter(t => t.isProject).sort(sortFn);
+            const standalone = activeTasks.filter(t => !t.isProject && !t.parentId).sort(sortFn);
+
+            projects.forEach(p => {
+                const progress = this.getProjectProgress(p.id);
+                const activeSubtasks = this.getSubtasks(p.id).filter(t => !t.completed).sort(sortFn);
+                columns.push({
+                    key: 'project-' + p.id, icon: 'fa-folder', label: p.text,
+                    count: activeSubtasks.length, tasks: [p, ...activeSubtasks], suppressTab: true, colorRole: 'project',
+                    progressPct: progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
+                });
+            });
+            if (standalone.length > 0 || projects.length === 0) {
+                columns.push({
+                    key: 'noproject', icon: 'fa-inbox', label: 'No Project',
+                    count: standalone.length, tasks: standalone, colorRole: 'neutral'
+                });
+            }
+        } else {
+            // Every active task — project, standalone, or subtask — is now a
+            // flat card bucketed by its own deadline; a subtask no longer
+            // has to sit nested under its parent to be visible here.
+            const groups = { overdue: [], today: [], upcoming: [], later: [], nodeadline: [] };
+            activeTasks.forEach(t => groups[this.getDeadlineGroup(t.deadline)].push(t));
+            Object.keys(groups).forEach(k => groups[k].sort(sortFn));
+
+            const todayCount = groups.today.length;
+            const didChange = this._lastTodayCount !== null && this._lastTodayCount !== todayCount;
+            this._lastTodayCount = todayCount;
+
+            if (groups.overdue.length > 0) {
+                columns.push({ key: 'overdue', icon: 'fa-triangle-exclamation', label: 'Overdue', count: groups.overdue.length, tasks: groups.overdue, colorRole: 'overdue' });
+            }
+            columns.push({ key: 'today', icon: 'fa-star', label: 'Today', count: todayCount, tasks: groups.today, colorRole: 'today', animSettle: didChange });
+            columns.push({ key: 'upcoming', icon: 'fa-calendar-week', label: 'Upcoming', count: groups.upcoming.length, tasks: groups.upcoming, colorRole: 'upcoming' });
+            columns.push({ key: 'later', icon: 'fa-calendar', label: 'Later', count: groups.later.length, tasks: groups.later, colorRole: 'later' });
+            if (groups.nodeadline.length > 0) {
+                columns.push({ key: 'nodeadline', icon: 'fa-inbox', label: 'No Deadline', count: groups.nodeadline.length, tasks: groups.nodeadline, colorRole: 'neutral' });
+            }
         }
 
-        // Everything else: plain, quiet sections stacked below Today — full
-        // width, full-size rows, exactly like Today's own task cards. Quieter
-        // means less visual weight (no glow, no tint, small header), never a
-        // narrower column or smaller type: a long task title has to stay
-        // fully readable regardless of which bucket it happens to be in.
-        const railKeys = ['upcoming', 'later', 'nodeadline'];
-        railKeys.forEach(key => {
-            const g = groups[key];
-            if (g.tasks.length === 0) return;
-            const collapsed = this.isDateGroupCollapsed(key);
-            html += `
-                <div class="rail-section ${collapsed ? 'collapsed' : ''}" data-group="${key}">
-                    <div class="rail-section-header" data-group="${key}">
-                        <i class="fa-solid ${g.icon} rail-section-icon"></i>
-                        <span class="rail-section-label">${g.label}</span>
-                        <span class="rail-section-count">${g.tasks.length}</span>
-                        <i class="fa-solid fa-chevron-down rail-section-chevron ${collapsed ? 'collapsed' : ''}"></i>
-                    </div>
-                    <ul class="agenda-lane-list rail-section-list">${renderTaskRows(g.tasks)}</ul>
-                </div>
-            `;
+        board.innerHTML = columns.length
+            ? columns.map(c => this.renderColumn(c)).join('')
+            : this.renderEmptyState();
+        this.finishBoardRender(board);
+    }
+
+    // Steps every render needs after the board's HTML lands: wire
+    // drag-and-drop, one column list at a time so dragging never
+    // accidentally crosses into a column's own semantics.
+    finishBoardRender(board) {
+        board.querySelectorAll('.board-column-list').forEach(list => {
+            this.setupDragListeners(list);
         });
+    }
 
-        if (totalCount === 0) return '';
-        return html;
+    // ===== Completed Overlay =====
+    openCompletedOverlay() {
+        this._completedOverlayOpen = true;
+        this.renderCompletedOverlay();
+        document.getElementById('completedOverlay').classList.add('open');
+    }
+
+    closeCompletedOverlay() {
+        this._completedOverlayOpen = false;
+        document.getElementById('completedOverlay').classList.remove('open');
+    }
+
+    renderCompletedOverlay() {
+        const body = document.getElementById('completedOverlayBody');
+        if (!body) return;
+        const sortFn = this.getSortFn();
+        const completedTodos = this.todos.filter(t => t.completed && !t.parentId).sort(sortFn);
+        body.innerHTML = completedTodos.length
+            ? `<ul class="agenda-lane-list">${completedTodos.map(t => this.renderTask(t)).join('')}</ul>`
+            : `<div class="empty-state"><div class="empty-state-icon"><i class="fa-solid fa-box"></i></div><div class="empty-state-msg">Nothing completed yet</div></div>`;
     }
 
     // ===== Main Render =====
     render() {
-        const todoList = document.getElementById('todoList');
-        const completedList = document.getElementById('completedList');
-        const completedCount = document.getElementById('completedCount');
-        const completedSection = document.getElementById('completedSection');
+        this.renderBoard();
 
-        this.populateParentProjectDropdown();
-
-        const sortFn = this.getSortFn();
-        const isSearchActive = this.searchTerm.length > 0;
-
-        const activeTasks = this.todos.filter(t => !t.completed);
-        let completedTodos = this.todos.filter(t => t.completed && !t.parentId);
-        if (isSearchActive) {
-            completedTodos = completedTodos.filter(t => this.matchesSearch(t));
-        }
-
-        this.renderFilterButtons();
-
-        // Every view (default, project-filtered, ungrouped, search) renders
-        // through the same agenda lanes now, instead of switching between a
-        // date-grouped view and a separate flat list depending on filter —
-        // one consistent structure regardless of how you're slicing tasks.
-        let topLevel;
-        let nestSubtasks;
-
-        if (isSearchActive) {
-            topLevel = activeTasks.filter(t => this.matchesSearch(t)).sort(sortFn);
-            nestSubtasks = false;
-        } else {
-            const projects = activeTasks.filter(t => t.isProject).sort(sortFn);
-            const standalone = activeTasks.filter(t => !t.isProject && !t.parentId).sort(sortFn);
-
-            let filteredProjects = projects;
-            let filteredStandalone = standalone;
-            if (this.uiState.activeFilter === 'ungrouped') {
-                filteredProjects = [];
-            } else if (this.uiState.activeFilter !== 'all') {
-                filteredProjects = projects.filter(p => p.id === this.uiState.activeFilter);
-                filteredStandalone = [];
-            }
-
-            topLevel = filteredProjects.concat(filteredStandalone);
-            nestSubtasks = true;
-        }
-
-        const activeHtml = this.renderDateGrouped(topLevel, nestSubtasks);
-        todoList.innerHTML = activeHtml || this.renderEmptyState();
-
-        // Render completed
-        completedCount.textContent = `(${completedTodos.length})`;
-        completedSection.style.display = completedTodos.length > 0 ? 'block' : 'none';
-        completedList.innerHTML = completedTodos.length === 0
-            ? ''
-            : completedTodos.map(t => this.renderTask(t)).join('');
-
-        // Update stats
-        this.updateStats();
-
-        // Apply persisted UI state
-        this.applyStatsState();
-        this.applyCompletedState();
+        if (this._completedOverlayOpen) this.renderCompletedOverlay();
 
         // Detail drawer (side panel, replaces the old inline expansion)
         this.renderDetailDrawer();
-
-        // Wire up inline subtask inputs
-        document.querySelectorAll('.inline-subtask-input').forEach(input => {
-            const projectId = parseInt(input.dataset.projectId);
-            this.setupInlineSubtaskInput(input, projectId);
-        });
-
-        // Setup drag-and-drop
-        this.setupDragListeners(todoList);
 
         // Clear animation flags after render
         this.lastAddedId = null;
@@ -1970,7 +2069,13 @@ class TodoApp {
 
         if (!todo) {
             drawer.classList.remove('open');
-            body.innerHTML = '';
+            title.textContent = '';
+            body.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fa-solid fa-list-check"></i></div>
+                    <div class="empty-state-msg">Select a task to see its details</div>
+                </div>
+            `;
             return;
         }
 
@@ -1980,6 +2085,84 @@ class TodoApp {
 
         const panel = body.querySelector('.detail-panel[data-detail-id]');
         if (panel) this.setupDetailPanel(panel, todo.id);
+    }
+
+    // ===== Task Edit Modal =====
+    // Double-clicking a card anywhere but its title opens this: a shorthand
+    // quick-edit bar (the same live-colored ::h/::p[Name]/::daily input and
+    // project autocomplete the composer uses) above the same structured
+    // fields the side drawer already renders — one line to type or one
+    // click, and every field still saves instantly either way.
+    openTaskEditModal(id) {
+        const todo = this.todos.find(t => t.id === id);
+        if (!todo) return;
+        this._taskEditId = id;
+
+        const modal = document.getElementById('taskEditModal');
+        const input = document.getElementById('taskEditInput');
+        input.value = todo.text;
+        this.closeProjectSuggestions('taskEditSuggestions');
+        this.renderTaskEditDetailBody(todo);
+
+        modal.classList.add('open');
+        input.focus();
+        // Cursor at the end, not select-all — the text sits right where
+        // you'd start typing more shorthand. The input's own text is
+        // transparent (the highlight layer underneath is what's visible),
+        // so this has to run after focusing, not before: rendering it here
+        // is what actually makes the title readable at all.
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+        this.updateComposerHighlight('taskEditInput', 'taskEditInputHighlight');
+    }
+
+    closeTaskEditModal() {
+        document.getElementById('taskEditModal').classList.remove('open');
+        this.closeProjectSuggestions('taskEditSuggestions');
+        this._taskEditId = null;
+    }
+
+    renderTaskEditDetailBody(todo) {
+        const body = document.getElementById('taskEditDetailBody');
+        body.innerHTML = this.renderDetailPanel(todo);
+        const panel = body.querySelector('.detail-panel[data-detail-id]');
+        if (panel) this.setupDetailPanel(panel, todo.id);
+    }
+
+    // Parses the quick-edit bar the same way the composer parses a new
+    // task — any shorthand tokens found override the matching field,
+    // whatever isn't mentioned keeps its current value (never cleared by
+    // omission), then the structured fields below re-render to match.
+    async applyTaskEditShorthand() {
+        const id = this._taskEditId;
+        if (id === null || id === undefined) return;
+        const todo = this.todos.find(t => t.id === id);
+        const input = document.getElementById('taskEditInput');
+        if (!todo || !input) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+        const parsed = this.parseShorthand(text);
+
+        todo.text = parsed.text || todo.text;
+        if (parsed.priority) todo.priority = parsed.priority;
+        if (parsed.deadline) todo.deadline = parsed.deadline;
+        if (parsed.recurrence) todo.recurrence = parsed.recurrence;
+        if (parsed.projectName) {
+            const newParentId = await this.findOrCreateProject(parsed.projectName);
+            if (newParentId !== todo.parentId) {
+                await this.reassignProject(todo, this.todos.find(t => t.id === newParentId));
+            }
+        }
+
+        await StorageManager.put('todos', todo);
+        this._syncTodo(todo);
+
+        input.value = todo.text;
+        this.closeProjectSuggestions('taskEditSuggestions');
+        this.updateComposerHighlight('taskEditInput', 'taskEditInputHighlight');
+        this.renderTaskEditDetailBody(todo);
+        this.render();
     }
 
     // ===== Firebase Sync Helpers =====
@@ -2197,6 +2380,17 @@ class TodoApp {
     }
 
     // ===== Utility =====
+    // Local calendar date as YYYY-MM-DD. toISOString() converts to UTC first, which
+    // silently shifts to the next/previous day for part of every day outside UTC —
+    // that mismatch was making ::today/::tomorrow deadlines land in "Upcoming"
+    // instead of "Today" since the grouping logic below is local-time based.
+    toLocalDateString(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;

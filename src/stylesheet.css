@@ -198,7 +198,7 @@
     --bg-tertiary: #2e2c28;
     --bg-hover: #24221f;
     --accent-primary: #ffd43b;
-    --accent-secondary: #765ad3;
+    --accent-secondary: #a594db;
     --text-primary: #ecebe6;
     --text-secondary: #a8a59c;
     --border-color: #3a3731;
@@ -212,7 +212,7 @@
     --syntax-function: #eed168;
     --syntax-number: #f0883e;
     --syntax-type: #4cc9e6;
-    --syntax-variable: #765ad3;
+    --syntax-variable: #a594db;
     --syntax-tag: #fb6ac6;
     --syntax-addition: #3ddc97;
     --syntax-deletion: #ff5c7a;
@@ -747,7 +747,6 @@ input[type="checkbox"]:checked {
 .newsletter-link .nav-pill-label {
     grid-template-columns: 1fr;
     opacity: 1;
-    margin-left: 8px;
     font-size: inherit;
 }
 
@@ -780,14 +779,12 @@ input[type="checkbox"]:checked {
     .newsletter-link .nav-pill-label {
         grid-template-columns: 0fr;
         opacity: 0;
-        margin-left: 0;
     }
 
     .newsletter-link:hover .nav-pill-label,
     .newsletter-link:focus-visible .nav-pill-label {
         grid-template-columns: 1fr;
         opacity: 1;
-        margin-left: 8px;
     }
 }
 
@@ -795,7 +792,6 @@ input[type="checkbox"]:checked {
     .newsletter-link.active .nav-pill-label {
         grid-template-columns: 1fr;
         opacity: 1;
-        margin-left: 8px;
     }
 }
 
@@ -845,7 +841,6 @@ input[type="checkbox"]:checked {
     .nav-pill-item.active:not(:hover):not(:focus-visible) .nav-pill-label {
         grid-template-columns: 0fr;
         opacity: 0;
-        margin-left: 0;
     }
 }
 
@@ -921,7 +916,6 @@ input[type="checkbox"]:checked {
     .nav-pill-item.active:not(:hover):not(:focus-visible) .nav-pill-label {
         grid-template-columns: 0fr;
         opacity: 0;
-        margin-left: 0;
     }
 }
 
@@ -961,15 +955,15 @@ input[type="checkbox"]:checked {
     grid-template-columns: 0fr;
     min-width: 0;
     opacity: 0;
-    margin-left: 0;
     font-size: 12px;
     font-weight: 600;
-    transition: grid-template-columns 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+    transition: grid-template-columns 0.25s ease, opacity 0.2s ease;
 }
 
 .nav-pill-label-text {
     display: block;
     min-width: 0;
+    padding-left: 8px;
     overflow: hidden;
 }
 
@@ -984,7 +978,6 @@ input[type="checkbox"]:checked {
 .nav-pill-item:focus-visible .nav-pill-label {
     grid-template-columns: 1fr;
     opacity: 1;
-    margin-left: 8px;
 }
 
 /* The current page's pill stays expanded — always-visible orientation,
@@ -998,7 +991,6 @@ input[type="checkbox"]:checked {
 .nav-pill-item.active .nav-pill-label {
     grid-template-columns: 1fr;
     opacity: 1;
-    margin-left: 8px;
 }
 
 .theme-selector label {

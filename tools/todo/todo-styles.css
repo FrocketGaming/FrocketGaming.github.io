@@ -11,9 +11,16 @@
     to { opacity: 0; transform: translateX(20px); }
 }
 
+/* A spring/overshoot pop, not a linear fade: the timing function (not extra
+   keyframe stops) is what creates the overshoot past 1 before settling — the
+   detail Things 3 is best known for on task completion. */
 @keyframes checkBounce {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
+    0% { transform: scale(0.6); }
+    100% { transform: scale(1); }
+}
+
+@keyframes statSettle {
+    0% { transform: scale(0.75); }
     100% { transform: scale(1); }
 }
 
@@ -51,10 +58,11 @@
 }
 
 .todo-item .anim-check-bounce {
-    animation: checkBounce 0.2s ease;
+    animation: checkBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.priority-badge.anim-pulse {
+
+.priority-dot.anim-pulse {
     animation: priorityPulse 0.15s ease;
 }
 
@@ -63,7 +71,8 @@
     .todo-item.anim-delete,
     .todo-item.completing,
     .todo-item .anim-check-bounce,
-    .priority-badge.anim-pulse {
+    .priority-dot.anim-pulse,
+    .agenda-main-stat.anim-settle {
         animation: none;
     }
 }
@@ -71,7 +80,7 @@
 /* ===== Header Section ===== */
 .header-section {
     width: 100%;
-    max-width: 2200px;
+    max-width: 1600px;
     margin: 0 auto 20px auto;
 }
 
@@ -98,10 +107,182 @@
     white-space: nowrap;
 }
 
-.todo-container {
+.todo-layout {
     width: 100%;
-    max-width: 2200px;
+    max-width: 1600px;
     margin: 0 auto;
+}
+
+/* ===== Board Header: Date/Project toggle + search + archive ===== */
+.board-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.view-toggle {
+    display: flex;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 3px;
+}
+
+.view-toggle-btn {
+    padding: 7px 18px;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.view-toggle-btn.active {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+.board-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.board-header-right .search-bar {
+    margin-bottom: 0;
+    width: 220px;
+}
+
+.archive-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.archive-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+.archive-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+
+/* ===== Flow Board: real kanban columns, not one scrolling list ===== */
+/* Columns divide the available width evenly (1fr each) and only wrap to a
+   second row once they'd drop below 240px — no horizontal scrollbar for the
+   common case (4-5 columns fits one row on any normal-width screen), and a
+   wrapped row still stretches to equal height within itself. */
+.board-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px 16px;
+    align-items: stretch;
+}
+
+.board-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-radius: 8px;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+/* Dragging a card over a different column: reschedule (Date mode) or
+   reassign project (Project mode) once dropped. */
+.board-column.board-column-drop-target {
+    background: color-mix(in srgb, var(--accent-secondary) 6%, transparent);
+    box-shadow: inset 0 0 0 2px var(--accent-secondary);
+}
+
+.board-column-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px 10px 4px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.board-column-header i {
+    font-size: 12px;
+}
+
+.board-column-count {
+    margin-left: auto;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: normal;
+    background: var(--bg-tertiary);
+    border-radius: 999px;
+    padding: 2px 9px;
+}
+
+.board-column-count.anim-settle {
+    animation: statSettle 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.board-column-header-overdue { border-bottom-color: var(--error-color); color: var(--error-color); }
+.board-column-header-overdue .board-column-count { color: var(--error-color); background: color-mix(in srgb, var(--error-color) 18%, var(--bg-tertiary)); }
+.board-column-header-today { border-bottom-color: var(--accent-primary); color: var(--accent-primary); }
+.board-column-header-today .board-column-count { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 18%, var(--bg-tertiary)); }
+.board-column-header-upcoming { border-bottom-color: var(--accent-secondary); color: var(--accent-secondary); }
+.board-column-header-upcoming .board-column-count { color: var(--accent-secondary); background: color-mix(in srgb, var(--accent-secondary) 18%, var(--bg-tertiary)); }
+.board-column-header-later { border-bottom-color: var(--text-secondary); color: var(--text-secondary); }
+.board-column-header-project { border-bottom-color: var(--accent-secondary); color: var(--accent-secondary); }
+.board-column-header-project .board-column-count { color: var(--accent-secondary); background: color-mix(in srgb, var(--accent-secondary) 18%, var(--bg-tertiary)); }
+.board-column-header-neutral { border-bottom-color: var(--border-color); color: var(--text-secondary); }
+
+.board-column-progress {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: -6px 4px 12px 4px;
+}
+
+.board-column-progress-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--accent-secondary);
+    transform-origin: left;
+    border-radius: 2px;
+}
+
+.board-column-empty {
+    list-style: none;
+    text-align: center;
+    padding: 20px 10px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    font-size: 12px;
+}
+
+.board-column-list {
+    flex: 1;
+    min-height: 60px;
 }
 
 /* ===== Smart Composer ===== */
@@ -121,22 +302,127 @@
 
 .composer-main {
     display: flex;
+    align-items: stretch;
     gap: 0;
 }
 
-#todoInput {
+/* Terminal-native composer: the input's own text is transparent (only the
+   caret shows); a mirrored div underneath renders the same string with the
+   shorthand tokens (::h, ::p[Name], ::daily...) colored live using the
+   theme's own --syntax-* roles, so the input reads like a real command line
+   instead of a text box with a caption underneath. */
+.composer-prompt {
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-shadow: 0 0 6px color-mix(in srgb, var(--accent-primary) 45%, transparent);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.composer-input-wrap {
+    position: relative;
     flex: 1;
-    padding: 18px 20px;
+    min-width: 0;
+}
+
+.composer-input-highlight {
+    position: absolute;
+    inset: 0;
+    padding: 18px 20px 18px 8px;
+    font-size: 16px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1.4;
+    white-space: pre;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--text-primary);
+}
+
+.composer-input-highlight .hl-priority {
+    color: var(--syntax-keyword);
+}
+
+.composer-input-highlight .hl-deadline {
+    color: var(--syntax-number);
+}
+
+.composer-input-highlight .hl-project {
+    color: var(--syntax-string);
+}
+
+.composer-input-highlight .hl-recurrence {
+    color: var(--syntax-function);
+}
+
+#todoInput,
+#taskEditInput {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 18px 20px 18px 8px;
     background: transparent;
     border: none;
-    color: var(--text-primary);
+    color: transparent;
+    caret-color: var(--text-primary);
     font-size: 16px;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1.4;
     outline: none;
 }
 
-#todoInput::placeholder {
+#todoInput::placeholder,
+#taskEditInput::placeholder {
     color: var(--text-secondary);
+    font-family: 'Raleway', sans-serif;
+}
+
+/* Project autocomplete: typing ::p[ opens this instead of requiring you to
+   remember and retype an exact project name. */
+.composer-suggestions {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 8px;
+    right: 8px;
+    margin-top: 4px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--accent-secondary);
+    border-radius: 5px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 20;
+}
+
+.composer-suggestions.open {
+    display: block;
+}
+
+.composer-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.composer-suggestion-item i {
+    color: var(--accent-secondary);
+    font-size: 12px;
+    width: 14px;
+    text-align: center;
+}
+
+.composer-suggestion-item.active {
+    background: color-mix(in srgb, var(--accent-secondary) 20%, transparent);
 }
 
 .composer-add-btn {
@@ -196,18 +482,72 @@
     color: #fff;
 }
 
-/* Composer Tray (slides open) */
+/* Composer Tray (slides open) — grid-template-rows 0fr->1fr reveal, the
+   same technique used site-wide for the nav-pill-label hover expand
+   (src/stylesheet.css), instead of animating max-height. */
 .composer-tray {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
+    min-height: 0;
+    transition: grid-template-rows 0.3s ease;
+}
+
+.composer-tray-inner {
     overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
+    min-height: 0;
     padding: 0 16px;
 }
 
 .composer.expanded .composer-tray {
-    max-height: 500px;
+    grid-template-rows: 1fr;
+}
+
+.composer.expanded .composer-tray-inner {
     padding: 12px 16px 16px 16px;
     border-top: 1px solid var(--border-color);
+}
+
+/* Composer "More options" — same 0fr->1fr reveal technique, nested one
+   level in so Recurrence/Project/Description stay out of the default view. */
+.composer-more {
+    display: grid;
+    grid-template-rows: 0fr;
+    min-height: 0;
+    transition: grid-template-rows 0.25s ease;
+}
+
+.composer-more-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.composer-more.open {
+    grid-template-rows: 1fr;
+    margin-top: 12px;
+}
+
+.composer-more-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-end;
+    padding: 6px 10px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: 'Raleway', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.composer-more-toggle:hover,
+.composer-more-toggle.open {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
 }
 
 .composer-row {
@@ -373,101 +713,6 @@
     color: var(--accent-secondary);
 }
 
-/* ===== Progress Strip ===== */
-.progress-strip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding: 0 2px;
-}
-
-.progress-strip-bar {
-    flex: 1;
-    height: 6px;
-    background: var(--bg-tertiary);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.progress-strip-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-    border-radius: 3px;
-    transition: width 0.4s ease;
-    width: 0%;
-}
-
-.progress-strip-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    min-width: 70px;
-    text-align: right;
-}
-
-.progress-strip-toggle {
-    padding: 4px 8px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s;
-}
-
-.progress-strip-toggle:hover,
-.progress-strip-toggle.active {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-}
-
-/* ===== Stats Panel ===== */
-.stats-panel {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, margin 0.3s ease;
-    margin-bottom: 0;
-}
-
-.stats-panel.open {
-    max-height: 200px;
-    margin-bottom: 12px;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
-}
-
-.stat-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 10px 8px;
-    text-align: center;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.stat-value {
-    color: var(--accent-secondary);
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.stat-overdue {
-    color: var(--error-color);
-}
-
 /* ===== Search Bar ===== */
 .search-bar {
     display: flex;
@@ -525,6 +770,29 @@
     color: var(--text-primary);
 }
 
+.shortcuts-trigger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.shortcuts-trigger-btn:hover,
+.shortcuts-trigger-btn:focus-visible {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
 /* ===== Filter Section ===== */
 .filter-section {
     display: flex;
@@ -569,190 +837,66 @@
 }
 
 /* ===== Task List ===== */
-.agenda-wrapper {
-    margin-bottom: 16px;
-    min-height: 100px;
-}
-
-#completedList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.section-title {
-    color: var(--accent-secondary);
-    font-size: 14px;
-    margin: 0;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* ===== Agenda: Today dominates, everything else recedes =====
-   One real hierarchy decision instead of five equal boxes: Today gets a
-   large, tinted, dominant zone; Overdue is an urgent strip above it;
-   Upcoming/Later/No Deadline stack below as plain, quiet sections. Hierarchy
-   comes from emphasis (glow, tint, a big number) and position, never from
-   shrinking task rows into a narrow column — every row stays full width and
-   full size so a long title is always fully readable. */
 .agenda-lane-list {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.agenda-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-/* --- Overdue banner --- */
-.agenda-overdue-banner {
-    background: color-mix(in srgb, var(--error-color) 10%, var(--bg-secondary));
-    border: 1px solid var(--error-color);
-    border-radius: 5px;
-    padding: 14px 18px;
-}
-
-.agenda-overdue-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--error-color);
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 10px;
-}
-
-/* --- Main zone: Today --- */
-.agenda-main {
-    background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-secondary));
-    border: 1px solid var(--accent-primary);
-    border-radius: 8px;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary) 18%, transparent);
-    padding: 24px 26px;
-    min-height: 200px;
-}
-
-.agenda-main-header {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
-}
-
-.agenda-main-stat {
-    font-family: 'Raleway', sans-serif;
-    font-size: 48px;
-    font-weight: 700;
-    color: var(--accent-secondary);
-    text-shadow: 0 0 12px var(--accent-primary);
-    line-height: 1;
-}
-
-.agenda-main-heading {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.agenda-main-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.agenda-main-sub {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-/* --- Upcoming / Later / No Deadline: plain, quiet, full-width sections ---
-   Quieter means less visual weight (no glow/tint, small header, muted
-   label), never a smaller or truncated task row. Task cards inside use the
-   exact same size as Today's — readability doesn't get traded for hierarchy. */
-.rail-section {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-}
-
-.rail-section-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.rail-section-icon {
-    font-size: 11px;
-    color: var(--text-secondary);
-    flex-shrink: 0;
-}
-
-.rail-section-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--text-secondary);
-}
-
-.rail-section-count {
-    font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.7;
-    background: var(--bg-tertiary);
-    border-radius: 999px;
-    padding: 1px 7px;
-}
-
-.rail-section-chevron {
-    font-size: 11px;
-    color: var(--text-secondary);
-    transition: transform 0.2s;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.rail-section-chevron.collapsed {
-    transform: rotate(-90deg);
-}
-
-.rail-section-list {
-    padding: 0 12px 12px 12px;
-}
-
-.rail-section.collapsed .rail-section-list {
-    display: none;
-}
-
-/* ===== Task Card ===== */
+/* ===== Task Card =====
+   One row of chrome (checkbox, priority dot, title, date, overflow menu) —
+   the whole point of dropping the old date-rail circle and multi-button
+   action row is that this now fits on one line even in a narrow kanban
+   column, so no grid/two-row layout trick is needed any more. Project
+   membership is a small colored tab on the card's own corner (below)
+   instead of nesting or an indented sub-list. */
 .todo-item {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 16px;
+    flex-direction: column;
+    min-width: 0;
+    padding: 9px 12px;
     background: var(--bg-secondary);
     border-radius: 5px;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
     border: 1px solid transparent;
-    transition: border-color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s;
+    border-left: 3px solid transparent;
+    box-shadow: 0 0 4px var(--shadow-color);
+    transition: border-color 0.2s, background 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s;
     position: relative;
+}
+
+.todo-item.has-tab {
+    margin-top: 13px;
+}
+
+.todo-item.todo-priority-high {
+    border-left-color: var(--error-color);
+}
+
+.todo-item.todo-priority-medium {
+    border-left-color: var(--warning-color);
+}
+
+.todo-item.todo-priority-low {
+    border-left-color: var(--info-color);
 }
 
 .todo-item:hover {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 8px var(--shadow-color);
+    box-shadow: 0 0 10px var(--shadow-color);
+    transform: translateY(-1px);
+}
+
+.todo-item.todo-priority-high:hover {
+    border-left-color: var(--error-color);
+}
+
+.todo-item.todo-priority-medium:hover {
+    border-left-color: var(--warning-color);
+}
+
+.todo-item.todo-priority-low:hover {
+    border-left-color: var(--info-color);
 }
 
 .todo-item.completed {
@@ -764,6 +908,61 @@
     background: var(--bg-hover);
 }
 
+/* Project tab: a small colored ribbon peeking off the card's top-left
+   corner, colored per project (see JS getProjectColor). Replaces both the
+   old indent/connector-line nesting and the plain-flat "just a tag chip"
+   option — the tab reads as project membership at a glance without any
+   parent/child grouping in the DOM or layout. */
+.project-tab {
+    position: absolute;
+    top: -10px;
+    left: 13px;
+    padding: 2px 8px;
+    border-radius: 4px 4px 0 0;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #141413;
+    max-width: calc(100% - 26px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.todo-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* ===== Date text (replaces the old circular date-rail node) ===== */
+.todo-date-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.todo-date-none {
+    opacity: 0.5;
+}
+
+.todo-date-overdue {
+    color: var(--error-color);
+}
+
+.todo-date-today {
+    color: var(--accent-primary);
+}
+
+.todo-date-soon {
+    color: var(--warning-color);
+}
+
 /* Drag Handle */
 .drag-handle {
     color: var(--text-secondary);
@@ -771,8 +970,6 @@
     cursor: grab;
     opacity: 0;
     transition: opacity 0.2s;
-    padding: 2px 0;
-    margin-top: 2px;
     flex-shrink: 0;
 }
 
@@ -803,11 +1000,10 @@
     background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary)) !important;
 }
 
-/* Three-zone layout: Status | Content | Actions */
 .todo-item input[type="checkbox"] {
-    width: 21px;
-    height: 21px;
-    min-width: 21px;
+    width: 17px;
+    height: 17px;
+    min-width: 17px;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
@@ -815,7 +1011,6 @@
     border-radius: 999px;
     outline: none;
     transition: background 0.2s, box-shadow 0.2s;
-    margin-top: 2px;
     flex-shrink: 0;
 }
 
@@ -832,28 +1027,23 @@
 .todo-item input[type="checkbox"]:checked::after {
     content: '';
     position: absolute;
-    left: 6px;
-    top: 3px;
-    width: 5px;
-    height: 9px;
+    left: 4px;
+    top: 2px;
+    width: 4px;
+    height: 7px;
     border: solid var(--bg-primary);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }
 
-/* Content zone */
-.todo-content {
+.todo-text {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.todo-text {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--text-primary);
-    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     line-height: 1.4;
     cursor: default;
 }
@@ -863,49 +1053,25 @@
     color: var(--text-secondary);
 }
 
-.todo-meta {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
+/* The item itself already dims to 0.55 opacity; a saturated priority dot
+   still reads as "urgent" at reduced opacity, so desaturate it too instead
+   of stacking a second opacity (which would just make it darker). */
+.todo-item.completed .priority-dot {
+    filter: grayscale(70%);
 }
 
-.todo-description-preview {
+/* Description preview: character-truncated in JS (see truncateDescription),
+   full text on hover via the cursor-follow tooltip driven by data-description
+   on the <li> (setupDescriptionTooltip) — not a second, CSS-only tooltip. */
+.todo-desc-preview {
     font-size: 11px;
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: clamp(160px, 40vw, 600px);
-    position: relative;
+    margin-top: 4px;
+    padding-left: 23px;
     cursor: default;
-}
-
-.todo-description-preview[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 7px);
-    left: 0;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 8px 10px;
-    font-size: 12px;
-    color: var(--text-primary);
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-width: 320px;
-    min-width: 140px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-    z-index: 200;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s 0.3s;
-    line-height: 1.5;
-}
-
-.todo-description-preview[data-tooltip]:hover::after {
-    opacity: 1;
 }
 
 /* Recurring badge */
@@ -922,154 +1088,120 @@
     opacity: 0.8;
 }
 
-/* Deadline badges */
-.deadline-badge {
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-}
 
-.deadline-overdue {
-    background: var(--error-color);
-    color: var(--bg-primary);
-}
-
-.deadline-today {
-    background: var(--warning-color);
-    color: var(--bg-primary);
-}
-
-.deadline-soon {
-    background: #f4d35e;
-    color: #1a1a1a;
-}
-
-.deadline-future {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-}
-
-/* Actions zone */
-.todo-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+/* Priority dot (clickable, cycles) — replaces the old text pill; the color
+   alone carries the meaning, same three tokens as before. */
+.priority-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
     flex-shrink: 0;
-    margin-top: 1px;
-}
-
-/* Priority Badge (clickable, cycles) */
-.priority-badge {
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
-    user-select: none;
 }
 
-.priority-badge:hover {
-    transform: scale(1.1);
+.priority-dot:hover {
+    transform: scale(1.3);
 }
 
-.priority-badge:focus-visible {
+.priority-dot:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-primary);
 }
 
 .priority-high {
     background: var(--error-color);
-    color: var(--bg-primary);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--error-color) 60%, transparent);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--error-color) 60%, transparent);
 }
 
 .priority-medium {
     background: var(--warning-color);
-    color: var(--bg-primary);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--warning-color) 60%, transparent);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--warning-color) 60%, transparent);
 }
 
 .priority-low {
     background: var(--info-color);
-    color: var(--text-primary);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--info-color) 60%, transparent);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--info-color) 60%, transparent);
 }
 
-/* Expand chevron */
-.expand-btn {
-    padding: 4px 6px;
+/* Overflow menu — one button replaces the old row of separate
+   move/expand/delete buttons. */
+.todo-menu-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.todo-menu-btn {
+    padding: 3px 5px;
     background: none;
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
-    transition: color 0.2s, transform 0.2s;
-    border-radius: 3px;
-}
-
-.expand-btn:hover {
-    color: var(--accent-primary);
-}
-
-.expand-btn.open {
-    color: var(--accent-primary);
-    background: var(--bg-tertiary);
-    border-radius: 3px;
-}
-
-/* Delete button (hidden until hover) */
-.delete-btn {
-    padding: 4px 6px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1;
     opacity: 0;
     transition: opacity 0.2s, color 0.2s;
     border-radius: 3px;
 }
 
-.todo-item:hover .delete-btn {
+.todo-item:hover .todo-menu-btn,
+.todo-item:focus-within .todo-menu-btn,
+.todo-menu-btn[aria-expanded="true"] {
     opacity: 1;
 }
 
-.delete-btn:hover {
-    color: var(--error-color);
-}
-
-/* Move up/down buttons — keyboard alternative to drag-and-drop reordering.
-   Hidden until hover or keyboard focus, like the delete button above. */
-.move-btn {
-    padding: 4px 6px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 11px;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-    border-radius: 3px;
-}
-
-.todo-item:hover .move-btn,
-.todo-item:focus-within .move-btn {
-    opacity: 1;
-}
-
-.move-btn:hover {
+.todo-menu-btn:hover,
+.todo-menu-btn[aria-expanded="true"] {
     color: var(--accent-primary);
 }
 
-.move-btn:focus-visible {
+.todo-menu-btn:focus-visible {
     opacity: 1;
     outline: none;
     box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-primary);
+}
+
+.todo-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    min-width: 132px;
+    padding: 4px;
+    z-index: 20;
+}
+
+.todo-menu[hidden] {
+    display: none;
+}
+
+.todo-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'Raleway', sans-serif;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.todo-menu-item:hover,
+.todo-menu-item:focus-visible {
+    background: var(--bg-hover);
+    outline: none;
+}
+
+.todo-menu-item-danger:hover,
+.todo-menu-item-danger:focus-visible {
+    color: var(--error-color);
 }
 
 /* ===== Inline Editing ===== */
@@ -1225,7 +1357,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: 380px;
+    width: 440px;
     max-width: 90vw;
     background: var(--bg-secondary);
     border-left: 1px solid var(--border-color);
@@ -1247,6 +1379,13 @@
     gap: 10px;
     padding: 16px 16px 14px 16px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.detail-drawer-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-shrink: 0;
 }
 
@@ -1280,7 +1419,88 @@
     flex: 1;
 }
 
-/* ===== Project Items ===== */
+/* ===== Task Edit Modal =====
+   Centered, not a slide-over — opened by double-clicking a card (except its
+   title, which still does the quick inline rename). The quick-edit bar
+   reuses the composer's exact terminal treatment; the fields below reuse
+   the side drawer's own renderDetailPanel/setupDetailPanel unchanged. */
+.task-edit-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    align-items: center;
+    justify-content: center;
+}
+
+.task-edit-modal.open {
+    display: flex;
+}
+
+.task-edit-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--scrim, rgba(0, 0, 0, 0.4));
+}
+
+.task-edit-modal-panel {
+    position: relative;
+    width: 560px;
+    max-width: 92vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.task-edit-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.task-edit-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.task-edit-quickbar {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.task-edit-quickbar:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary) 25%, transparent);
+}
+
+.task-edit-quickbar #taskEditInput,
+.task-edit-quickbar .composer-input-highlight {
+    padding: 12px 16px 12px 8px;
+}
+
+.task-edit-quickbar .composer-prompt {
+    padding-left: 16px;
+}
+
+.task-edit-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin: 8px 0 16px 4px;
+}
+
+
+/* ===== Project's own card ===== */
 .project-item {
     background: var(--bg-hover) !important;
 }
@@ -1291,104 +1511,27 @@
 
 .project-icon {
     color: var(--accent-primary);
-    font-size: 14px;
+    font-size: 13px;
     flex-shrink: 0;
-    margin-top: 2px;
 }
 
 .project-progress-bar {
-    width: 60px;
+    width: 44px;
     height: 4px;
     background: var(--bg-tertiary);
     border-radius: 2px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .project-progress-fill {
     height: 100%;
+    width: 100%;
     background: var(--accent-primary);
     border-radius: 2px;
-    transition: width 0.3s;
-}
-
-.project-progress-label {
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-
-/* Collapse chevron */
-.collapse-chevron {
-    cursor: pointer;
-    color: var(--accent-primary);
-    font-size: 11px;
-    transition: transform 0.2s;
-    padding: 2px;
-    flex-shrink: 0;
-    margin-top: 3px;
-}
-
-.collapse-chevron.collapsed {
-    transform: rotate(-90deg);
-}
-
-/* Quick add subtask button */
-.quick-add-btn {
-    padding: 2px 6px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 3px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s;
-    opacity: 0;
-}
-
-.todo-item:hover .quick-add-btn {
-    opacity: 1;
-}
-
-.quick-add-btn:hover {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-}
-
-/* ===== Subtask Items ===== */
-.subtask-group {
-    margin-left: 28px;
-    padding-left: 12px;
-    border-left: 2px solid var(--border-color);
-}
-
-.subtask-item {
-    background: var(--bg-primary) !important;
-}
-
-/* Inline Subtask Input Row */
-.inline-subtask-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    margin-bottom: 6px;
-}
-
-.inline-subtask-input {
-    flex: 1;
-    padding: 6px 10px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--accent-primary);
-    border-radius: 4px;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-family: 'Raleway', sans-serif;
-    outline: none;
-}
-
-.inline-subtask-hint {
-    font-size: 11px;
-    color: var(--text-secondary);
-    white-space: nowrap;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
 }
 
 /* ===== Completed Section ===== */
@@ -1764,22 +1907,14 @@ kbd {
         align-items: stretch;
     }
 
-    .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .todo-description-preview {
-        max-width: clamp(100px, 35vw, 280px);
+    .composer-more-toggle {
+        align-self: stretch;
+        justify-content: center;
     }
 
     .detail-row {
         flex-direction: column;
         gap: 8px;
-    }
-
-    .subtask-group {
-        margin-left: 16px;
-        padding-left: 8px;
     }
 
     .drag-handle {
@@ -1790,10 +1925,6 @@ kbd {
         padding: 18px;
     }
 
-    .agenda-main-stat {
-        font-size: 28px;
-    }
-
     .detail-drawer-panel-wrap {
         width: 100vw;
         max-width: 100vw;
@@ -1801,17 +1932,8 @@ kbd {
 }
 
 @media (max-width: 540px) {
-    .todo-container {
+    .todo-layout {
         padding: 0 10px;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .filter-btn {
-        padding: 4px 8px;
-        font-size: 11px;
     }
 
     .todo-item {
