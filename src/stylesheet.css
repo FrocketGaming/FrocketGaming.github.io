@@ -220,6 +220,25 @@
     --band-4: #c792ea;
 }
 
+/* Chart preset hues: JSON Canvas colours "1".."6" (red, orange, yellow, green, cyan, purple),
+   used by Flow and the Snippets .canvas preview. Each one points at the closest hue the theme
+   already defines, so a chart recolours with the theme. Nord has no orange token of its own,
+   so it mixes red and yellow there. */
+:root {
+    --hue-red: var(--error-color);
+    --hue-orange: var(--warning-color);
+    --hue-yellow: var(--syntax-type);
+    --hue-green: var(--syntax-string);
+    --hue-cyan: var(--info-color);
+    --hue-purple: var(--syntax-keyword);
+}
+[data-theme="dracula"] { --hue-yellow: var(--syntax-string); --hue-green: var(--syntax-function); --hue-purple: var(--accent-primary); }
+[data-theme="catppuccin"] { --hue-cyan: color-mix(in srgb, var(--info-color) 55%, var(--syntax-string)); }
+[data-theme="nord"] { --hue-orange: color-mix(in oklab, var(--error-color) 50%, var(--warning-color)); --hue-yellow: var(--warning-color); --hue-cyan: var(--syntax-function); --hue-purple: var(--syntax-number); }
+[data-theme="solarized"] { --hue-green: var(--syntax-keyword); --hue-cyan: var(--syntax-string); --hue-purple: color-mix(in oklab, var(--syntax-number) 55%, var(--info-color)); }
+[data-theme="synthwave"] { --hue-orange: var(--syntax-string); --hue-yellow: var(--warning-color); --hue-green: var(--syntax-type); --hue-purple: color-mix(in oklab, var(--accent-primary) 50%, var(--text-secondary)); }
+[data-theme="canary"] { --hue-yellow: var(--accent-primary); --hue-cyan: var(--info-color); }
+
 /* Browser surfaces that would otherwise ship default-colored: follow the active theme */
 ::selection {
     background-color: color-mix(in srgb, var(--accent-primary) 35%, transparent);
@@ -962,7 +981,6 @@ input[type="checkbox"]:checked {
 
 .nav-pill-label-text {
     display: block;
-    min-width: 0;
     padding-left: 8px;
     overflow: hidden;
 }

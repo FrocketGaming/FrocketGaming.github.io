@@ -45,6 +45,7 @@
                     <a class="nav-pill-item active" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Snippets</span></span></a>
                     <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label"><span class="nav-pill-label-text">To-Do List</span></span></a>
                     <a class="nav-pill-item" href="../notes/index.html"><i class="fa-solid fa-note-sticky"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Notes</span></span></a>
+                    <a class="nav-pill-item" href="../flow/index.html"><i class="fa-solid fa-diagram-project"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Flow</span></span></a>
                     <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label"><span class="nav-pill-label-text">CSV Viewer</span></span></a>
                     <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Regex Tester</span></span></a>
                     <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Image Editor</span></span></a>
@@ -285,6 +286,24 @@
                                 </button>
                                 <button
                                     class="action-btn"
+                                    id="downloadSnippetBtn"
+                                    title="Download as a file"
+                                    aria-label="Download as a file"
+                                >
+                                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                                </button>
+                                <a
+                                    class="action-btn open-in-flow-btn"
+                                    id="openInFlowBtn"
+                                    href="../flow/index.html"
+                                    title="Open in Flow"
+                                    aria-label="Open in Flow"
+                                    hidden
+                                >
+                                    <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                </a>
+                                <button
+                                    class="action-btn"
                                     id="editBtn"
                                     title="Edit snippet"
                                     aria-label="Edit snippet"
@@ -311,6 +330,13 @@
                             <pre><code id="snippetCode"></code></pre>
                         </div>
                         <div id="markdownPreview" class="markdown-preview" style="display:none"></div>
+                        <div id="canvasPreview" class="canvas-preview" style="display:none">
+                            <div class="canvas-preview-stage" id="canvasPreviewStage"></div>
+                            <div class="canvas-preview-bar">
+                                <span class="canvas-preview-stats" id="canvasPreviewStats"></span>
+                                <a class="canvas-preview-open" id="canvasPreviewOpen" href="../flow/index.html"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open in Flow</a>
+                            </div>
+                        </div>
                         <div class="snippet-meta">
                             <span id="snippetCreated"></span>
                             <span id="snippetUpdated"></span>
@@ -382,6 +408,7 @@
                                 <option value="php">PHP (.php)</option>
                                 <option value="rb">Ruby (.rb)</option>
                                 <option value="txt">Plain Text (.txt)</option>
+                                <option value="canvas">JSON Canvas (.canvas)</option>
                             </select>
                         </div>
                     </div>
@@ -760,6 +787,8 @@
         <script src="../../src/storage-manager.js"></script>
         <script src="../../src/firebase-config.js"></script>
         <script src="../../src/firebase-sync.js"></script>
+        <script src="../../src/vendor/purify.min.js"></script>
+        <script src="../flow/flow-static.js"></script>
         <script src="graph-view.js"></script>
         <script src="snippets-app.js"></script>
     </body>

@@ -49,6 +49,7 @@ class SnippetsApp {
       rb: "ruby",
       txt: "plaintext",
       nu: "bash",
+      canvas: "json",
     };
 
     this.categoryIconMap = {
@@ -881,6 +882,7 @@ class SnippetsApp {
       }
 
       this.bindEvents();
+      this.watchExternalChanges();
       this.renderCategories();
       this.renderSnippetsList();
       this.updateSnippetsCount();
@@ -1066,6 +1068,9 @@ class SnippetsApp {
     document
       .getElementById("historyBtn")
       .addEventListener("click", () => this.openHistoryModal());
+    document
+      .getElementById("downloadSnippetBtn")
+      .addEventListener("click", () => this.downloadSnippet());
     document
       .getElementById("generateShareBtn")
       .addEventListener("click", () => this.generateShareLink());
@@ -1569,6 +1574,7 @@ class SnippetsApp {
 
   async saveTagsInline(tags) {
     if (!this.currentSnippet) return;
+    if (!(await this._fresh(this.currentSnippet))) return this.refreshFromStore();
     this.currentSnippet.tags = tags;
     this.currentSnippet.updatedAt = Date.now();
     await StorageManager.put("snippets", this.currentSnippet);
@@ -1581,6 +1587,7 @@ class SnippetsApp {
 
   async toggleFavorite() {
     if (!this.currentSnippet) return;
+    if (!(await this._fresh(this.currentSnippet))) return this.refreshFromStore();
 
     this.currentSnippet.favorite = !(this.currentSnippet.favorite || false);
     await StorageManager.put("snippets", this.currentSnippet);
@@ -2085,8 +2092,22 @@ class SnippetsApp {
     // Code rendering — markdown gets a live preview, everything else gets syntax highlighting
     const codeContainer = document.getElementById("snippetCodeContainer");
     const mdPreview = document.getElementById("markdownPreview");
+    const canvasPreview = document.getElementById("canvasPreview");
+    const openInFlowBtn = document.getElementById("openInFlowBtn");
+    const isCanvas = snippet.extension === "canvas";
+    canvasPreview.style.display = "none";
+    openInFlowBtn.hidden = !isCanvas;
+    openInFlowBtn.href = `../flow/index.html?snippet=${encodeURIComponent(snippet.id)}`;
+    const dlBtn = document.getElementById("downloadSnippetBtn");
+    dlBtn.title = `Download .${snippet.extension || "txt"}`;
+    dlBtn.setAttribute("aria-label", dlBtn.title);
 
-    if (snippet.extension === "md") {
+    if (isCanvas && this.renderCanvasPreview(snippet)) {
+      // JSON Canvas charts (from Flow) get a rendered, read-only preview of the chart.
+      codeContainer.style.display = "none";
+      mdPreview.style.display = "none";
+      canvasPreview.style.display = "flex";
+    } else if (snippet.extension === "md") {
       codeContainer.style.display = "none";
       mdPreview.style.display = "block";
       this.renderMarkdownPreview(snippet.content, mdPreview);
@@ -2128,6 +2149,184 @@ class SnippetsApp {
     }
 
     this.renderSnippetsList();
+  }
+
+  /**
+   * Render a .canvas snippet as a read-only chart (tools/flow/flow-static.js).
+   * Colours are live CSS variables, so the preview follows the theme.
+   * Returns false when the content isn't a JSON Canvas, so the caller falls back to code view.
+   */
+  renderCanvasPreview(snippet) {
+    if (typeof FlowStatic === "undefined") return false;
+    let doc;
+    try {
+      doc = JSON.parse(snippet.content);
+    } catch (e) {
+      return false;
+    }
+    if (!doc || typeof doc !== "object" || (doc.nodes && !Array.isArray(doc.nodes))) return false;
+    const stage = document.getElementById("canvasPreviewStage");
+    const nodes = Array.isArray(doc.nodes) ? doc.nodes : [];
+    const edges = Array.isArray(doc.edges) ? doc.edges : [];
+    const prev = this._cp && this._cp.id === snippet.id && this._cp.touched ? this._cp : null;
+    this._initCanvasPreviewViewer();
+    if (!nodes.length) {
+      stage.innerHTML = '<p class="canvas-preview-empty">This chart is empty.</p>';
+      this._cp = null;
+    } else {
+      stage.innerHTML = FlowStatic.toSVG(doc, { padding: 32, background: false }).svg;
+      const svg = stage.querySelector("svg");
+      const vb = svg.viewBox.baseVal;
+      svg.classList.add("cp-zoomable");
+      svg.style.width = vb.width + "px";
+      svg.style.height = vb.height + "px";
+      this._cp = { id: snippet.id, svg, vw: vb.width, vh: vb.height, s: 1, tx: 0, ty: 0, touched: false };
+      if (prev) {
+        Object.assign(this._cp, { s: prev.s, tx: prev.tx, ty: prev.ty, touched: true });
+        this._cpApply();
+      } else {
+        requestAnimationFrame(() => this._cpFit(false));
+      }
+    }
+    document.getElementById("canvasPreviewZoom").hidden = !this._cp;
+    document.getElementById("canvasPreviewStats").textContent =
+      `${nodes.length} card${nodes.length === 1 ? "" : "s"} · ${edges.length} connector${edges.length === 1 ? "" : "s"}`;
+    document.getElementById("canvasPreviewOpen").href =
+      `../flow/index.html?snippet=${encodeURIComponent(snippet.id)}`;
+    return true;
+  }
+
+  /**
+   * Pan/zoom for the chart preview, same gestures as Flow: drag or scroll to pan,
+   * Ctrl+scroll / pinch to zoom, double-click to fit the whole chart.
+   */
+  _initCanvasPreviewViewer() {
+    if (this._cpBound) return;
+    this._cpBound = true;
+    const stage = document.getElementById("canvasPreviewStage");
+    const bar = document.querySelector("#canvasPreview .canvas-preview-bar");
+    const zoom = document.createElement("div");
+    zoom.className = "canvas-preview-zoom";
+    zoom.id = "canvasPreviewZoom";
+    zoom.innerHTML =
+      '<button type="button" data-z="out" title="Zoom out (Ctrl+scroll)" aria-label="Zoom out"><i class="fa-solid fa-minus"></i></button>' +
+      '<button type="button" data-z="fit" class="canvas-preview-pct" id="canvasPreviewPct" title="Fit the whole chart (double-click the chart)">100%</button>' +
+      '<button type="button" data-z="in" title="Zoom in (Ctrl+scroll)" aria-label="Zoom in"><i class="fa-solid fa-plus"></i></button>' +
+      '<span class="canvas-preview-hint">Drag to pan · Ctrl+scroll to zoom · double-click to fit</span>';
+    bar.insertBefore(zoom, document.getElementById("canvasPreviewOpen"));
+    zoom.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-z]");
+      if (!b || !this._cp) return;
+      const r = stage.getBoundingClientRect();
+      if (b.dataset.z === "fit") this._cpFit(true);
+      else this._cpZoomAt(b.dataset.z === "in" ? 1.25 : 0.8, r.width / 2, r.height / 2);
+    });
+    stage.addEventListener(
+      "wheel",
+      (e) => {
+        const cp = this._cp;
+        if (!cp) return;
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) {
+          const r = stage.getBoundingClientRect();
+          this._cpZoomAt(Math.exp(-e.deltaY * 0.002), e.clientX - r.left, e.clientY - r.top);
+          return;
+        }
+        const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+        const dy = e.shiftKey && !e.deltaX ? 0 : e.deltaY;
+        cp.tx -= dx;
+        cp.ty -= dy;
+        cp.touched = true;
+        this._cpApply();
+      },
+      { passive: false },
+    );
+    stage.addEventListener("pointerdown", (e) => {
+      const cp = this._cp;
+      if (!cp || e.button !== 0) return;
+      const start = { x: e.clientX, y: e.clientY, tx: cp.tx, ty: cp.ty };
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add("is-dragging");
+      const move = (ev) => {
+        cp.tx = start.tx + ev.clientX - start.x;
+        cp.ty = start.ty + ev.clientY - start.y;
+        cp.touched = true;
+        this._cpApply();
+      };
+      const up = () => {
+        stage.classList.remove("is-dragging");
+        stage.removeEventListener("pointermove", move);
+        stage.removeEventListener("pointerup", up);
+        stage.removeEventListener("pointercancel", up);
+      };
+      stage.addEventListener("pointermove", move);
+      stage.addEventListener("pointerup", up);
+      stage.addEventListener("pointercancel", up);
+    });
+    stage.addEventListener("dblclick", () => this._cp && this._cpFit(true));
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => {
+        if (this._cp && !this._cp.touched) this._cpFit(false);
+      }).observe(stage);
+    }
+  }
+
+  /**
+   * overview=false: readable first view (fit the width, at most 100%, never so small the text
+   * turns to dust; tall charts start at the top). overview=true: the whole chart.
+   */
+  _cpFit(overview) {
+    const cp = this._cp;
+    const stage = document.getElementById("canvasPreviewStage");
+    const W = stage.clientWidth, H = stage.clientHeight;
+    if (!cp || !W || !H) return;
+    const pad = 16;
+    const both = Math.min((W - pad * 2) / cp.vw, (H - pad * 2) / cp.vh);
+    let s = both;
+    // 0.75 keeps 16px card text at 12px: readable while still showing a good part of the chart.
+    if (!overview) s = Math.max(both, Math.min(0.75, (W - pad * 2) / cp.vw));
+    cp.s = Math.min(s, 1.5);
+    cp.tx = Math.max((W - cp.vw * cp.s) / 2, pad);
+    cp.ty = cp.vh * cp.s <= H ? (H - cp.vh * cp.s) / 2 : pad;
+    if (cp.vw * cp.s > W) cp.tx = pad;
+    if (overview) cp.touched = true;
+    this._cpApply();
+  }
+
+  _cpZoomAt(factor, px, py) {
+    const cp = this._cp;
+    if (!cp) return;
+    const s = Math.min(4, Math.max(0.05, cp.s * factor));
+    cp.tx = px - (px - cp.tx) * (s / cp.s);
+    cp.ty = py - (py - cp.ty) * (s / cp.s);
+    cp.s = s;
+    cp.touched = true;
+    this._cpApply();
+  }
+
+  _cpApply() {
+    const cp = this._cp;
+    if (!cp) return;
+    cp.svg.style.transform = `translate(${cp.tx}px, ${cp.ty}px) scale(${cp.s})`;
+    const pct = document.getElementById("canvasPreviewPct");
+    if (pct) pct.textContent = Math.round(cp.s * 100) + "%";
+  }
+
+  /** Download the snippet as a file with its own extension (a .canvas opens in Obsidian / Flow). */
+  downloadSnippet() {
+    const s = this.currentSnippet;
+    if (!s) return;
+    const ext = String(s.extension || "txt").replace(/[^a-z0-9]/gi, "") || "txt";
+    const base = String(s.name || "snippet").replace(/[\\/:*?"<>|]+/g, "-").trim() || "snippet";
+    const type = ext === "canvas" || ext === "json" ? "application/json" : "text/plain";
+    const url = URL.createObjectURL(new Blob([s.content || ""], { type: type + ";charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${base}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // ── MD Toolbar ──────────────────────────────────────────────────────────
@@ -2430,6 +2629,8 @@ class SnippetsApp {
         // Update existing — save version snapshot of old state first
         const snippet = this.snippets.find((s) => s.id === this.editingSnippet);
         if (snippet) {
+          // Snapshot the stored record, not a stale in-memory copy (Flow may have saved since).
+          await this._fresh(snippet);
           await this.saveVersionSnapshot(snippet);
 
           snippet.name = name;
@@ -2630,6 +2831,7 @@ class SnippetsApp {
 
   async trackCopyForSnippet(snippet) {
     // Update copyCount and lastCopiedAt WITHOUT touching updatedAt
+    if (!(await this._fresh(snippet))) return;
     const todayStr = new Date().toISOString().slice(0, 10);
     snippet.copyCount = (snippet.copyCount || 0) + 1;
     snippet.lastCopiedAt = new Date().toISOString();
@@ -3010,6 +3212,7 @@ class SnippetsApp {
 
   async restoreVersion() {
     if (!this.selectedVersion || !this.currentSnippet) return;
+    await this._fresh(this.currentSnippet);
 
     // Save current state as a version first
     await this.saveVersionSnapshot(this.currentSnippet);
@@ -3139,7 +3342,22 @@ class SnippetsApp {
 
     panel.innerHTML = `<div class="tcp-header"><span>${this.escapeHtml(name)}</span><span class="tcp-ext">.${extension}</span></div>`;
 
-    if (extension === "tex" && typeof katex !== "undefined") {
+    let canvasDoc = null;
+    if (extension === "canvas" && typeof FlowStatic !== "undefined") {
+      try {
+        canvasDoc = JSON.parse(content);
+        if (!canvasDoc || !Array.isArray(canvasDoc.nodes) || !canvasDoc.nodes.length) canvasDoc = null;
+      } catch (e) {
+        canvasDoc = null;
+      }
+    }
+
+    if (canvasDoc) {
+      const thumb = document.createElement("div");
+      thumb.className = "tcp-canvas";
+      thumb.innerHTML = FlowStatic.toSVG(canvasDoc, { padding: 24, background: false }).svg;
+      panel.appendChild(thumb);
+    } else if (extension === "tex" && typeof katex !== "undefined") {
       const container = document.createElement("div");
       container.className = "tcp-latex";
 
@@ -3365,6 +3583,7 @@ class SnippetsApp {
     if (typeof FirebaseSync !== "undefined" && FirebaseSync.isSignedIn()) {
       FirebaseSync.pushSnippet(snippet);
     }
+    this._broadcast({ type: "saved", id: snippet.id });
   }
 
   /** Push snippet type to cloud (non-blocking) */
@@ -3386,6 +3605,89 @@ class SnippetsApp {
     if (typeof FirebaseSync !== "undefined" && FirebaseSync.isSignedIn()) {
       FirebaseSync.deleteSnippet(snippetId);
     }
+    this._broadcast({ type: "deleted", id: snippetId });
+  }
+
+  // ─── Other tabs (Flow, another Snippets tab) ───────────────
+
+  /** Tell other tabs a snippet changed (Flow re-checks the chart it has open). */
+  _broadcast(msg) {
+    try {
+      if (this._channel) this._channel.postMessage(msg);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  /**
+   * Another tab (Flow saving a chart, a second Snippets tab) may have written the
+   * store since we loaded it: re-read on focus / a BroadcastChannel ping.
+   */
+  watchExternalChanges() {
+    try {
+      this._channel = new BroadcastChannel("qol-snippets");
+      this._channel.onmessage = () => this.refreshFromStore();
+    } catch (e) {
+      this._channel = null;
+    }
+    window.addEventListener("focus", () => this.refreshFromStore());
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) this.refreshFromStore();
+    });
+  }
+
+  async refreshFromStore() {
+    if (this._refreshing) return this._refreshing;
+    this._refreshing = (async () => {
+      let fresh;
+      try {
+        fresh = await StorageManager.getAll("snippets");
+      } catch (e) {
+        return;
+      }
+      const sig = (list) =>
+        JSON.stringify([...list].sort((a, b) => (a.id > b.id ? 1 : -1)));
+      if (sig(fresh) === sig(this.snippets)) return;
+      const cur = this.currentSnippet;
+      const before = cur ? JSON.stringify(cur) : null;
+      this.snippets = fresh;
+      this.renderCategories();
+      this.renderSnippetsList();
+      this.updateSnippetsCount();
+      if (cur) {
+        const now = fresh.find((s) => s.id === cur.id);
+        if (!now) {
+          this.currentSnippet = null;
+          document.getElementById("snippetView").style.display = "none";
+          document.getElementById("emptyState").style.display = "flex";
+        } else if (JSON.stringify(now) !== before) {
+          this.viewSnippet(now.id);
+        } else {
+          this.currentSnippet = now;
+        }
+      }
+    })().finally(() => {
+      this._refreshing = null;
+    });
+    return this._refreshing;
+  }
+
+  /**
+   * Re-read a record from IndexedDB into the in-memory object before writing it back,
+   * so a stale copy (e.g. a chart Flow saved since) is never written over the newer one.
+   * Returns false when the snippet no longer exists.
+   */
+  async _fresh(snippet) {
+    let rec = null;
+    try {
+      rec = await StorageManager.get("snippets", snippet.id);
+    } catch (e) {
+      return true;
+    }
+    if (!rec) return false;
+    for (const k of Object.keys(snippet)) if (!(k in rec)) delete snippet[k];
+    Object.assign(snippet, rec);
+    return true;
   }
 
   /** Delete snippet type from cloud (non-blocking) */

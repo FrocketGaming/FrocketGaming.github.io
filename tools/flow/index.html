@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow - QoL Tools</title>
+    <script>
+        // Pre-paint: apply the visitor's theme before first render so there is no flash of the
+        // wrong palette. Mirrors ThemeManager.getSavedTheme() in src/theme-manager.js.
+        (function() {
+            var theme = document.documentElement.getAttribute('data-default-theme') || 'canary';
+            try {
+                theme = localStorage.getItem('qol-tools-theme') || theme;
+            } catch (e) {}
+            if (theme === 'dunder') { theme = 'canary'; }
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="../../src/stylesheet.css">
+    <link rel="stylesheet" href="../../src/firebase-sync.css">
+    <link rel="stylesheet" href="flow-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="raleway-fnt flow-page">
+    <div class="header">
+        <div class="header-icon-row">
+            <a class="newsletter-link" href="../../newsletter/index.html" title="Snake Charmer Newsletter"><i class="fa-solid fa-newspaper"></i><span class="nav-pill-label newsletter-link-label"><span class="nav-pill-label-text">Newsletter</span></span></a>
+            <nav class="nav-pill-rail">
+                <a class="nav-pill-item" href="../txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Txt Formatter</span></span></a>
+                <a class="nav-pill-item" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Snippets</span></span></a>
+                <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label"><span class="nav-pill-label-text">To-Do List</span></span></a>
+                <a class="nav-pill-item" href="../notes/index.html"><i class="fa-solid fa-note-sticky"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Notes</span></span></a>
+                <a class="nav-pill-item active" href="../flow/index.html"><i class="fa-solid fa-diagram-project"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Flow</span></span></a>
+                <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label"><span class="nav-pill-label-text">CSV Viewer</span></span></a>
+                <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Regex Tester</span></span></a>
+                <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Image Editor</span></span></a>
+                <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Cron Builder</span></span></a>
+                <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Timezone</span></span></a>
+                <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Text Diff</span></span></a>
+                <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a><a class="nav-pill-item" href="../palette-extractor/index.html"><i class="fa-solid fa-palette"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Palette Extractor</span></span></a>
+            </nav>
+            <div class="theme-selector">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" class="theme-select"></select>
+            </div>
+        </div>
+    </div>
+
+    <main class="flow-app" id="flowApp">
+        <!-- P1: the infinite canvas. Everything inside .flow-world is in world units. -->
+        <div class="flow-viewport" id="flowViewport" tabindex="-1" aria-label="Flow chart canvas">
+            <div class="flow-world" id="flowWorld">
+                <div class="flow-layer flow-layer-groups" id="flowGroups"></div>
+                <svg class="flow-layer flow-layer-edges" id="flowEdges" aria-hidden="true"></svg>
+                <div class="flow-layer flow-layer-nodes" id="flowNodes"></div>
+                <div class="flow-layer flow-layer-labels" id="flowLabels"></div>
+                <svg class="flow-layer flow-layer-overlay" id="flowOverlay" aria-hidden="true"></svg>
+                <div class="flow-layer flow-layer-ui" id="flowSelUI"></div>
+            </div>
+            <div class="flow-marquee" id="flowMarquee" hidden></div>
+            <div class="flow-empty" id="flowEmpty" hidden>
+                <p class="flow-empty-title">Double-click anywhere to add a card</p>
+                <p class="flow-empty-keys"><kbd>T</kbd> card <kbd>G</kbd> group <kbd>Ctrl</kbd>+<kbd>&rarr;</kbd> next connected card <kbd>?</kbd> all shortcuts</p>
+            </div>
+            <div class="flow-drop-hint" id="flowDropHint" hidden><i class="fa-solid fa-file-import"></i> Drop a .canvas file to open it</div>
+        </div>
+
+        <!-- Top-left: document identity -->
+        <div class="flow-doc" data-ui>
+            <input type="text" class="flow-doc-title" id="flowTitle" value="Untitled chart" spellcheck="false" aria-label="Chart name">
+            <span class="flow-doc-status" id="flowDocStatus" title=""><span class="flow-doc-dot"></span><span id="flowDocStatusText">Draft</span></span>
+        </div>
+
+        <!-- Top-centre: tools -->
+        <div class="flow-toolbar" id="flowToolbar" role="toolbar" aria-label="Tools" data-ui>
+            <button class="flow-tool" data-tool="select" title="Select — V or 1" aria-label="Select"><i class="fa-solid fa-arrow-pointer"></i><span class="flow-tool-key">1</span></button>
+            <button class="flow-tool" data-tool="hand" title="Pan — H or 2 (or hold Space)" aria-label="Pan"><i class="fa-regular fa-hand"></i><span class="flow-tool-key">2</span></button>
+            <span class="flow-toolbar-sep"></span>
+            <button class="flow-tool" data-tool="card" title="Card — T or 3" aria-label="Card"><i class="fa-regular fa-square"></i><span class="flow-tool-key">3</span></button>
+            <button class="flow-tool" data-tool="connect" title="Connector — A or 4" aria-label="Connector"><i class="fa-solid fa-arrow-right-long"></i><span class="flow-tool-key">4</span></button>
+            <button class="flow-tool" data-tool="group" title="Group — G or 5" aria-label="Group"><i class="fa-regular fa-object-group"></i><span class="flow-tool-key">5</span></button>
+            <button class="flow-tool" data-tool="link" title="Link card — L or 6" aria-label="Link card"><i class="fa-solid fa-link"></i><span class="flow-tool-key">6</span></button>
+            <span class="flow-toolbar-sep"></span>
+            <button class="flow-tool flow-tool-lock" id="flowToolLock" title="Keep tool active after drawing — Q" aria-label="Keep tool active" aria-pressed="false"><i class="fa-solid fa-lock-open"></i></button>
+        </div>
+        <div class="flow-hint" id="flowHint" aria-live="polite"></div>
+
+        <!-- Top-right: file actions -->
+        <div class="flow-actions" data-ui>
+            <button class="flow-btn" id="flowOpenBtn" title="Open from Snippets — Ctrl+O"><i class="fa-regular fa-folder-open"></i><span>Open</span></button>
+            <button class="flow-btn flow-btn-primary" id="flowSaveBtn" title="Save to Snippets — Ctrl+S"><i class="fa-regular fa-floppy-disk"></i><span id="flowSaveBtnLabel">Save to Snippets</span></button>
+            <div class="flow-menu-wrap">
+                <button class="flow-icon-btn" id="flowMenuBtn" title="More" aria-label="More actions" aria-haspopup="menu" aria-expanded="false"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                <div class="flow-menu" id="flowMenu" role="menu" hidden>
+                    <button role="menuitem" data-action="new"><i class="fa-regular fa-file"></i><span>New chart</span><kbd>Alt+N</kbd></button>
+                    <button role="menuitem" data-action="import"><i class="fa-solid fa-file-import"></i><span>Import .canvas…</span><kbd>Ctrl+Shift+O</kbd></button>
+                    <div class="flow-menu-sep"></div>
+                    <button role="menuitem" data-action="export-canvas"><i class="fa-solid fa-file-export"></i><span>Export .canvas</span><kbd>Ctrl+Shift+S</kbd></button>
+                    <button role="menuitem" data-action="export-png"><i class="fa-regular fa-image"></i><span>Export PNG</span><kbd>Ctrl+Shift+E</kbd></button>
+                    <button role="menuitem" data-action="export-svg"><i class="fa-solid fa-bezier-curve"></i><span>Export SVG</span></button>
+                    <button role="menuitem" data-action="copy-png"><i class="fa-regular fa-copy"></i><span>Copy as PNG</span><kbd>Shift+Alt+C</kbd></button>
+                    <div class="flow-menu-sep"></div>
+                    <button role="menuitem" data-action="snap"><i class="fa-solid fa-magnet"></i><span>Snap to grid</span><kbd>Ctrl+'</kbd></button>
+                    <button role="menuitem" data-action="grid"><i class="fa-solid fa-border-none"></i><span>Show grid</span><kbd>Ctrl+Shift+'</kbd></button>
+                    <div class="flow-menu-sep"></div>
+                    <button role="menuitem" data-action="shortcuts"><i class="fa-regular fa-keyboard"></i><span>Keyboard shortcuts</span><kbd>?</kbd></button>
+                </div>
+            </div>
+            <input type="file" id="flowImportInput" accept=".canvas,.json,application/json" hidden>
+        </div>
+
+        <!-- Left: properties of the selection (filled by flow-panel.js) -->
+        <aside class="flow-panel" id="flowPanel" data-ui hidden aria-label="Selection properties"></aside>
+
+        <!-- Bottom-left: zoom + history -->
+        <div class="flow-footer" data-ui>
+            <div class="flow-pillgroup">
+                <button class="flow-icon-btn" id="flowZoomOut" title="Zoom out — Ctrl+-" aria-label="Zoom out"><i class="fa-solid fa-minus"></i></button>
+                <button class="flow-zoom-label" id="flowZoomLabel" title="Reset zoom — Shift+0">100%</button>
+                <button class="flow-icon-btn" id="flowZoomIn" title="Zoom in — Ctrl+=" aria-label="Zoom in"><i class="fa-solid fa-plus"></i></button>
+                <button class="flow-icon-btn" id="flowZoomFit" title="Zoom to fit — Shift+1" aria-label="Zoom to fit"><i class="fa-solid fa-expand"></i></button>
+            </div>
+            <div class="flow-pillgroup">
+                <button class="flow-icon-btn" id="flowUndo" title="Undo — Ctrl+Z" aria-label="Undo" disabled><i class="fa-solid fa-rotate-left"></i></button>
+                <button class="flow-icon-btn" id="flowRedo" title="Redo — Ctrl+Shift+Z" aria-label="Redo" disabled><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <span class="flow-stats" id="flowStats"></span>
+        </div>
+
+        <!-- Bottom-right -->
+        <div class="flow-footer-right" data-ui>
+            <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Keyboard shortcuts — ?" aria-label="Keyboard shortcuts"><i class="fa-regular fa-circle-question"></i></button>
+        </div>
+
+        <div class="flow-toast" id="flowToast" role="status" aria-live="polite"></div>
+    </main>
+
+    <!-- Save to Snippets -->
+    <div class="flow-dialog-backdrop" id="flowSaveDialog" hidden>
+        <form class="flow-dialog" id="flowSaveForm" role="dialog" aria-modal="true" aria-labelledby="flowSaveTitle">
+            <h3 id="flowSaveTitle">Save to Snippets</h3>
+            <label class="flow-field"><span>Name</span><input type="text" id="flowSaveName" required autocomplete="off"></label>
+            <label class="flow-field"><span>Category</span><select id="flowSaveCategory"></select></label>
+            <label class="flow-field"><span>Description <em>(optional)</em></span><input type="text" id="flowSaveDesc" autocomplete="off"></label>
+            <p class="flow-dialog-note" id="flowSaveNote"></p>
+            <div class="flow-dialog-actions">
+                <button type="button" class="flow-btn" id="flowSaveAsNew" hidden>Save as new</button>
+                <span class="flow-spacer"></span>
+                <button type="button" class="flow-btn" data-close>Cancel</button>
+                <button type="submit" class="flow-btn flow-btn-primary" id="flowSaveSubmit">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Open from Snippets -->
+    <div class="flow-dialog-backdrop" id="flowOpenDialog" hidden>
+        <div class="flow-dialog flow-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="flowOpenTitle">
+            <div class="flow-dialog-head">
+                <h3 id="flowOpenTitle">Open from Snippets</h3>
+                <button type="button" class="flow-icon-btn" data-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="search" class="flow-search" id="flowOpenSearch" placeholder="Filter charts…" autocomplete="off">
+            <ul class="flow-open-list" id="flowOpenList" role="listbox" aria-label="Saved charts"></ul>
+        </div>
+    </div>
+
+    <!-- Keyboard shortcuts -->
+    <div class="flow-dialog-backdrop" id="flowShortcuts" hidden>
+        <div class="flow-dialog flow-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="flowShortcutsTitle">
+            <div class="flow-dialog-head">
+                <h3 id="flowShortcutsTitle">Keyboard shortcuts</h3>
+                <button type="button" class="flow-icon-btn" data-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flow-shortcuts-grid" id="flowShortcutsGrid"></div>
+        </div>
+    </div>
+
+    <script src="../../src/theme-manager.js"></script>
+    <script src="../../src/storage-manager.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="../../src/firebase-config.js"></script>
+    <script src="../../src/firebase-sync.js"></script>
+    <script src="../../src/vendor/purify.min.js"></script>
+    <script src="flow-static.js"></script>
+    <script src="flow-core.js"></script>
+    <script src="flow-canvas.js"></script>
+    <script src="flow-nodes.js"></script>
+    <script src="flow-edges.js"></script>
+    <script src="flow-interact.js"></script>
+    <script src="flow-panel.js"></script>
+    <script src="flow-io.js"></script>
+    <script src="flow-snippets.js"></script>
+    <script src="flow-app.js"></script>
+</body>
+
+</html>
