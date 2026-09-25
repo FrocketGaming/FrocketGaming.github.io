@@ -157,10 +157,11 @@
     function startMove(e, p0) {
         const sx = e.clientX, sy = e.clientY;
         let active = false, moving = null, starts = null, box0 = null, others = null;
-        let duplicated = false;
+        let duplicated = false, sidesFrame = 0;
         const begin = (ev) => {
             active = true;
             core.begin('Move');
+            S.setInteractive(true);
             if (ev.altKey) {
                 // Alt-drag duplicates the selection and drags the copy (originals stay put).
                 const ids = [...core.selection.nodes];
@@ -192,18 +193,32 @@
                     if (nx !== Number(n.x)) n.x = nx;   // write only real changes (keeps "100" if unmoved)
                     if (ny !== Number(n.y)) n.y = ny;
                 }
-                Flow.edges.refreshAutoSides([...moving]);
-                core.invalidate('nodes', [...moving]);
+                // Re-pick connector sides at most once per frame (fast mice fire many moves per
+                // frame) and with a cheaper search; the full-quality pick runs once on drop.
+                if (!sidesFrame) sidesFrame = requestAnimationFrame(() => {
+                    sidesFrame = 0;
+                    Flow.edges.refreshAutoSides([...moving], { fast: true });
+                    core.invalidate('nodes', [...moving]);
+                });
             },
             up: () => {
                 drawGuides([]);
                 document.body.classList.remove('flow-moving');
-                if (active) core.commit();
+                if (sidesFrame) { cancelAnimationFrame(sidesFrame); sidesFrame = 0; }
+                S.setInteractive(false);
+                if (active) {
+                    core.invalidate('edges');
+                    Flow.edges.refreshAutoSides([...moving]);
+                    core.invalidate('nodes', [...moving]);
+                    core.commit();
+                }
             },
             cancel: () => {
                 drawGuides([]);
                 document.body.classList.remove('flow-moving');
-                if (active) core.cancel();
+                if (sidesFrame) { cancelAnimationFrame(sidesFrame); sidesFrame = 0; }
+                S.setInteractive(false);
+                if (active) { core.cancel(); core.invalidate('edges'); }
             },
         });
     }

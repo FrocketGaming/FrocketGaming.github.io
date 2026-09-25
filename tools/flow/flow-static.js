@@ -387,15 +387,21 @@
      * Orthogonal route from anchor p0 (leaving along s0) to p3 (entering from s3),
      * around the obstacles in ctx. Returns the polyline or null.
      */
+    const TOO_BIG = { tooBig: true };
     function orthoRoute(p0, s0, p3, s3, ctx, useGroups) {
         // Only obstacles near the connector shape the grid (keeps big charts fast); widen the
         // search if that leaves no way through, and when cards sit closer together than the
         // normal clearance, route with less clearance rather than through a card.
         // Returns { pts, reach }: reach is how far around the ends the obstacles mattered.
+        // A grid over the size cap stays over it with a wider window, so skip those retries.
+        let wideTooBig = false;
         for (const M of [ROUTE_M, 10, 4]) {
             let r = orthoRouteIn(p0, s0, p3, s3, ctx, useGroups, 240, M);
+            if (r === TOO_BIG) return null;
             if (r) return { pts: r, reach: 240 };
+            if (wideTooBig) continue;
             r = orthoRouteIn(p0, s0, p3, s3, ctx, useGroups, 900, M);
+            if (r === TOO_BIG) { wideTooBig = true; continue; }
             if (r) return { pts: r, reach: 900 };
         }
         return null;
@@ -445,22 +451,36 @@
         const addMid = (v) => { const out = [v[0] - M]; for (let i = 0; i < v.length; i++) { out.push(v[i]); if (i + 1 < v.length) out.push((v[i] + v[i + 1]) / 2); } out.push(v[v.length - 1] + M); return uniqSorted(out); };
         xs = addMid(xs); ys = addMid(ys);
         const nx = xs.length, ny = ys.length;
-        if (nx * ny > 40000) return null;
-        const blocked = (x, y) => { for (const r of rects) if (x > r.x1 && x < r.x2 && y > r.y1 && y < r.y2) return true; return false; };
-        const free = new Uint8Array(nx * ny);
-        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) free[j * nx + i] = blocked(xs[i], ys[j]) ? 0 : 1;
-        const hOk = new Uint8Array(nx * ny), vOk = new Uint8Array(nx * ny); // edge to i+1 / j+1
+        if (nx * ny > 40000) return TOO_BIG;
+        // Rasterize each obstacle onto the grid by index range (binary search on the sorted
+        // coordinate lists) instead of testing every cell against every obstacle; the result
+        // is identical, but a drag on a big chart stays cheap.
+        const mxs = [], mys = [];
+        for (let i = 0; i + 1 < nx; i++) mxs.push((xs[i] + xs[i + 1]) / 2);
+        for (let j = 0; j + 1 < ny; j++) mys.push((ys[j] + ys[j + 1]) / 2);
+        const firstAbove = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] > v) hi = m; else lo = m + 1; } return lo; };
+        const firstAtLeast = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] >= v) hi = m; else lo = m + 1; } return lo; };
+        // Calls fn(i) for every index with lo < arr[i] < hi.
+        const span = (arr, lo, hi, fn) => { for (let i = firstAbove(arr, lo), e = firstAtLeast(arr, hi); i < e; i++) fn(i); };
+        const cellBlk = new Uint8Array(nx * ny), hBlk = new Uint8Array(nx * ny), vBlk = new Uint8Array(nx * ny);
         // Segments running right along an obstacle's clearance line cost a little extra, so
         // routes take the middle of a channel instead of hugging one side of it.
+        const hHugRaw = new Uint8Array(nx * ny), vHugRaw = new Uint8Array(nx * ny);
+        for (const r of rects) {
+            span(ys, r.y1, r.y2, j => { span(xs, r.x1, r.x2, i => { cellBlk[j * nx + i] = 1; }); span(mxs, r.x1, r.x2, i => { hBlk[j * nx + i] = 1; }); });
+            span(mys, r.y1, r.y2, j => span(xs, r.x1, r.x2, i => { vBlk[j * nx + i] = 1; }));
+            for (const yv of [r.y1, r.y2]) span(ys, yv - 0.5, yv + 0.5, j => span(mxs, r.x1, r.x2, i => { hHugRaw[j * nx + i] = 1; }));
+            for (const xv of [r.x1, r.x2]) span(mys, r.y1, r.y2, j => span(xs, xv - 0.5, xv + 0.5, i => { vHugRaw[j * nx + i] = 1; }));
+        }
+        const free = new Uint8Array(nx * ny);
+        for (let k = 0; k < nx * ny; k++) free[k] = cellBlk[k] ? 0 : 1;
+        const hOk = new Uint8Array(nx * ny), vOk = new Uint8Array(nx * ny); // edge to i+1 / j+1
         const hHug = new Uint8Array(nx * ny), vHug = new Uint8Array(nx * ny);
-        const hugs = (vertical, x, y) => rects.some(r => vertical
-            ? (Math.abs(x - r.x1) < 0.5 || Math.abs(x - r.x2) < 0.5) && y > r.y1 && y < r.y2
-            : (Math.abs(y - r.y1) < 0.5 || Math.abs(y - r.y2) < 0.5) && x > r.x1 && x < r.x2) ? 1 : 0;
         for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
             const k = j * nx + i;
             if (!free[k]) continue;
-            if (i + 1 < nx && free[k + 1] && !blocked((xs[i] + xs[i + 1]) / 2, ys[j])) { hOk[k] = 1; hHug[k] = hugs(0, (xs[i] + xs[i + 1]) / 2, ys[j]); }
-            if (j + 1 < ny && free[k + nx] && !blocked(xs[i], (ys[j] + ys[j + 1]) / 2)) { vOk[k] = 1; vHug[k] = hugs(1, xs[i], (ys[j] + ys[j + 1]) / 2); }
+            if (i + 1 < nx && free[k + 1] && !hBlk[k]) { hOk[k] = 1; hHug[k] = hHugRaw[k]; }
+            if (j + 1 < ny && free[k + nx] && !vBlk[k]) { vOk[k] = 1; vHug[k] = vHugRaw[k]; }
         }
         const ix = (v) => xs.findIndex(x => Math.abs(x - v) <= 0.5), iy = (v) => ys.findIndex(y => Math.abs(y - v) <= 0.5);
         const ai = ix(a.x), aj = iy(a.y), bi = ix(b.x), bj = iy(b.y);
@@ -529,11 +549,16 @@
      * With a cache, a plan is reused only while the obstacles in its region are exactly the same
      * (scene index signature), so routing is a function of the document alone, not of history.
      */
+    // While a drag is live, connectors whose ends didn't move keep their last route even if the
+    // dragged card now crosses their region; everything is re-routed once the drag ends.
+    let interactive = false;
+    function setInteractive(v) { interactive = !!v; }
+
     function planPath(from, fs, to, ts, route, ctx, cache) {
         if (!ctx || !cache) return planPathRaw(from, fs, to, ts, route, ctx);
         const key = route + '|' + fs + '|' + ts + '|' + from.x + ',' + from.y + '|' + to.x + ',' + to.y + '|' + ctx.key;
         const hit = cache.get(key);
-        if (hit && ctx.idx.sig(hit.region) === hit.sig) return hit.plan;
+        if (hit && (interactive || ctx.idx.sig(hit.region) === hit.sig)) return hit.plan;
         const plan = planPathRaw(from, fs, to, ts, route, ctx);
         if (cache.size > 6000) cache.clear();
         cache.set(key, { plan, region: plan.region, sig: ctx.idx.sig(plan.region) });
@@ -596,7 +621,8 @@
     }
 
     const sideCache = new Map();
-    function bestSides(a, b, nodes, route, current, used, idx) {
+    function bestSides(a, b, nodes, route, current, used, idx, maxEvals) {
+        maxEvals = maxEvals || 6;
         if (!a || !b) return autoSides(a, b);
         const r = route || 'curve';
         if (r === 'straight') return autoSides(a, b);
@@ -629,7 +655,7 @@
         for (const c of cand) {
             if (c === cur) continue;
             if (c.simple >= bestCost - need(bestCost)) break;
-            if (++evals > 6) break;
+            if (++evals > maxEvals) break;
             const cc = cost(c);
             if (cc < bestCost - need(cc)) { bestCost = cc; best = c; }
         }
@@ -1620,7 +1646,7 @@
 
     window.FlowStatic = {
         SIDES, NORMAL, OPPOSITE, PRESETS, PRESET_NAMES,
-        center, anchor, autoSides, bestSides, routeContext, nearestSide, facingSide, bbox,
+        center, anchor, autoSides, bestSides, routeContext, nearestSide, facingSide, bbox, setInteractive,
         connectorGeometry, edgeGeometry, layoutEdges, layoutLabels, labelBox, labelPoint, labelLines, LABEL_MAX_EM, LABEL_RESERVE, sceneIndex, inShape, arrowPath, edgeRoute, edgeDash, nodeShape,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, escapeHtml, sanitize, safeHref, str,

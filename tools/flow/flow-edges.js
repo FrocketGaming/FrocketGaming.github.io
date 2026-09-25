@@ -72,8 +72,8 @@
     };
 
     /** Best sides for a connector between nodes a and b, avoiding the other cards. */
-    function pickSides(a, b, route, current, edgeId, idx) {
-        return S.bestSides(a, b, core.nodes(), route || 'curve', current, sideUse(a, b, edgeId), idx);
+    function pickSides(a, b, route, current, edgeId, idx, maxEvals) {
+        return S.bestSides(a, b, core.nodes(), route || 'curve', current, sideUse(a, b, edgeId), idx, maxEvals);
     }
 
     /** How many other connectors leave from / arrive at each side of nodes a and b. */
@@ -92,7 +92,9 @@
     edges.pickSides = pickSides;
 
     /** Re-pick sides of auto-routed edges touching these nodes (call inside a transaction). */
-    edges.refreshAutoSides = function (nodeIds) {
+    // opts.fast (mid-drag): try fewer alternative side pairs; the drop does a full pick.
+    edges.refreshAutoSides = function (nodeIds, opts) {
+        const maxEvals = opts && opts.fast ? 2 : 6;
         if (!core.autoEdges.size) return;
         const set = nodeIds ? new Set(nodeIds) : null;
         // Edges whose end a moved card now sits on are re-picked too (their side is buried).
@@ -116,7 +118,7 @@
             // While the cards overlap (mid-drag) any pair of sides is as bad as another: keep them.
             if (a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height) continue;
             if (!idx) idx = S.sceneIndex(core.nodes());
-            const [fs, ts] = pickSides(a, b, S.edgeRoute(e), [e.fromSide, e.toSide], e.id, idx);
+            const [fs, ts] = pickSides(a, b, S.edgeRoute(e), [e.fromSide, e.toSide], e.id, idx, maxEvals);
             if (hasF && e.fromSide !== fs) e.fromSide = fs;
             if (hasT && e.toSide !== ts) e.toSide = ts;
         }
