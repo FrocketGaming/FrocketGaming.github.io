@@ -189,6 +189,7 @@
                 drawGuides(snapped.guides);
                 for (const [id, s] of starts) {
                     const n = core.getNode(id);
+                    if (!n) continue;   // deleted in another tab mid-drag
                     const nx = Math.round(s.x + dx), ny = Math.round(s.y + dy);
                     if (nx !== Number(n.x)) n.x = nx;   // write only real changes (keeps "100" if unmoved)
                     if (ny !== Number(n.y)) n.y = ny;

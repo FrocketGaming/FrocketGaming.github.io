@@ -529,15 +529,16 @@ body.flow-moving .flow-edge-hit { pointer-events: none; }
 .flow-port-left::after { right: 50%; }
 .flow-port-right::after { left: 50%; }
 .flow-port::before {
-    /* the whole painted dot connects, with half a pixel of slack at its rim (anti-aliasing) */
+    /* the whole painted dot connects, and no further (subpixel rounding on the bottom/right
+       ports already adds up to a pixel of reach into the card) */
     content: "";
     position: absolute;
     /* sized from the dot's centre (not inset from the padding box, whose size depends on how the
        border width rounds at this zoom) */
     left: 50%;
     top: 50%;
-    width: calc(13px / var(--flow-zoom, 1));
-    height: calc(13px / var(--flow-zoom, 1));
+    width: calc(12px / var(--flow-zoom, 1));
+    height: calc(12px / var(--flow-zoom, 1));
     transform: translate(-50%, -50%);
     border-radius: 50%;
 }
