@@ -462,6 +462,7 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-edge:hover .flow-edge-head { fill: var(--text-primary); stroke: var(--text-primary); }
 .flow-edge.is-selected .flow-edge-line { stroke: var(--accent-primary); stroke-width: max(2.5px, calc(2.25px / var(--flow-zoom, 1))); }
 .flow-edge.is-selected .flow-edge-head { fill: var(--accent-primary); stroke: var(--accent-primary); }
+.flow-edge-hit.is-end-grab { cursor: grab; }
 .flow-edge.is-reconnecting { opacity: 0.25; }
 body.flow-moving .flow-edge-hit { pointer-events: none; }
 

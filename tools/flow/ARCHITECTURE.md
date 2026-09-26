@@ -175,7 +175,7 @@ handlers registered with `core.addPointerHandler(priority, fn(e, hit, worldPoint
 to low until one returns true. `hit` comes from `core.hitTest(target)` and data attributes:
 `data-port` (+`data-node-id`), `data-handle`, `data-edge-end`, `data-edge-id` (+`data-edge-label`),
 `data-node-id` (+`data-group-label`), `data-ui`. Priorities in use: 2000 finish editors (never claims),
-1000 pan, 950 ports/edge ends, 900 resize handles, 800 connector tool, 600 creation tools,
+1000 pan, 950 ports/edge ends, 940 grab a connector near its end, 900 resize handles, 800 connector tool, 600 creation tools,
 500 select/marquee/move. Use `core.trackDrag(e, { move, up, cancel })` for the drag itself
 (Escape calls `cancel`).
 
@@ -193,6 +193,11 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
     earlier children on that same side fan out sideways.
   - `geometry(edge)` returns what was last drawn (spread + tracks). It falls back to a single-edge
     computation before the first render.
+  - Reconnect: drag either end of any connector onto another card. A press on the line within
+    40 screen px of an end (at most 35% of its length, so a short connector's middle still just
+    selects) grabs that end directly (pointer handler 940, grab cursor there); a click without a
+    4px move selects the connector. The endpoint handles of a selected connector do the same.
+    Dropping on empty space changes nothing; Alt pins the sides.
   - Dragging a connector back onto its own card, after leaving it or moving 24px or more, makes a
     self-loop on a neighbouring side. A small wiggle that stays on the card does nothing.
 - `Flow.interact`: `init, finishEditing, addConnectedCard(id, 'up'|'down'|'left'|'right'), navigate(dir), nudge, duplicate, deleteSelection, groupSelection, ungroupSelection, reorder(toFront), align(how), distribute(axis), cloneItems, pasteText(text), SHORTCUTS`

@@ -36,6 +36,16 @@
             if (hit.kind === 'edge-end') { startReconnect(e, hit.id, hit.end); return true; }
             return false;
         });
+        // Grab a connector near either end (no need to select it first) and drag it to another card.
+        core.addPointerHandler(940, (e, hit, p) => {
+            if (e.button !== 0 || hit.kind !== 'edge' || hit.label) return false;
+            if (core.tool !== 'select' && core.tool !== 'connect') return false;
+            if (e.shiftKey || e.ctrlKey || e.metaKey) return false;
+            const end = grabbableEnd(hit.id, p);
+            if (!end) return false;
+            startReconnect(e, hit.id, end, { lazy: true });
+            return true;
+        });
         // Connector tool: drag from anywhere on a card.
         core.addPointerHandler(800, (e, hit) => {
             if (core.tool !== 'connect' || e.button !== 0) return false;
@@ -46,6 +56,7 @@
 
         const vp = core.viewportEl;
         vp.addEventListener('pointermove', onHoverMove);
+        vp.addEventListener('pointermove', updateEndHover);
         vp.addEventListener('pointerleave', () => scheduleHidePorts());
         core.on('view', () => { if (portsEl) positionPorts(); });
         // Labels are laid out cheaply during drags; lay them all out again once it's committed.
@@ -532,15 +543,63 @@
         });
     };
 
-    function startReconnect(downEvent, edgeId, end) {
+    /** Screen px from a connector's tip within which a press grabs that end. */
+    const END_GRAB_PX = 40;
+
+    /**
+     * 'from' | 'to' when world point p is close enough to that end of the drawn connector
+     * to grab it, else null. On a short connector the zone shrinks so its middle still just selects.
+     */
+    function grabbableEnd(edgeId, p) {
+        const r = els.get(edgeId);
+        if (!r || !r.geo || !r.geo.startTip || !r.geo.endTip) return null;
+        const zoom = core.view.zoom || 1;
+        const reach = Math.min(END_GRAB_PX / zoom, (r.geo.len || Infinity) * 0.35);
+        const ds = Math.hypot(p.x - r.geo.startTip.x, p.y - r.geo.startTip.y);
+        const de = Math.hypot(p.x - r.geo.endTip.x, p.y - r.geo.endTip.y);
+        if (Math.min(ds, de) > reach) return null;
+        return de <= ds ? 'to' : 'from';
+    }
+
+    /** Grab cursor while hovering the grabbable part of a connector. */
+    function updateEndHover(e) {
+        const t = e.target;
+        const hitEl = t && t.classList && t.classList.contains('flow-edge-hit') ? t : null;
+        let on = false;
+        if (hitEl && !core.dragging && (core.tool === 'select' || core.tool === 'connect')) {
+            const g = hitEl.parentNode;
+            on = !!grabbableEnd(g && g.dataset.edgeId, core.screenToWorld(e.clientX, e.clientY));
+        }
+        if (hitEl) hitEl.classList.toggle('is-end-grab', on);
+    }
+
+    /**
+     * Drag one end of a connector onto another card. With opts.lazy (a press on the line itself)
+     * nothing happens until the pointer moves 4px; a plain click selects the connector instead.
+     */
+    function startReconnect(downEvent, edgeId, end, opts) {
         const edge = core.getEdge(edgeId);
         if (!edge) return;
         const fixedId = end === 'from' ? edge.toNode : edge.fromNode;
         const fixed = core.getNode(fixedId);
         const r = els.get(edgeId);
-        if (!fixed || !r) return;
-        const t = tempPath();
-        r.g.classList.add('is-reconnecting');
+        if (!fixed || !r || !r.geo) return;
+        const lazy = !!(opts && opts.lazy);
+        const start = { x: downEvent.clientX, y: downEvent.clientY };
+        let t = null;
+        const begin = () => {
+            t = tempPath();
+            r.g.classList.add('is-reconnecting');
+            hidePorts();
+            document.body.classList.add('flow-connecting');
+        };
+        const finish = () => {
+            if (t) t.g.remove();
+            r.g.classList.remove('is-reconnecting');
+            setTargetHighlight(null);
+            document.body.classList.remove('flow-connecting');
+        };
+        if (!lazy) begin();
         const geo0 = r.geo;
         const fixedSide = end === 'from' ? geo0.toSide : geo0.fromSide;
         let target = null, tSide = null, fSide = fixedSide, pin = false;
@@ -568,19 +627,31 @@
             setTargetHighlight(target && target.id);
         };
         core.trackDrag(downEvent, {
-            move: (ev, p) => draw(p, ev.altKey),
-            up: (ev, p) => {
+            move: (ev, p) => {
+                if (!t) {
+                    if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 4) return;
+                    begin();
+                }
                 draw(p, ev.altKey);
-                t.g.remove(); r.g.classList.remove('is-reconnecting'); setTargetHighlight(null);
+            },
+            up: (ev, p) => {
+                if (!t) {
+                    // A click on the line near its end: select the connector, as anywhere else on it.
+                    if (!core.selection.edges.has(edgeId) || core.selection.nodes.size) core.select([], [edgeId]);
+                    return;
+                }
+                draw(p, ev.altKey);
+                finish();
                 if (!target) return;
                 core.change('Reconnect', () => {
                     if (end === 'to') { edge.toNode = target.id; edge.toSide = tSide; if (edge.fromSide !== fSide) edge.fromSide = fSide; }
                     else { edge.fromNode = target.id; edge.fromSide = tSide; if (edge.toSide !== fSide) edge.toSide = fSide; }
                     // Dropped plainly: auto (re-aims as cards move). With Alt: pinned to the side dropped on.
                     if (pin) core.autoEdges.delete(edge.id); else core.autoEdges.add(edge.id);
+                    core.select([], [edge.id]);
                 });
             },
-            cancel: () => { t.g.remove(); r.g.classList.remove('is-reconnecting'); setTargetHighlight(null); },
+            cancel: finish,
         });
     }
 
