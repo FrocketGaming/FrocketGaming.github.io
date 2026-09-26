@@ -940,6 +940,51 @@
         return s === 'pill' || s === 'diamond' || s === 'circle' ? s : 'rect';
     }
 
+    // ── Step labels: what runs a card's step (styleAttributes.step), drawn as a chip ──
+
+    /** Preset step types and the colour preset each one uses (null = neutral grey). */
+    const STEP_TYPES = [['sql', '5'], ['python', '3'], ['api', '6'], ['email', '2'], ['schedule', '4'], ['manual', null]];
+    const STEP_PRESET = new Map(STEP_TYPES);
+    const STEP_FONT = "700 10px 'JetBrains Mono', Consolas, monospace";
+    const STEP_H = 15;
+
+    /** A text card's step label ('' when none): trimmed, single-spaced, at most 32 characters. */
+    function stepType(n) {
+        if (!n || n.type !== 'text' || !n.styleAttributes) return '';
+        return str(n.styleAttributes.step).trim().replace(/\s+/g, ' ').slice(0, 32);
+    }
+
+    /** Colour of a card's chip: the preset's, else the card's own colour, else null (neutral). */
+    function stepColor(n) {
+        const t = stepType(n).toLowerCase();
+        if (STEP_PRESET.has(t)) return STEP_PRESET.get(t);
+        return hasColor(n.color) ? n.color : null;
+    }
+
+    /**
+     * Padding around a text card's content, [top, right, bottom, left] in world px. A step label
+     * reserves room above the text. The editor's CSS (.flow-node-text rules) uses the same numbers.
+     */
+    function cardPadding(n, shape) {
+        const boxed = shape === 'rect' || shape === 'pill';
+        const top = stepType(n) ? (boxed ? 22 : 18) : (boxed ? 7 : 0);
+        return boxed ? [top, 12, 7, 12] : [top, 0, 0, 0];
+    }
+
+    /**
+     * The chip's box in world px ({ x, y, w, h, text }, text ellipsised to fit), or null.
+     * inner = the shape's text area. Rects: top-left corner; other shapes: centred over the text.
+     */
+    function stepChip(n, shape, inner) {
+        const t = stepType(n);
+        if (!t) return null;
+        const boxed = shape === 'rect' || shape === 'pill';
+        const text = fitLabel(t, STEP_FONT, Math.max(20, inner.w - 34));
+        const w = labelWidth(text, STEP_FONT) + 10;
+        const x = shape === 'rect' ? inner.x + 7 : inner.x + (inner.w - w) / 2;
+        return { x, y: inner.y + (boxed ? 5 : 0), w, h: STEP_H, text };
+    }
+
     /**
      * Full geometry for a JSON Canvas edge given a node lookup.
      * Missing sides are chosen automatically (spec: fromSide/toSide are optional).
@@ -1574,7 +1619,8 @@
             let inner;
             if (n.type === 'text') {
                 const html = opts.markdown === false ? escapeHtml(n.text || '') : renderMarkdown(n.text || '');
-                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${isSimpleText(n.text) || shape !== 'rect' ? ' simple' : ''}">${toXhtml(html)}</div>`;
+                const cp = cardPadding(n, shape).map(v => v + 'px').join(' ');
+                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${isSimpleText(n.text) || shape !== 'rect' ? ' simple' : ''}" style="padding:${cp}">${toXhtml(html)}</div>`;
             } else if (n.type === 'link') {
                 let host = n.url || '';
                 try { host = new URL(n.url).hostname; } catch (e) { /* keep raw */ }
@@ -1594,6 +1640,12 @@
                 catch (e) { console.warn('Flow: could not draw card text', n.id, e); }   // one bad node never aborts the export
             }
             else out.push(`<foreignObject x="${f(ix)}" y="${f(iy)}" width="${f(iw)}" height="${f(ih)}">${inner}</foreignObject>`);
+            const chip = stepChip(n, shape, { x: ix, y: iy, w: iw, h: ih });
+            if (chip) {
+                const sc = paint.color(stepColor(n), '--text-secondary');
+                out.push(`<rect x="${f(chip.x)}" y="${f(chip.y)}" width="${f(chip.w)}" height="${f(chip.h)}" rx="3" style="fill:${paint.mix(sc, 16, '--bg-secondary')};stroke:${paint.mix(sc, 40, '--bg-secondary')};stroke-width:1"/>`);
+                out.push(`<text x="${f(chip.x + 5)}" y="${f(chip.y + 11)}" xml:space="preserve" style="fill:${sc};font-family:'JetBrains Mono',Consolas,monospace;font-size:10px;font-weight:700">${escapeHtml(chip.text)}</text>`);
+            }
         }
         out.push('</svg>');
         return { svg: out.join(''), width: vw, height: vh, box: { x: vx, y: vy, width: vw, height: vh } };
@@ -1650,6 +1702,7 @@
         SIDES, NORMAL, OPPOSITE, PRESETS, PRESET_NAMES,
         center, anchor, autoSides, bestSides, routeContext, nearestSide, facingSide, bbox, setInteractive,
         connectorGeometry, edgeGeometry, layoutEdges, layoutLabels, labelBox, labelPoint, labelLines, LABEL_MAX_EM, LABEL_RESERVE, sceneIndex, inShape, arrowPath, edgeRoute, edgeDash, nodeShape,
+        STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, escapeHtml, sanitize, safeHref, str,
         toSVG,

@@ -203,6 +203,43 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 }
 .flow-node.is-editing .flow-node-content { visibility: hidden; }
 
+/* Text cards: padding matches FlowStatic.cardPadding (the exports use the same numbers). A step
+   label reserves room above the text: 22px on rects and pills, 18px inside diamonds and circles. */
+.flow-node-text .flow-node-content,
+.flow-node-text .flow-node-editor { padding: 7px 12px; }
+.flow-node-text.has-step .flow-node-content,
+.flow-node-text.has-step .flow-node-editor { padding-top: 22px; }
+.flow-node-text.has-step.flow-shape-diamond .flow-node-content,
+.flow-node-text.has-step.flow-shape-diamond .flow-node-editor,
+.flow-node-text.has-step.flow-shape-circle .flow-node-content,
+.flow-node-text.has-step.flow-shape-circle .flow-node-editor { padding: 18px 0 0; }
+
+/* Step label chip: what runs the step (sql, python...). Top-left on rects, centred over the text
+   on other shapes (their corners are outside the shape). Same box as FlowStatic.stepChip. */
+.flow-step-chip {
+    --step-color: var(--text-secondary);
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    z-index: 3;
+    height: 15px;
+    max-width: calc(100% - 34px);
+    box-sizing: border-box;
+    padding: 0 5px;
+    font: 700 10px/13px "JetBrains Mono", Consolas, monospace;
+    color: var(--step-color);
+    background: color-mix(in srgb, var(--step-color) 16%, var(--flow-card-bg));
+    border: 1px solid color-mix(in srgb, var(--step-color) 40%, var(--flow-card-bg));
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+.flow-node.flow-shape-pill .flow-step-chip { left: 50%; transform: translateX(-50%); }
+.flow-node.flow-shape-diamond .flow-step-chip { top: 25%; left: 50%; transform: translateX(-50%); max-width: calc(50% - 34px); }
+.flow-node.flow-shape-circle .flow-step-chip { top: 14.6%; left: 50%; transform: translateX(-50%); max-width: calc(70.8% - 34px); }
+
 /* Rendered markdown inside cards */
 .flow-md > :first-child { margin-top: 0; }
 .flow-md > :last-child { margin-bottom: 0; }
@@ -551,6 +588,32 @@ body.flow-moving .flow-edge-hit { pointer-events: none; }
 .flow-port-right { left: 100%; top: 50%; }
 @keyframes flow-port-in { from { opacity: 0; } to { opacity: 1; } }
 body.flow-connecting .flow-ports { display: none; }
+/* Step label picker in the properties panel */
+.flow-step-opts { display: flex; flex-wrap: wrap; gap: 4px; }
+.flow-step-opt {
+    --step-color: var(--text-secondary);
+    padding: 2px 6px;
+    font: 700 11px/16px "JetBrains Mono", Consolas, monospace;
+    color: var(--step-color);
+    background: color-mix(in srgb, var(--step-color) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--step-color) 35%, transparent);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.flow-step-opt:hover { background: color-mix(in srgb, var(--step-color) 22%, transparent); }
+.flow-step-opt.is-active { background: color-mix(in srgb, var(--step-color) 30%, transparent); border-color: var(--step-color); }
+.flow-step-custom { display: flex; gap: 4px; margin-top: 6px; }
+.flow-step-input {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 6px;
+    font: 12px/18px "JetBrains Mono", Consolas, monospace;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.flow-step-input:focus { outline: none; border-color: var(--accent-primary); }
 /* Dots on the card a connector is being dragged to (display only); the one it will snap to is filled. */
 .flow-drop-ports { position: absolute; pointer-events: none; }
 .flow-drop-ports .flow-port { pointer-events: none; animation: none; }
@@ -1160,15 +1223,20 @@ body.flow-moving .flow-viewport * { cursor: move !important; }
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 8px 28px;
     overflow-y: auto;
+    /* keep the scrollbar in its own lane: right-aligned descriptions must never run under it */
+    scrollbar-gutter: stable;
+    padding-right: 12px;
 }
 .flow-shortcuts-grid h4 { margin: 8px 0 6px; font-size: 13px; color: var(--accent-primary); }
 .flow-sc-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
-.flow-sc-row > span:last-child { color: var(--text-secondary); text-align: right; }
+.flow-sc-row > span:last-child { min-width: 0; color: var(--text-secondary); text-align: right; }
 .flow-sc-keys { white-space: nowrap; }
 /* Shapes legend: spans the full width, above the shortcut groups. */
 .flow-sc-shapes { grid-column: 1 / -1; }
 .flow-sc-shape { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
 .flow-sc-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; color: var(--text-secondary); }
+.flow-ico-step { display: block; padding: 0 3px; font: 700 9px/12px "JetBrains Mono", Consolas, monospace; color: var(--hue-cyan); border: 1px solid currentColor; border-radius: 3px; }
+.flow-ico-step::before { content: "sql"; }
 .flow-ico-group { display: block; width: 18px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; box-sizing: border-box; background: color-mix(in srgb, currentColor 15%, transparent); }
 
 @media (max-width: 900px) {

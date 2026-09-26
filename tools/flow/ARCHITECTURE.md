@@ -36,6 +36,13 @@ export untouched. Rules for every module:
 - Extensions beyond the spec live in `styleAttributes` (Advanced Canvas compatible):
   nodes `styleAttributes.shape` = `pill|diamond|circle`; edges `styleAttributes.pathfindingMethod`
   = `direct|square` and `styleAttributes.path` = `dashed|dotted`. Other apps ignore them; we keep them.
+- Step labels: a text card's `styleAttributes.step` (free text, max 32 chars; presets `sql python api
+  email schedule manual` in `FlowStatic.STEP_TYPES`, each with a colour preset; a custom label takes the
+  card's colour) is drawn as a chip: top-left on rects, centred over the text on pills, diamonds and
+  circles. `FlowStatic.stepChip` places it and `cardPadding` gives the text padding with room for it;
+  the editor CSS, the export (`flow-io.js` `cardContent`) and the Snippets preview all use those numbers.
+  Set from the panel's Step section; a card whose text would no longer fit grows to the next grid line
+  in the same undo step.
 - `core.exportDoc()` is what gets written: it omits a top-level `nodes`/`edges` array
   that was absent in the source and is still empty. It copies keys with `Object.defineProperty`
   so a literal `"__proto__"` key survives the round-trip.

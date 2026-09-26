@@ -78,7 +78,7 @@
     function signature(n) {
         // Any field can hold any JSON value: never let Array.join call an object's toString.
         const v = (x) => (x == null || typeof x !== 'object' ? x : JSON.stringify(x));
-        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
+        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
     }
 
     function renderNodes(d) {
@@ -185,7 +185,17 @@
             return;
         }
         const shape = S.nodeShape(n);
-        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (core.selection.nodes.has(n.id) ? ' is-selected' : '');
+        const step = S.stepType(n);
+        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (step ? ' has-step' : '') + (core.selection.nodes.has(n.id) ? ' is-selected' : '');
+        // Step label chip (sibling of the content, so it stays visible while the card is edited).
+        let chip = el.querySelector('.flow-step-chip');
+        if (step) {
+            if (!chip) { chip = document.createElement('span'); chip.className = 'flow-step-chip'; el.appendChild(chip); }
+            chip.textContent = step;
+            chip.title = step;
+            const sc = S.stepColor(n);
+            if (sc) chip.style.setProperty('--step-color', nodes.cssColor(sc)); else chip.style.removeProperty('--step-color');
+        } else if (chip) chip.remove();
         let shapeEl = el.querySelector('.flow-node-shape');
         if (shape === 'diamond' || shape === 'circle') {
             if (!shapeEl) {

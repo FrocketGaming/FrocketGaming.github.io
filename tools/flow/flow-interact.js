@@ -629,6 +629,7 @@
         ['flow-ico-pill', 'Pill', 'Start or end of the flow ("Start", "Done")'],
         ['flow-ico-diamond', 'Diamond', 'A decision (if / else): a question, with labelled arrows out ("Yes" / "No")'],
         ['flow-ico-circle', 'Circle', 'A jump point: the same letter in two places continues the flow without a long line'],
+        ['flow-ico-step', 'Step label', 'What runs the step (sql, python, api...): the chip in the corner, set in the panel'],
         ['flow-ico-group', 'Group', 'Steps that belong together: a phase, a system or an owner'],
         ['flow-ico-line', 'Arrow label', 'The condition for taking that path ("Yes", "No", "Timeout")'],
     ];

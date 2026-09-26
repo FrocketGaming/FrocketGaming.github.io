@@ -304,8 +304,9 @@
         return (n, box, shape) => {
             const note = (s) => { for (const ch of S.str(s)) chars.add(ch); return s; };
             const padded = shape === 'rect' || shape === 'pill';
-            const px = padded ? 14 : 0, py = padded ? 10 : 0;
-            const x0 = box.x + px, y0 = box.y + py, w = Math.max(10, box.w - px * 2), h = Math.max(10, box.h - py * 2);
+            // Text cards: the editor's padding (room for a step label included); others as before.
+            const [pt, pr, pb, pl] = n.type === 'text' ? S.cardPadding(n, shape) : padded ? [10, 14, 10, 14] : [0, 0, 0, 0];
+            const x0 = box.x + pl, y0 = box.y + pt, w = Math.max(10, box.w - pl - pr), h = Math.max(10, box.h - pt - pb);
             const parts = [];
             let contentH = 0;
 
@@ -527,6 +528,14 @@
         usedFaces.add('body|400|0');
         for (const n of part.nodes) if (n.type === 'group' && n.label) { usedFaces.add('body|700|0'); for (const ch of S.str(n.label)) chars.add(ch); }
         for (const e of part.edges) if (e.label) for (const ch of S.str(e.label)) chars.add(ch);
+        // Step label chips: JetBrains Mono 700, the label's characters (and '…' when ellipsised).
+        for (const n of part.nodes) {
+            const t = S.stepType(n);
+            if (!t) continue;
+            usedFaces.add('head|700|0');
+            for (const ch of t) chars.add(ch);
+            chars.add('…');
+        }
         const r = S.toSVG({ nodes: part.nodes, edges: part.edges }, {
             paint, padding: 40, background: opts.background !== false,
             fontFamily: FONT_BODY, cardContent: cardContent(pal, chars),

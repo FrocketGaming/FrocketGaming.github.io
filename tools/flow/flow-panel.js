@@ -22,6 +22,13 @@
         el.addEventListener('input', onInput);
         el.addEventListener('change', onChange);
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
+        // Custom step label: Enter applies it (via change), Escape leaves the field unchanged.
+        el.addEventListener('keydown', (e) => {
+            if (e.target.dataset.action !== 'step-custom') return;
+            e.stopPropagation();
+            if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+            else if (e.key === 'Escape') { e.preventDefault(); render(); }
+        });
     };
 
     const btn = (action, value, icon, title, active, extra) =>
@@ -71,6 +78,19 @@
             html += btn('shape', 'pill', '<span class="flow-ico-pill"></span>', 'Pill: start or end', shape === 'pill');
             html += btn('shape', 'diamond', '<span class="flow-ico-diamond"></span>', 'Diamond: a decision (if / else)', shape === 'diamond');
             html += btn('shape', 'circle', '<span class="flow-ico-circle"></span>', 'Circle: a jump point', shape === 'circle');
+            html += '</div></div>';
+
+            // Step label: what runs this step. Presets carry their own colour; a custom one uses the card's.
+            const step = common(textCards, S.stepType);
+            const preset = step != null && S.STEP_TYPES.some(([t]) => t === step);
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Step</div><div class="flow-step-opts">';
+            for (const [t, key] of S.STEP_TYPES) {
+                const on = step === t;
+                html += `<button type="button" class="flow-step-opt${on ? ' is-active' : ''}" data-action="step" data-value="${t}" style="--step-color:${key ? `var(${S.PRESETS[key]})` : 'var(--text-secondary)'}" title="${on ? 'Remove the step label' : 'Label this step ' + t}" aria-pressed="${on ? 'true' : 'false'}">${t}</button>`;
+            }
+            html += '</div><div class="flow-step-custom">';
+            html += `<input type="text" class="flow-step-input" data-action="step-custom" maxlength="32" placeholder="Custom…" aria-label="Custom step label" value="${step && !preset ? S.escapeHtml(step) : ''}">`;
+            if (step) html += btn('step', '', '<i class="fa-solid fa-xmark"></i>', 'Remove the step label', false);
             html += '</div></div>';
         }
 
@@ -147,6 +167,33 @@
         obj.styleAttributes[key] = value;
     }
 
+    /**
+     * Set (or with '' remove) the step label on the selected text cards, in one undo step.
+     * A card whose text would no longer fit under the chip grows to the next grid line.
+     */
+    function applyStep(value) {
+        let v = S.str(value).trim().replace(/\s+/g, ' ').slice(0, 32);
+        const preset = S.STEP_TYPES.find(([t]) => t === v.toLowerCase());
+        if (preset) v = preset[0];
+        const cards = core.selectedNodes().filter(n => n.type === 'text');
+        if (!cards.length) return;
+        core.change(v ? 'Step label' : 'Remove step label', () => {
+            for (const n of cards) {
+                setStyleAttr(n, 'step', v || null);
+                if (!v) continue;
+                const el = Flow.nodes.elementFor(n.id);
+                const c = el && el.querySelector('.flow-node-content');
+                if (!c) continue;
+                el.classList.add('has-step');   // the padding the chip reserves, before measuring
+                c.style.justifyContent = 'flex-start';   // centred overflow would hide above the top
+                const need = c.scrollHeight;
+                c.style.justifyContent = '';
+                if (need > (Number(n.height) || 0) + 1) n.height = Math.ceil(need / 20) * 20;
+            }
+            core.invalidate('all');
+        });
+    }
+
     function applyColor(value) {
         const items = [...core.selectedNodes(), ...core.selectedEdges()];
         for (const it of items) { if (value) it.color = value; else delete it.color; }
@@ -160,6 +207,11 @@
         const nodes = core.selectedNodes(), edges = core.selectedEdges();
         switch (b.dataset.action) {
             case 'color': core.change('Colour', () => applyColor(v)); break;
+            case 'step': {
+                const cur = common(nodes.filter(n => n.type === 'text'), S.stepType);
+                applyStep(v && v === cur ? '' : v);   // clicking the active preset removes it
+                break;
+            }
             case 'shape':
                 core.change('Shape', () => nodes.forEach(n => {
                     const was = S.nodeShape(n);
@@ -201,6 +253,7 @@
         e.target.parentElement.style.setProperty('--sw', e.target.value);
     }
     function onChange(e) {
+        if (e.target.dataset.action === 'step-custom') { applyStep(e.target.value); return; }
         if (e.target.dataset.action !== 'custom-color') return;
         if (colorTxn) { colorTxn = false; core.commit(); }
         render();
