@@ -997,7 +997,8 @@
         const arrowStart = edge.fromEnd === 'arrow';
         const arrowEnd = edge.toEnd !== 'none';
         const nodes = opts && opts.nodes;
-        const g = connectorGeometry(anchor(a, fs), fs, anchor(b, ts), ts, {
+        const [pa, pb] = alignFacing(a, fs, anchor(a, fs), b, ts, anchor(b, ts));
+        const g = connectorGeometry(pa, fs, pb, ts, {
             route: edgeRoute(edge), arrowStart, arrowEnd, arrowSize: (opts && opts.arrowSize) || 11,
             ctx: nodes ? routeContext(a, b, nodes) : null,
             cache: opts && opts.cache,
@@ -1021,6 +1022,24 @@
             if (!SIDES.includes(ts)) ts = bs;
         }
         return [fs, ts];
+    }
+
+    /**
+     * Ends that face each other across a gap but miss by a pixel or two (cards of different
+     * widths on the grid, a rounded centre snap) draw as a faint S-bend or slant. Line them
+     * up exactly. The end on a flat side moves, so a tip on a diamond or circle vertex stays put.
+     * Mutates and returns [from, to].
+     */
+    function alignFacing(a, fs, from, b, ts, to) {
+        if (OPPOSITE[fs] !== ts) return [from, to];
+        const nv = NORMAL[fs];
+        if ((to.x - from.x) * nv[0] + (to.y - from.y) * nv[1] <= 0) return [from, to];
+        const k = nv[0] ? 'y' : 'x';
+        const miss = to[k] - from[k];
+        if (!miss || Math.abs(miss) > 3) return [from, to];
+        if (spreadable(a, fs)) from = { ...from, [k]: to[k] };
+        else if (spreadable(b, ts)) to = { ...to, [k]: from[k] };
+        return [from, to];
     }
 
     /**
@@ -1199,6 +1218,7 @@
             items.push({ e, a, b, fs, ts, from: anchor(a, fs), to: anchor(b, ts), route: edgeRoute(e) });
         }
         portPoints(items);
+        for (const it of items) [it.from, it.to] = alignFacing(it.a, it.fs, it.from, it.b, it.ts, it.to);
         for (const it of items) {
             it.ctx = idx ? routeContext(it.a, it.b, nodes, idx) : null;
             if (it.route !== 'straight') it.plan = planPath(it.from, it.fs, it.to, it.ts, it.route, it.ctx, opts.cache || null);
