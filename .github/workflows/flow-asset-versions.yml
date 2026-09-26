@@ -1,0 +1,43 @@
+name: Update Flow asset versions
+
+# Stamps ?v=<hash> on Flow's CSS/JS tags (tools/flow/index.html, plus the Snippets page's
+# flow-static.js tag) so browsers never mix a new page with stale cached scripts.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/flow/*.js"
+      - "tools/flow/*.css"
+      - "tools/flow/version-assets.mjs"
+      - "tools/flow/index.html"
+      - "tools/snippets/index.html"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flow-asset-versions
+  cancel-in-progress: false
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp asset versions
+        run: node tools/flow/version-assets.mjs
+
+      - name: Commit the new versions if they changed
+        run: |
+          if git diff --quiet -- tools/flow/index.html tools/snippets/index.html; then
+            echo "Asset versions are already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/flow/index.html tools/snippets/index.html
+          git commit -m "Update Flow asset versions"
+          # Another workflow (the newsletter's) may have pushed meanwhile.
+          git pull --rebase
+          git push

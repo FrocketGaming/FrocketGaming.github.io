@@ -286,6 +286,15 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
 - Categories: if `snippetTypes` is empty, Flow seeds Snippets' 8 defaults (same ids) before adding one.
 - Prefs: `localStorage['flow-prefs']` (`snap`, `grid`).
 
+## Asset versions
+
+`index.html` loads every `flow-*.js` / `flow-styles.css` with `?v=<hash>` (one md5 of all of them,
+line endings normalised), as does the Snippets page's `flow-static.js` tag. `version-assets.mjs`
+writes it; `.github/workflows/flow-asset-versions.yml` runs it on pushes to `main` that touch Flow and
+commits the result as a bot (so `git pull` after pushing a Flow change). Pages caches CSS/JS for
+4 hours but HTML for 10 minutes; without this a new page could run with stale scripts. Adding a
+`flow-*.js` file needs only its `<script>` tag; the script picks it up.
+
 ## Checks
 
 Harness scripts live outside the repo (scratchpad). The invariants worth re-running after any change:
