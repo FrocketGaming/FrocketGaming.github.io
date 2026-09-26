@@ -271,7 +271,8 @@
         if (core.dragging || core.editing || core.tool === 'hand' || core.viewportEl.classList.contains('is-space')) { if (!core.dragging) hidePorts(); return; }
         const t = e.target;
         if (t.closest('.flow-ports')) { clearTimeout(hideTimer); return; }
-        const nodeEl = t.closest('.flow-node');
+        // A group is only hit on its frame and title tab, so that is where its dots appear.
+        const nodeEl = t.closest('.flow-node, .flow-group-edge, .flow-group-label');
         let id = nodeEl ? nodeEl.dataset.nodeId : null;
         if (id && id !== hoverNodeId) {
             const n = core.getNode(id);
@@ -287,7 +288,9 @@
                 const n = core.getNode(hoverNodeId);
                 const p = core.screenToWorld(e.clientX, e.clientY);
                 const m = 24 / core.view.zoom;
-                if (n && p.x > n.x - m && p.x < n.x + n.width + m && p.y > n.y - m && p.y < n.y + n.height + m) { clearTimeout(hideTimer); return; }
+                const gx = n ? Number(n.x) : 0, gy = n ? Number(n.y) : 0;
+                const inner = n && n.type === 'group' && p.x > gx + m && p.x < gx + Number(n.width) - m && p.y > gy + m && p.y < gy + Number(n.height) - m;
+                if (n && !inner && p.x > n.x - m && p.x < n.x + n.width + m && p.y > n.y - m && p.y < n.y + n.height + m) { clearTimeout(hideTimer); return; }
             }
             scheduleHidePorts();
             return;
@@ -516,7 +519,8 @@
             pin = !!alt;
             snapped = null;
             // Onto its own card after a deliberate drag (left it, or moved 24px+): a self-loop.
-            overSource = p.x > from.x && p.x < from.x + from.width && p.y > from.y && p.y < from.y + from.height;
+            // From a group, its inside is where its cards are (valid targets), not a self-loop.
+            overSource = from.type !== 'group' && p.x > from.x && p.x < from.x + from.width && p.y > from.y && p.y < from.y + from.height;
             if (!overSource || (ev && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) >= 24)) leftSource = true;
             const snap = overSource ? null : snapTarget(p, fromId);
             target = overSource ? (leftSource ? from : null) : (snap && snap.node);
@@ -565,7 +569,10 @@
                 // Settle the final target first, then clear every drag-only visual.
                 if (moved) draw(p, ev.altKey, ev);
                 showDropPorts(null);
-                if (moved && !target && overSource) {
+                // A group never counts as overSource (its inside holds targets), so a short
+                // drag from it that finds no target is treated as the same wiggle.
+                const wiggle = overSource || (from.type === 'group' && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 24);
+                if (moved && !target && wiggle) {
                     // Wiggled on its own card without leaving it: nothing to do.
                     t.g.remove(); setTargetHighlight(null); document.body.classList.remove('flow-connecting');
                     return;

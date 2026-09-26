@@ -422,6 +422,10 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 calc(1px / var(--flow-zoom, 1)) var(--accent-primary);
 }
+.flow-group.is-connect-target .flow-group-fill {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 calc(2px / var(--flow-zoom, 1)) var(--accent-secondary);
+}
 .flow-group-edge {
     position: absolute;
     pointer-events: auto;

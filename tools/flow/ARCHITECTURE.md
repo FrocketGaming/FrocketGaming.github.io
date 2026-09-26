@@ -209,7 +209,10 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
     four dots (`.flow-drop-ports`, display only). Within 18 screen px of a dot the end snaps to that
     side and the edge is pinned; on the card body (or up to 18px off its edge) Flow picks the side.
     Cards beat groups: a group is a target only near its frame, so a drop that just misses a card
-    inside a group never lands on the group. A drag started from a dot keeps that side (`pickSides`
+    inside a group never lands on the group. Groups are also sources: their hover dots show when
+    the pointer is on the frame or title tab (the only parts of a group that take pointer events),
+    and a drag from a group never turns into a self-loop, so it can end on a card inside the group.
+    A drag started from a dot keeps that side (`pickSides`
     with `fixed`, `FlowStatic.bestSides(..., fixed)`); on a dot drop the unmoved end keeps its side.
   - Dragging a connector back onto its own card, after leaving it or moving 24px or more, makes a
     self-loop on a neighbouring side. A small wiggle that stays on the card does nothing.
