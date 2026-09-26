@@ -1234,7 +1234,7 @@ body.flow-moving .flow-viewport * { cursor: move !important; }
 /* Shapes legend: spans the full width, above the shortcut groups. */
 .flow-sc-shapes { grid-column: 1 / -1; }
 .flow-sc-shape { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
-.flow-sc-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; color: var(--text-secondary); }
+.flow-sc-ico { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 28px; color: var(--text-secondary); }
 .flow-ico-step { display: block; padding: 0 3px; font: 700 9px/12px "JetBrains Mono", Consolas, monospace; color: var(--hue-cyan); border: 1px solid currentColor; border-radius: 3px; }
 .flow-ico-step::before { content: "sql"; }
 .flow-ico-group { display: block; width: 18px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; box-sizing: border-box; background: color-mix(in srgb, currentColor 15%, transparent); }
