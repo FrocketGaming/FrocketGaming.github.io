@@ -69,7 +69,7 @@
             <div class="flow-marquee" id="flowMarquee" hidden></div>
             <div class="flow-empty" id="flowEmpty" hidden>
                 <p class="flow-empty-title">Double-click anywhere to add a card</p>
-                <p class="flow-empty-keys"><kbd>T</kbd> card <kbd>G</kbd> group <kbd>Ctrl</kbd>+<kbd>&rarr;</kbd> next connected card <kbd>?</kbd> all shortcuts</p>
+                <p class="flow-empty-keys"><kbd>T</kbd> card <kbd>G</kbd> group <kbd>Ctrl</kbd>+<kbd>&rarr;</kbd> next connected card <kbd>?</kbd> shapes and shortcuts</p>
             </div>
             <div class="flow-drop-hint" id="flowDropHint" hidden><i class="fa-solid fa-file-import"></i> Drop a .canvas file to open it</div>
         </div>
@@ -112,7 +112,7 @@
                     <button role="menuitem" data-action="snap"><i class="fa-solid fa-magnet"></i><span>Snap to grid</span><kbd>Ctrl+'</kbd></button>
                     <button role="menuitem" data-action="grid"><i class="fa-solid fa-border-none"></i><span>Show grid</span><kbd>Ctrl+Shift+'</kbd></button>
                     <div class="flow-menu-sep"></div>
-                    <button role="menuitem" data-action="shortcuts"><i class="fa-regular fa-keyboard"></i><span>Keyboard shortcuts</span><kbd>?</kbd></button>
+                    <button role="menuitem" data-action="shortcuts"><i class="fa-regular fa-keyboard"></i><span>Shapes and shortcuts</span><kbd>?</kbd></button>
                 </div>
             </div>
             <input type="file" id="flowImportInput" accept=".canvas,.json,application/json" hidden>
@@ -138,7 +138,7 @@
 
         <!-- Bottom-right -->
         <div class="flow-footer-right" data-ui>
-            <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Keyboard shortcuts — ?" aria-label="Keyboard shortcuts"><i class="fa-regular fa-circle-question"></i></button>
+            <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Shapes and shortcuts — ?" aria-label="Shapes and shortcuts"><i class="fa-regular fa-circle-question"></i></button>
         </div>
 
         <div class="flow-toast" id="flowToast" role="status" aria-live="polite"></div>
@@ -177,7 +177,7 @@
     <div class="flow-dialog-backdrop" id="flowShortcuts" hidden>
         <div class="flow-dialog flow-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="flowShortcutsTitle">
             <div class="flow-dialog-head">
-                <h3 id="flowShortcutsTitle">Keyboard shortcuts</h3>
+                <h3 id="flowShortcutsTitle">Shapes and shortcuts</h3>
                 <button type="button" class="flow-icon-btn" data-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="flow-shortcuts-grid" id="flowShortcutsGrid"></div>

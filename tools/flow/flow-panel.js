@@ -67,10 +67,10 @@
         if (textCards.length && textCards.length === nodes.length) {
             const shape = common(textCards, S.nodeShape);
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Shape</div><div class="flow-pbtns">';
-            html += btn('shape', 'rect', '<span class="flow-ico-rect"></span>', 'Rectangle', shape === 'rect');
-            html += btn('shape', 'pill', '<span class="flow-ico-pill"></span>', 'Rounded (terminal)', shape === 'pill');
-            html += btn('shape', 'diamond', '<span class="flow-ico-diamond"></span>', 'Diamond (decision)', shape === 'diamond');
-            html += btn('shape', 'circle', '<span class="flow-ico-circle"></span>', 'Circle', shape === 'circle');
+            html += btn('shape', 'rect', '<span class="flow-ico-rect"></span>', 'Rectangle: a step', shape === 'rect');
+            html += btn('shape', 'pill', '<span class="flow-ico-pill"></span>', 'Pill: start or end', shape === 'pill');
+            html += btn('shape', 'diamond', '<span class="flow-ico-diamond"></span>', 'Diamond: a decision (if / else)', shape === 'diamond');
+            html += btn('shape', 'circle', '<span class="flow-ico-circle"></span>', 'Circle: a jump point', shape === 'circle');
             html += '</div></div>';
         }
 

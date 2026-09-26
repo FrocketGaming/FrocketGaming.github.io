@@ -623,6 +623,16 @@
         ]],
     ];
 
+    /** What each shape usually means in a flowchart, shown in the help sheet: [icon class, name, meaning]. */
+    interact.SHAPES = [
+        ['flow-ico-rect', 'Rectangle', 'A step: something that gets done ("Pull data", "Send email")'],
+        ['flow-ico-pill', 'Pill', 'Start or end of the flow ("Start", "Done")'],
+        ['flow-ico-diamond', 'Diamond', 'A decision (if / else): a question, with labelled arrows out ("Yes" / "No")'],
+        ['flow-ico-circle', 'Circle', 'A jump point: the same letter in two places continues the flow without a long line'],
+        ['flow-ico-group', 'Group', 'Steps that belong together: a phase, a system or an owner'],
+        ['flow-ico-line', 'Arrow label', 'The condition for taking that path ("Yes", "No", "Timeout")'],
+    ];
+
     const TOOL_KEYS = { v: 'select', '1': 'select', h: 'hand', '2': 'hand', t: 'card', c: 'card', '3': 'card', a: 'connect', '4': 'connect', g: 'group', '5': 'group', l: 'link', '6': 'link' };
 
     function onKeyDown(e) {

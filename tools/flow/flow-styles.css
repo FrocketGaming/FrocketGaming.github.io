@@ -1165,6 +1165,11 @@ body.flow-moving .flow-viewport * { cursor: move !important; }
 .flow-sc-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent); }
 .flow-sc-row > span:last-child { color: var(--text-secondary); text-align: right; }
 .flow-sc-keys { white-space: nowrap; }
+/* Shapes legend: spans the full width, above the shortcut groups. */
+.flow-sc-shapes { grid-column: 1 / -1; }
+.flow-sc-shape { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+.flow-sc-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; color: var(--text-secondary); }
+.flow-ico-group { display: block; width: 18px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; box-sizing: border-box; background: color-mix(in srgb, currentColor 15%, transparent); }
 
 @media (max-width: 900px) {
     .flow-hint, .flow-stats, .flow-doc-status { display: none; }

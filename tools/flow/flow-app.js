@@ -159,7 +159,9 @@
     app.showShortcuts = function () {
         const grid = $('flowShortcutsGrid');
         if (!grid.childElementCount) {
-            grid.innerHTML = Flow.interact.SHORTCUTS.map(([group, rows]) =>
+            const shapes = `<section class="flow-sc-shapes"><h4>Shapes</h4>${Flow.interact.SHAPES.map(([ico, name, d]) =>
+                `<div class="flow-sc-row"><span class="flow-sc-shape"><span class="flow-sc-ico"><span class="${ico}"></span></span>${name}</span><span>${d}</span></div>`).join('')}</section>`;
+            grid.innerHTML = shapes + Flow.interact.SHORTCUTS.map(([group, rows]) =>
                 `<section><h4>${group}</h4>${rows.map(([k, d]) => `<div class="flow-sc-row"><span class="flow-sc-keys">${k.split(' / ').map(part => part.split(' + ').map(x => `<kbd>${x}</kbd>`).join('+')).join(' / ')}</span><span>${d}</span></div>`).join('')}</section>`).join('');
         }
         app.openDialog('flowShortcuts', grid.closest('.flow-dialog').querySelector('[data-close]'));
