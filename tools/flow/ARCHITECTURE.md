@@ -81,7 +81,7 @@ export untouched. Rules for every module:
   Every edge is auto by default: all UI-created edges (port drag, connector tool, drop on empty
   space, Ctrl+Arrow, paste) and every edge of a chart opened from a file or snippet (P3 adds them
   on the `load` event when `source` is `file`/`snippet`). An edge is pinned (removed from the set)
-  only when the user holds Alt while dropping a new connector or a reconnected end. Loading never
+  when the user drops a new connector or a reconnected end on a side dot, or holds Alt while dropping. Loading never
   rewrites sides; they change only when one of the edge's cards moves, and only sides that are
   stored: an edge the file saved without `fromSide`/`toSide` keeps them omitted (render-time
   routing picks them); a side is written for it only by a user action (reconnect / pin). Pins are deliberately not
@@ -198,6 +198,12 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
     selects) grabs that end directly (pointer handler 940, grab cursor there); a click without a
     4px move selects the connector. The endpoint handles of a selected connector do the same.
     Dropping on empty space changes nothing; Alt pins the sides.
+  - Drop targets (`snapTarget`): while a connector or an end is dragged, the card under it shows its
+    four dots (`.flow-drop-ports`, display only). Within 18 screen px of a dot the end snaps to that
+    side and the edge is pinned; on the card body (or up to 18px off its edge) Flow picks the side.
+    Cards beat groups: a group is a target only near its frame, so a drop that just misses a card
+    inside a group never lands on the group. A drag started from a dot keeps that side (`pickSides`
+    with `fixed`, `FlowStatic.bestSides(..., fixed)`); on a dot drop the unmoved end keeps its side.
   - Dragging a connector back onto its own card, after leaving it or moving 24px or more, makes a
     self-loop on a neighbouring side. A small wiggle that stays on the card does nothing.
 - `Flow.interact`: `init, finishEditing, addConnectedCard(id, 'up'|'down'|'left'|'right'), navigate(dir), nudge, duplicate, deleteSelection, groupSelection, ungroupSelection, reorder(toFront), align(how), distribute(axis), cloneItems, pasteText(text), SHORTCUTS`

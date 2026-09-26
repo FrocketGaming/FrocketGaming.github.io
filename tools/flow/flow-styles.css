@@ -551,6 +551,15 @@ body.flow-moving .flow-edge-hit { pointer-events: none; }
 .flow-port-right { left: 100%; top: 50%; }
 @keyframes flow-port-in { from { opacity: 0; } to { opacity: 1; } }
 body.flow-connecting .flow-ports { display: none; }
+/* Dots on the card a connector is being dragged to (display only); the one it will snap to is filled. */
+.flow-drop-ports { position: absolute; pointer-events: none; }
+.flow-drop-ports .flow-port { pointer-events: none; animation: none; }
+.flow-drop-ports .flow-port::before,
+.flow-drop-ports .flow-port::after { display: none; }
+.flow-drop-ports .flow-port.is-snap {
+    background: var(--accent-primary);
+    box-shadow: 0 0 0 calc(3px / var(--flow-zoom, 1)) color-mix(in srgb, var(--accent-primary) 35%, transparent);
+}
 
 .flow-temp-edge .flow-edge-line { stroke: var(--accent-primary); stroke-dasharray: 6 5; }
 .flow-temp-edge .flow-edge-head { fill: var(--accent-primary); stroke: var(--accent-primary); }

@@ -600,7 +600,8 @@
         ['Build fast', [
             ['Double-click', 'New card here'], ['Ctrl + Arrow', 'New connected card in that direction (also while typing)'],
             ['Alt + Arrow', 'Jump to neighbouring card'], ['Enter / F2', 'Edit card or connector label'],
-            ['Esc / Ctrl + Enter', 'Finish editing'], ['Drag edge dot', 'Connect, or drop on empty space for a new card'],
+            ['Esc / Ctrl + Enter', 'Finish editing'], ['Drag edge dot', 'Connect (drop on a dot to fix that side), or drop on empty space for a new card'],
+            ['Drag near a connector end', 'Move that end to another card or dot'],
             ['Click edge dot', 'New connected card on that side'],
         ]],
         ['Edit', [

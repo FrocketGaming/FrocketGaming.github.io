@@ -82,9 +82,15 @@
         return S.edgeGeometry(edge, core.nodeIndex(), { arrowSize: arrowSize(), nodes: core.nodes(), cache: routeCache });
     };
 
-    /** Best sides for a connector between nodes a and b, avoiding the other cards. */
-    function pickSides(a, b, route, current, edgeId, idx, maxEvals) {
-        return S.bestSides(a, b, core.nodes(), route || 'curve', current, sideUse(a, b, edgeId), idx, maxEvals);
+    /**
+     * Best sides for a connector between nodes a and b, avoiding the other cards.
+     * fixed = { from?, to? } keeps a side the user chose and picks only the other one.
+     */
+    function pickSides(a, b, route, current, edgeId, idx, maxEvals, fixed) {
+        const r = S.bestSides(a, b, core.nodes(), route || 'curve', current, sideUse(a, b, edgeId), idx, maxEvals, fixed);
+        if (fixed && fixed.from) r[0] = fixed.from;
+        if (fixed && fixed.to) r[1] = fixed.to;
+        return r;
     }
 
     /** How many other connectors leave from / arrive at each side of nodes a and b. */
@@ -297,7 +303,7 @@
             portsEl.className = 'flow-ports';
             selUI.appendChild(portsEl);
         }
-        portsEl.innerHTML = S.SIDES.map(s => `<div class="flow-port flow-port-${s}" data-port="${s}" data-node-id="${S.escapeHtml(id)}" title="Drag to connect (hold Alt to pin sides) · click the dot to add a connected card"></div>`).join('');
+        portsEl.innerHTML = S.SIDES.map(s => `<div class="flow-port flow-port-${s}" data-port="${s}" data-node-id="${S.escapeHtml(id)}" title="Drag to connect: drop on a dot to fix that side, or on the card to let Flow choose · click the dot to add a connected card"></div>`).join('');
         positionPorts();
     }
 
@@ -342,6 +348,65 @@
             ex.add(n.id);
         }
         return null;
+    }
+
+    /** Screen px around a side dot (or a card edge) within which a dragged connector end snaps to it. */
+    const DROP_SNAP_PX = 18;
+
+    /**
+     * What a dragged connector end at world point p attaches to: { node, side } near one of a
+     * card's side dots (side = that dot), { node, side: null } on a card or just off its edge
+     * (Flow picks the side), else null. Cards win over groups: a group is only a target near
+     * its frame, so a drop that just misses a card inside a group never lands on the group.
+     */
+    function snapTarget(p, excludeId) {
+        const R = DROP_SNAP_PX / (core.view.zoom || 1);
+        const list = core.nodes();
+        const box = (n) => ({ x: Number(n.x), y: Number(n.y), w: Number(n.width), h: Number(n.height) });
+        const near = (b, m) => p.x > b.x - m && p.x < b.x + b.w + m && p.y > b.y - m && p.y < b.y + b.h + m;
+        const dotNear = (groups) => {
+            let best = null, bd = R * R;
+            for (const n of list) {
+                if (!n || n.id === excludeId || (n.type === 'group') !== groups || !near(box(n), R)) continue;
+                for (const side of S.SIDES) {
+                    const a = S.anchor(n, side);
+                    const d = (a.x - p.x) ** 2 + (a.y - p.y) ** 2;
+                    if (d < bd) { bd = d; best = { node: n, side }; }
+                }
+            }
+            return best;
+        };
+        const cardDot = dotNear(false);
+        if (cardDot) return cardDot;
+        for (let i = list.length - 1; i >= 0; i--) {
+            const c = list[i];
+            if (c && c.id !== excludeId && c.type !== 'group' && S.inShape(c, p, -R)) return { node: c, side: null };
+        }
+        const groupDot = dotNear(true);
+        if (groupDot) return groupDot;
+        for (let i = list.length - 1; i >= 0; i--) {
+            const g = list[i];
+            if (!g || g.id === excludeId || g.type !== 'group') continue;
+            const b = box(g);
+            if (near(b, R) && !(p.x > b.x + R && p.x < b.x + b.w - R && p.y > b.y + R && p.y < b.y + b.h - R)) return { node: g, side: null };
+        }
+        return null;
+    }
+
+    /** The four side dots on the card a connector is being dragged to; the snapped one is filled. */
+    let dropPortsEl = null;
+    function showDropPorts(n, side) {
+        if (!n) { if (dropPortsEl) { dropPortsEl.remove(); dropPortsEl = null; } return; }
+        if (!dropPortsEl) {
+            dropPortsEl = document.createElement('div');
+            dropPortsEl.className = 'flow-drop-ports';
+            dropPortsEl.innerHTML = S.SIDES.map(sd => `<div class="flow-port flow-port-${sd}" data-side="${sd}"></div>`).join('');
+            selUI.appendChild(dropPortsEl);
+        }
+        const st = dropPortsEl.style;
+        st.left = Number(n.x) + 'px'; st.top = Number(n.y) + 'px';
+        st.width = Number(n.width) + 'px'; st.height = Number(n.height) + 'px';
+        for (const d of dropPortsEl.children) d.classList.toggle('is-snap', d.dataset.side === side);
     }
 
     function setTargetHighlight(id) {
@@ -441,7 +506,7 @@
         hidePorts();
         const t = tempPath();
         const start = { x: downEvent.clientX, y: downEvent.clientY };
-        let moved = false, target = null, toSide = null, fromSide = side, pin = false;
+        let moved = false, target = null, toSide = null, fromSide = side, pin = false, snapped = null;
         let leftSource = false, overSource = false;
         const startWorld = core.screenToWorld(start.x, start.y);
         const NEXT = { top: 'right', right: 'bottom', bottom: 'left', left: 'top' };
@@ -449,10 +514,12 @@
 
         const draw = (p, alt, ev) => {
             pin = !!alt;
+            snapped = null;
             // Onto its own card after a deliberate drag (left it, or moved 24px+): a self-loop.
             overSource = p.x > from.x && p.x < from.x + from.width && p.y > from.y && p.y < from.y + from.height;
             if (!overSource || (ev && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) >= 24)) leftSource = true;
-            target = overSource ? (leftSource ? from : null) : targetAt(p, fromId);
+            const snap = overSource ? null : snapTarget(p, fromId);
+            target = overSource ? (leftSource ? from : null) : (snap && snap.node);
             let endPt = p, ts = null;
             if (target === from) {
                 fromSide = side || S.nearestSide(from, startWorld);
@@ -462,16 +529,21 @@
                 ts = d2(nb[0]) <= d2(nb[1]) ? nb[0] : nb[1];
                 endPt = S.anchor(from, ts);
             } else if (target) {
-                if (pin) {
+                // The dot the drag started from, and a dot dropped on, are kept; Flow picks the rest.
+                if (snap.side) {
+                    snapped = snap.side;
+                    [fromSide, ts] = pickSides(from, target, 'curve', null, null, null, null, { from: side, to: snapped });
+                } else if (pin) {
                     fromSide = side || S.facingSide(from, S.center(target));
                     ts = S.nearestSide(target, p);
                 } else {
-                    [fromSide, ts] = pickSides(from, target, 'curve');
+                    [fromSide, ts] = pickSides(from, target, 'curve', null, null, null, null, side ? { from: side } : null);
                 }
                 endPt = S.anchor(target, ts);
             } else {
-                fromSide = pin && side ? side : S.facingSide(from, p);
+                fromSide = side || S.facingSide(from, p);
             }
+            showDropPorts(target && target !== from ? target : null, snapped);
             toSide = ts;
             const geo = S.connectorGeometry(S.anchor(from, fromSide), fromSide, endPt, ts, {
                 arrowEnd: true, arrowSize: arrowSize(),
@@ -492,6 +564,7 @@
             up: (ev, p) => {
                 // Settle the final target first, then clear every drag-only visual.
                 if (moved) draw(p, ev.altKey, ev);
+                showDropPorts(null);
                 if (moved && !target && overSource) {
                     // Wiggled on its own card without leaving it: nothing to do.
                     t.g.remove(); setTargetHighlight(null); document.body.classList.remove('flow-connecting');
@@ -511,7 +584,7 @@
                 }
                 if (target) {
                     core.change('Connect', () => {
-                        const edge = core.addEdge({ id: core.newId(), fromNode: fromId, fromSide: fromSide, toNode: target.id, toSide: toSide }, { auto: !pin });
+                        const edge = core.addEdge({ id: core.newId(), fromNode: fromId, fromSide: fromSide, toNode: target.id, toSide: toSide }, { auto: !(pin || snapped) });
                         core.select([], [edge.id]);
                     });
                     return;
@@ -533,13 +606,13 @@
                 core.begin('Add connected card');
                 const node = Flow.nodes.createCard({ x: spot.x, y: spot.y }, { center: false, width: w, height: h });
                 node.x = Math.round(spot.x); node.y = Math.round(spot.y);
-                const [afs, ats] = pin ? [fs, ts] : pickSides(from, node, 'curve');
+                const [afs, ats] = pin ? [fs, ts] : pickSides(from, node, 'curve', null, null, null, null, side ? { from: side } : null);
                 core.addEdge({ id: core.newId(), fromNode: fromId, fromSide: afs, toNode: node.id, toSide: ats }, { auto: !pin });
                 core.reindex();
                 core.invalidate('all');
                 Flow.nodes.startEdit(node.id, { isNew: true, ownTxn: true });
             },
-            cancel: () => { t.g.remove(); setTargetHighlight(null); document.body.classList.remove('flow-connecting'); },
+            cancel: () => { t.g.remove(); setTargetHighlight(null); showDropPorts(null); document.body.classList.remove('flow-connecting'); },
         });
     };
 
@@ -597,20 +670,25 @@
             if (t) t.g.remove();
             r.g.classList.remove('is-reconnecting');
             setTargetHighlight(null);
+            showDropPorts(null);
             document.body.classList.remove('flow-connecting');
         };
         if (!lazy) begin();
         const geo0 = r.geo;
         const fixedSide = end === 'from' ? geo0.toSide : geo0.fromSide;
-        let target = null, tSide = null, fSide = fixedSide, pin = false;
+        let target = null, tSide = null, fSide = fixedSide, pin = false, snapped = null;
         const route = S.edgeRoute(edge);
         const draw = (p, alt) => {
             pin = !!alt;
-            target = targetAt(p, fixedId);
+            snapped = null;
+            const snap = snapTarget(p, fixedId);
+            target = snap && snap.node;
             let pt = p;
             tSide = null; fSide = fixedSide;
             if (target) {
-                if (pin) tSide = S.nearestSide(target, p);
+                // On a dot: that side, and the end that stayed put keeps its side.
+                if (snap.side) tSide = snapped = snap.side;
+                else if (pin) tSide = S.nearestSide(target, p);
                 else {
                     const [x, y] = end === 'to' ? pickSides(fixed, target, route, null, edge.id) : pickSides(target, fixed, route, null, edge.id);
                     if (end === 'to') { fSide = x; tSide = y; } else { tSide = x; fSide = y; }
@@ -623,8 +701,9 @@
             const geo = end === 'to' ? S.connectorGeometry(fa, fSide, pt, tSide, o) : S.connectorGeometry(pt, tSide, fa, fSide, o);
             t.line.setAttribute('d', geo.d);
             t.head.setAttribute('d', S.arrowPath(geo.endTip, geo.endDir, arrowSize()));
-            t.g.classList.toggle('is-pinned', pin);
+            t.g.classList.toggle('is-pinned', pin || !!snapped);
             setTargetHighlight(target && target.id);
+            showDropPorts(target, snapped);
         };
         core.trackDrag(downEvent, {
             move: (ev, p) => {
@@ -646,8 +725,8 @@
                 core.change('Reconnect', () => {
                     if (end === 'to') { edge.toNode = target.id; edge.toSide = tSide; if (edge.fromSide !== fSide) edge.fromSide = fSide; }
                     else { edge.fromNode = target.id; edge.fromSide = tSide; if (edge.toSide !== fSide) edge.toSide = fSide; }
-                    // Dropped plainly: auto (re-aims as cards move). With Alt: pinned to the side dropped on.
-                    if (pin) core.autoEdges.delete(edge.id); else core.autoEdges.add(edge.id);
+                    // Dropped on the card: auto (re-aims as cards move). On a dot or with Alt: pinned.
+                    if (pin || snapped) core.autoEdges.delete(edge.id); else core.autoEdges.add(edge.id);
                     core.select([], [edge.id]);
                 });
             },

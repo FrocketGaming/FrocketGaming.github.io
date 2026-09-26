@@ -621,7 +621,7 @@
     }
 
     const sideCache = new Map();
-    function bestSides(a, b, nodes, route, current, used, idx, maxEvals) {
+    function bestSides(a, b, nodes, route, current, used, idx, maxEvals, fixed) {
         maxEvals = maxEvals || 6;
         if (!a || !b) return autoSides(a, b);
         const r = route || 'curve';
@@ -633,6 +633,8 @@
             .some(c => pt.x > num(c.x) - 2 && pt.x < num(c.x) + num(c.width) + 2 && pt.y > num(c.y) - 2 && pt.y < num(c.y) + num(c.height) + 2);
         const cand = [];
         for (const fs of SIDES) for (const ts of SIDES) {
+            // fixed = { from?, to? }: a side the user chose; only the other one is picked.
+            if (fixed && ((fixed.from && fs !== fixed.from) || (fixed.to && ts !== fixed.to))) continue;
             const pa = anchor(a, fs), pb = anchor(b, ts);
             const ua = (used && used.a && used.a[fs]) || { in: 0, out: 0 };
             const ub = (used && used.b && used.b[ts]) || { in: 0, out: 0 };
