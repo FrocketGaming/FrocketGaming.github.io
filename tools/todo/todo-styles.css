@@ -1892,6 +1892,19 @@ kbd {
     display: block;
 }
 
+.desc-tooltip-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.desc-tooltip-title:only-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
 /* ===== Scrollbar ===== */
 .completed-list-wrapper::-webkit-scrollbar {
     width: 6px;

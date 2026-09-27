@@ -1340,12 +1340,26 @@ class TodoApp {
         lists.forEach(list => {
             list.addEventListener('mousemove', (e) => {
                 const item = e.target.closest('.todo-item');
-                if (!item || !item.dataset.description) {
+                const titleEl = item?.querySelector('.todo-text');
+                // Titles are single-line with an ellipsis, so a title-only
+                // card earns a tooltip just when its title is cut off.
+                const titleCut = !!titleEl && titleEl.scrollWidth > titleEl.clientWidth;
+                if (!item || (!item.dataset.description && !titleCut)) {
                     tooltip.classList.remove('visible');
+                    tooltip.dataset.forId = '';
                     return;
                 }
                 if (tooltip.dataset.forId !== item.dataset.id) {
-                    tooltip.textContent = item.dataset.description;
+                    const title = document.createElement('div');
+                    title.className = 'desc-tooltip-title';
+                    title.textContent = titleEl?.textContent || '';
+                    const parts = [title];
+                    if (item.dataset.description) {
+                        const body = document.createElement('div');
+                        body.textContent = item.dataset.description;
+                        parts.push(body);
+                    }
+                    tooltip.replaceChildren(...parts);
                     tooltip.dataset.forId = item.dataset.id;
                 }
                 tooltip.classList.add('visible');
