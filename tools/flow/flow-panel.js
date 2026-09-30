@@ -116,6 +116,9 @@
             html += btn('dash', 'dotted', '<span class="flow-ico-line is-dotted"></span>', 'Dotted', dash === 'dotted');
             html += '</div></div>';
             // Label presets: one click sets the branch name on every selected connector; the active one clears it.
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Direction</div><div class="flow-pbtns">';
+            html += btn('reverse', '', '<i class="fa-solid fa-right-left"></i>', 'Reverse direction (Alt+R)', false);
+            html += '</div></div>';
             const lab = common(edges, e => S.str(e.label));
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Label</div><div class="flow-step-opts">';
             for (const t of Flow.arrange.LABEL_PRESETS) {
@@ -274,6 +277,7 @@
                 break;
             case 'label': Flow.edges.editLabel(edges[0].id); break;
             case 'edge-label': Flow.arrange.setLabel(v && v === common(edges, ed => S.str(ed.label)) ? '' : v); break;
+            case 'reverse': Flow.arrange.reverseEdges(); break;
             case 'equal': Flow.arrange.equalSize(v); break;
             case 'layout': Flow.arrange.autoLayout(v); break;
             case 'collapse': Flow.arrange.toggleCollapse(); break;

@@ -229,6 +229,32 @@
         });
     };
 
+    // ── Reverse direction ───────────────────────────────────────────────────
+
+    /**
+     * Flip each selected connector: it now starts at the card it ended on, and the sides swap with
+     * the ends. Arrowheads stay with their role (start / end), so an A to B arrow becomes B to A
+     * and its head moves to A; a two-headed or headless connector looks the same. Label and
+     * colour are untouched.
+     */
+    arrange.reverseEdges = function () {
+        const list = core.selectedEdges();
+        if (!list.length) return;
+        core.change('Reverse direction', () => {
+            for (const e of list) {
+                const swap = (a, b) => {
+                    const va = Object.prototype.hasOwnProperty.call(e, a) ? e[a] : undefined;
+                    const vb = Object.prototype.hasOwnProperty.call(e, b) ? e[b] : undefined;
+                    if (vb === undefined) delete e[a]; else e[a] = vb;
+                    if (va === undefined) delete e[b]; else e[b] = va;
+                };
+                swap('fromNode', 'toNode');
+                swap('fromSide', 'toSide');
+            }
+            core.invalidate('all');
+        });
+    };
+
     // ── Format painter ──────────────────────────────────────────────────────
 
     let brush = null;   // { kind: 'node' | 'edge', ... } while a style is held
@@ -323,7 +349,8 @@
             if (mod && e.altKey && e.code === 'KeyC') { e.preventDefault(); arrange.copyStyle(false); return; }
             if (mod && e.altKey && e.code === 'KeyV') { e.preventDefault(); arrange.pasteStyle(); return; }
             if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyL') { e.preventDefault(); arrange.toggleLock(); return; }
-            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyG') { e.preventDefault(); arrange.toggleCollapse(); }
+            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyG') { e.preventDefault(); arrange.toggleCollapse(); return; }
+            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyR') { e.preventDefault(); arrange.reverseEdges(); }
         }, true);
         core.on('load', () => { if (brush) endPainting(); });
     };

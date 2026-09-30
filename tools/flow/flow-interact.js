@@ -643,6 +643,7 @@
             ['Ctrl + A', 'Select all'], ['Ctrl + G', 'Group selection'], ['Ctrl + Shift + G', 'Ungroup'],
             ['Arrows / Shift + Arrows', 'Nudge 1px / one grid step'], ['Ctrl + ] / [', 'Bring to front / send to back'],
             ['Ctrl while dragging', 'Move without snapping'],
+            ['Alt + R', 'Reverse the selected connectors'],
             ['Alt + L', 'Lock / unlock (no moving, resizing or deleting)'], ['Alt + G', 'Collapse / expand the selected group'],
             ['Ctrl + Alt + C / V', 'Copy / paste style (or use the brush in the panel)'],
         ]],
@@ -678,6 +679,7 @@
         ['fa-solid fa-vector-square', 'Fit group', 'Resize a group to hug the cards inside it'],
         ['fa-regular fa-square-minus', 'Collapse group', 'Shrink a group to its title bar and hide its cards; connectors attach to the bar. Also the chevron on the group'],
         ['fa-solid fa-lock', 'Lock', 'A locked card or group cannot be moved, resized or deleted. A padlock shows in its corner'],
+        ['fa-solid fa-right-left', 'Reverse direction', 'Flip a connector so it runs the other way: the arrow points at the card it started from'],
         ['fa-solid fa-font', 'Connector labels', 'Yes / No / Success / Failure / Retry / Timeout in one click; click the active one to clear it'],
     ];
 

@@ -222,6 +222,8 @@
                 case 'export-png': Flow.io.exportPNG(); break;
                 case 'export-svg': Flow.io.exportSVG(); break;
                 case 'copy-png': Flow.io.copyPNG(); break;
+                case 'copy-mermaid': Flow.mermaid.copy(); break;
+                case 'export-mermaid': Flow.mermaid.download(); break;
                 case 'snap': core.setPref('snap', !core.prefs.snap); break;
                 case 'grid': core.setPref('grid', !core.prefs.grid); break;
                 case 'shortcuts': app.showShortcuts(); break;

@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
     <link rel="stylesheet" href="../../src/firebase-sync.css">
-    <link rel="stylesheet" href="flow-styles.css?v=9aa89ffe">
+    <link rel="stylesheet" href="flow-styles.css?v=5a925020">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -118,6 +118,8 @@
                     <button role="menuitem" data-action="export-canvas"><i class="fa-solid fa-file-export"></i><span>Export .canvas</span><kbd>Ctrl+Shift+S</kbd></button>
                     <button role="menuitem" data-action="export-png"><i class="fa-regular fa-image"></i><span>Export PNG</span><kbd>Ctrl+Shift+E</kbd></button>
                     <button role="menuitem" data-action="export-svg"><i class="fa-solid fa-bezier-curve"></i><span>Export SVG</span></button>
+                    <button role="menuitem" data-action="copy-mermaid"><i class="fa-solid fa-diagram-project"></i><span>Copy as Mermaid</span></button>
+                    <button role="menuitem" data-action="export-mermaid"><i class="fa-solid fa-file-code"></i><span>Export Mermaid (.mmd)</span></button>
                     <button role="menuitem" data-action="copy-png"><i class="fa-regular fa-copy"></i><span>Copy as PNG</span><kbd>Shift+Alt+C</kbd></button>
                     <div class="flow-menu-sep"></div>
                     <button role="menuitem" data-action="snap"><i class="fa-solid fa-magnet"></i><span>Snap to grid</span><kbd>Ctrl+'</kbd></button>
@@ -208,19 +210,20 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="../../src/vendor/purify.min.js"></script>
-    <script src="flow-static.js?v=9aa89ffe"></script>
-    <script src="flow-core.js?v=9aa89ffe"></script>
-    <script src="flow-canvas.js?v=9aa89ffe"></script>
-    <script src="flow-nodes.js?v=9aa89ffe"></script>
-    <script src="flow-edges.js?v=9aa89ffe"></script>
-    <script src="flow-interact.js?v=9aa89ffe"></script>
-    <script src="flow-arrange.js?v=9aa89ffe"></script>
-    <script src="flow-find.js?v=9aa89ffe"></script>
-    <script src="flow-minimap.js?v=9aa89ffe"></script>
-    <script src="flow-panel.js?v=9aa89ffe"></script>
-    <script src="flow-io.js?v=9aa89ffe"></script>
-    <script src="flow-snippets.js?v=9aa89ffe"></script>
-    <script src="flow-app.js?v=9aa89ffe"></script>
+    <script src="flow-static.js?v=5a925020"></script>
+    <script src="flow-core.js?v=5a925020"></script>
+    <script src="flow-canvas.js?v=5a925020"></script>
+    <script src="flow-nodes.js?v=5a925020"></script>
+    <script src="flow-edges.js?v=5a925020"></script>
+    <script src="flow-interact.js?v=5a925020"></script>
+    <script src="flow-arrange.js?v=5a925020"></script>
+    <script src="flow-find.js?v=5a925020"></script>
+    <script src="flow-minimap.js?v=5a925020"></script>
+    <script src="flow-panel.js?v=5a925020"></script>
+    <script src="flow-mermaid.js?v=5a925020"></script>
+    <script src="flow-io.js?v=5a925020"></script>
+    <script src="flow-snippets.js?v=5a925020"></script>
+    <script src="flow-app.js?v=5a925020"></script>
 </body>
 
 </html>

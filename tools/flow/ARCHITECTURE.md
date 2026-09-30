@@ -2,7 +2,7 @@
 
 Vanilla JS, classic `<script>` tags, no build. Load order (see `index.html`):
 `flow-static.js` -> `flow-core.js` -> `flow-canvas.js` -> `flow-nodes.js` -> `flow-edges.js` ->
-`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-io.js` -> `flow-snippets.js` -> `flow-app.js`.
+`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-mermaid.js` -> `flow-io.js` -> `flow-snippets.js` -> `flow-app.js`.
 Everything hangs off `window.Flow` (plus the standalone `window.FlowStatic`). Each piece
 module exposes `init()`; `flow-app.js` calls them in that order and then loads a document.
 
@@ -17,6 +17,7 @@ module exposes `init()`; `flow-app.js` calls them in that order and then loads a
 | `flow-arrange.js` | P7 | Lock, collapse/expand groups, fit group to contents, equal size, auto layout (`Flow.arrange.layout` is the pure layered layout), format painter (copy/paste style, armed brush), connector label presets. |
 | `flow-find.js` | P8 | Find on canvas (Ctrl+F): bar, match list over card text / link / file / group titles / step labels / connector labels, ring overlay layer. Never writes to the document. |
 | `flow-minimap.js` | P9 | Minimap canvas (M or footer button, pref `minimap`): whole-chart overview, click or drag to move the view. |
+| `flow-mermaid.js` | P10 | Mermaid export: `build()` turns the chart into a `flowchart` (shapes, subgraphs from group containment, arrow/dash/label/colour, TD or LR from how connectors run); copy or `.mmd` download from the menu. Export only. |
 | `flow-panel.js` | P2/P3 UI | Left properties panel: colour (6 presets + custom), card shape, arrowheads, route, line style, arrange, actions. Stateless: reads the selection, writes through `core.change`. |
 | `flow-io.js` | P5 | `parse` / `serialize`, import (file picker, drag-drop, paste of files), export `.canvas`; the Export image dialog (PNG/SVG, scale 1x/2x/3x, whole chart by default or "Only selected", background on/off), copy PNG; the portable SVG text layout. |
 | `flow-snippets.js` | P6 | `Flow.store`: per-chart localStorage working copies, cross-tab sync, boot restore. `Flow.snippets`: save to / open from the IndexedDB `snippets` store (versions like Snippets), conflict + delete detection, Open dialog (incl. Unsaved work), Save-as-new, inline new category, Firebase push when signed in. |
@@ -231,9 +232,10 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
   - Dragging a connector back onto its own card, after leaving it or moving 24px or more, makes a
     self-loop on a neighbouring side. A small wiggle that stays on the card does nothing.
 - `Flow.interact`: `init, finishEditing, addConnectedCard(id, 'up'|'down'|'left'|'right'), navigate(dir), nudge, duplicate, deleteSelection, groupSelection, ungroupSelection, reorder(toFront), align(how), distribute(axis), cloneItems, pasteText(text), SHORTCUTS`
-- `Flow.arrange`: `init, toggleLock, toggleCollapse(groupIds?), fitGroups, equalSize('w'|'h'|'both'), autoLayout('down'|'right'), layout(nodes, edges, dir), setLabel(text), copyStyle(arm), pasteStyle, hasBrush, isPainting, setStyleAttr, LABEL_PRESETS`
+- `Flow.arrange`: `init, toggleLock, toggleCollapse(groupIds?), fitGroups, equalSize('w'|'h'|'both'), autoLayout('down'|'right'), layout(nodes, edges, dir), setLabel(text), reverseEdges, copyStyle(arm), pasteStyle, hasBrush, isPainting, setStyleAttr, LABEL_PRESETS`
   - Auto layout tidies the selection (2+ unlocked cards), or the whole chart when fewer are selected (cards inside groups stay put). Layers by longest path (cycles broken by ignoring the closing edge), barycentre ordering, snapped to the grid, anchored at the old top-left. One undo step.
   - Format painter: the brush is `{ kind: 'node' | 'edge', ... }` (colour and shape for cards, colour / arrowheads / route / line for connectors). Armed = body class `flow-painting`; the pointer handler at priority 550 paints the next card or connector and disarms; Esc cancels.
+- `Flow.mermaid`: `build(doc?), copy, download`
 - `Flow.find`: `init, open, close, isOpen`
 - `Flow.minimap`: `init, toggle`
 - `Flow.panel`: `init, render`
