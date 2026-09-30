@@ -79,7 +79,8 @@
     edges.geometry = function (edge) {
         const r = edge && els.get(edge.id);
         if (r && r.geo) return r.geo;
-        return S.edgeGeometry(edge, core.nodeIndex(), { arrowSize: arrowSize(), nodes: core.nodes(), cache: routeCache });
+        const sc = core.scene();
+        return S.edgeGeometry(edge, sc ? sc.byId : core.nodeIndex(), { arrowSize: arrowSize(), nodes: sc ? sc.nodes : core.nodes(), cache: routeCache });
     };
 
     /**
@@ -157,10 +158,13 @@
         const list = core.edges();
         const AS = arrowSize();
         // Lay out every connector together: shared sides are spread, shared channels split.
-        const layout = S.layoutEdges(list, core.nodeIndex(), { nodes: core.nodes(), cache: routeCache, arrowSize: AS });
+        // Collapsed groups: members are hidden and their connectors land on the group's bar.
+        const sc = core.scene();
+        const drawn = sc ? sc.edges : list;
+        const layout = S.layoutEdges(drawn, sc ? sc.byId : core.nodeIndex(), { nodes: sc ? sc.nodes : core.nodes(), cache: routeCache, arrowSize: AS });
         // Labels: the same layout as export (S.layoutLabels). While a drag is in progress only
         // the labels whose connector moved are re-placed, cheaply; the full layout runs on release.
-        const labelAt = core.dragging ? null : S.layoutLabels(list, layout, layout.idx);
+        const labelAt = core.dragging ? null : S.layoutLabels(drawn, layout, layout.idx);
         const set = (el, name, v) => { if (el['_' + name] !== v) { el['_' + name] = v; el.setAttribute(name, v); } };
         let i = 0;
         for (const e of list) {

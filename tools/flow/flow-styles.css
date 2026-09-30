@@ -461,6 +461,71 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-group:hover .flow-group-label.is-empty,
 .flow-group.is-selected .flow-group-label.is-empty { opacity: 0.6; }
 .flow-group.is-selected .flow-group-label { color: var(--accent-primary); }
+.flow-group-toggle {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--chrome-muted);
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    border-radius: 6px;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0;
+    transform-origin: top right;
+    transform: scale(calc(1 / var(--flow-zoom, 1)));
+    transition: opacity 0.12s, color 0.12s;
+}
+.flow-group:hover .flow-group-toggle,
+.flow-group.is-selected .flow-group-toggle,
+.flow-group.is-collapsed .flow-group-toggle,
+.flow-group-toggle:focus-visible { opacity: 1; }
+.flow-group-toggle:hover { color: var(--text-primary); }
+.flow-group-toggle i { transition: transform 0.12s; }
+.flow-group.is-collapsed .flow-group-toggle i { transform: rotate(-90deg); }
+/* Collapsed: just the title bar, with a count of what is hidden. Members are display:none. */
+.flow-group.is-collapsed .flow-group-fill { background: color-mix(in srgb, var(--group-color) 16%, var(--bg-secondary)); }
+.flow-group.is-collapsed::after {
+    content: attr(data-note);
+    position: absolute;
+    left: 14px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    max-width: calc(100% - 56px);
+    font-size: max(13px, calc(12px / var(--flow-zoom, 1)));
+    color: var(--chrome-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+}
+.is-collapsed-hidden { display: none !important; }
+
+/* Locked: a small padlock in the corner, no resize handles. */
+.flow-node.is-locked::after,
+.flow-group.is-locked .flow-group-fill::after {
+    content: '023';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 10px;
+    color: var(--chrome-muted);
+    opacity: 0.75;
+    pointer-events: none;
+}
+.flow-group.is-locked .flow-group-toggle { right: 34px; }
+.flow-sel-frame.is-locked { border-style: dashed; }
+
 .flow-group-label-input {
     font: inherit;
     color: var(--text-primary);
@@ -715,6 +780,79 @@ body.flow-moving .flow-viewport * { cursor: move !important; }
     background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 }
 .flow-draft-group { border-radius: 10px; }
+
+/* ── Find on canvas ─────────────────────────────────────────────────────── */
+
+.flow-find {
+    position: absolute;
+    top: 64px;
+    right: 12px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 0 6px 0 12px;
+    border-radius: 8px;
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+    color: var(--chrome-muted);
+}
+.flow-find[hidden] { display: none; }
+.flow-find input {
+    width: 190px;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+.flow-find input:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.flow-find-count { min-width: 64px; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
+.flow-find-count.is-empty { color: var(--error-color); }
+.flow-find .flow-icon-btn { width: 32px; height: 32px; border: 0; box-shadow: none; background: transparent; }
+.flow-find .flow-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.flow-layer-find { pointer-events: none; }
+.flow-find-ring {
+    position: absolute;
+    box-sizing: border-box;
+    border: calc(2px / var(--flow-zoom, 1)) solid var(--accent-secondary);
+    border-radius: calc(10px / var(--flow-zoom, 1));
+    outline: calc(6px / var(--flow-zoom, 1)) solid color-mix(in srgb, var(--accent-secondary) 18%, transparent);
+}
+.flow-find-ring.is-current {
+    border-color: var(--accent-primary);
+    outline-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+}
+
+/* ── Minimap ───────────────────────────────────────────────────────────── */
+
+.flow-minimap {
+    position: absolute;
+    right: 12px;
+    bottom: 68px;
+    z-index: 5;
+    width: 200px;
+    height: 140px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+}
+.flow-minimap[hidden] { display: none; }
+.flow-minimap canvas { display: block; width: 200px; height: 140px; cursor: crosshair; touch-action: none; }
+.flow-footer-right { display: flex; gap: 8px; }
+.flow-pill-solo.is-active { color: var(--accent-primary); border-color: var(--accent-primary); }
+body.flow-painting .flow-viewport,
+body.flow-painting .flow-viewport * { cursor: copy !important; }
 
 /* ── Floating chrome ───────────────────────────────────────────────────── */
 

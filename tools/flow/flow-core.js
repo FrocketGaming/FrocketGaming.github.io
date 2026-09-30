@@ -256,6 +256,19 @@
         return out;
     };
 
+    /**
+     * What is drawn while any group is collapsed (see FlowStatic.collapsedScene), else null.
+     * Recomputed per call (a scan of the node list); callers hold the result for one pass.
+     */
+    core.scene = function () {
+        return window.FlowStatic.collapsedScene(core.doc.nodes, core.doc.edges, core.nodeIndex());
+    };
+    /** True for a card hidden inside a collapsed group. */
+    core.isHidden = function (id) {
+        const sc = core.scene();
+        return !!sc && sc.hidden.has(id);
+    };
+
     /** The set of nodes that move when `ids` are dragged: the nodes plus the contents of any groups among them. */
     core.expandWithGroupContents = function (ids) {
         const result = new Set(ids);
@@ -439,9 +452,11 @@
     core.nodeAt = function (p, opts) {
         const nodes = core.doc.nodes;
         const exclude = opts && opts.exclude;
+        const sc = core.scene();
         for (let pass = 0; pass < 2; pass++) {
             for (let i = nodes.length - 1; i >= 0; i--) {
                 const n = nodes[i];
+                if (sc && sc.hidden.has(n.id)) continue;   // inside a collapsed group
                 if ((pass === 0) === (n.type === 'group')) continue;
                 if (exclude && exclude.has(n.id)) continue;
                 if (p.x >= n.x && p.x <= n.x + n.width && p.y >= n.y && p.y <= n.y + n.height) return n;

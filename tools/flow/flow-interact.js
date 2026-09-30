@@ -146,7 +146,9 @@
                 // Cards are picked up as soon as the box touches them; groups only when fully
                 // enclosed (they are big, so touching one would grab it on almost every drag).
                 // Numbers are coerced because a file can hold "x": "100".
+                const scene = core.scene();
                 const inside = core.nodes().filter(n => {
+                    if (scene && scene.hidden.has(n.id)) return false;   // inside a collapsed group
                     const nx = Number(n.x) || 0, ny = Number(n.y) || 0;
                     const nw = Number(n.width) || 0, nh = Number(n.height) || 0;
                     if (n.type === 'group') return nx >= a.x && ny >= a.y && nx + nw <= b.x && ny + nh <= b.y;
@@ -166,8 +168,13 @@
     function startMove(e, p0) {
         const sx = e.clientX, sy = e.clientY;
         let active = false, moving = null, starts = null, box0 = null, others = null;
-        let duplicated = false, sidesFrame = 0;
+        let duplicated = false, sidesFrame = 0, blocked = false;
         const begin = (ev) => {
+            // Locked cards stay put: with nothing movable in the selection the press is only a click.
+            if (!ev.altKey) {
+                const probe = core.expandWithGroupContents([...core.selection.nodes]);
+                if (![...probe].some(id => !S.isLocked(core.getNode(id)))) { blocked = true; return; }
+            }
             active = true;
             core.begin('Move');
             S.setInteractive(true);
@@ -175,10 +182,12 @@
                 // Alt-drag duplicates the selection and drags the copy (originals stay put).
                 const ids = [...core.selection.nodes];
                 const copy = cloneItems(ids, 0, 0);
+                for (const id of copy.nodes) unlock(core.getNode(id));   // a copy is free to move
                 core.select(copy.nodes, copy.edges);
                 duplicated = true;
             }
             moving = core.expandWithGroupContents([...core.selection.nodes]);
+            for (const id of [...moving]) if (S.isLocked(core.getNode(id))) moving.delete(id);
             starts = new Map();
             for (const id of moving) { const n = core.getNode(id); starts.set(id, { x: Number(n.x) || 0, y: Number(n.y) || 0 }); }  // "x": "100" in a file must not concatenate
             box0 = S.bbox([...moving].map(core.getNode));
@@ -189,8 +198,9 @@
         core.trackDrag(e, {
             move: (ev, p) => {
                 if (!active) {
-                    if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 3) return;
+                    if (blocked || Math.hypot(ev.clientX - sx, ev.clientY - sy) < 3) return;
                     begin(ev);
+                    if (!active) return;
                 }
                 let dx = p.x - p0.x, dy = p.y - p0.y;
                 const snapped = snapMove(box0, dx, dy, others, !(ev.ctrlKey || ev.metaKey));
@@ -344,9 +354,21 @@
         });
     };
 
+    /** Clear the lock flag on a node (call inside a transaction). */
+    function unlock(n) {
+        if (!n || !S.isLocked(n)) return;
+        delete n.styleAttributes.locked;
+        if (!Object.keys(n.styleAttributes).length) delete n.styleAttributes;
+    }
+
     interact.deleteSelection = function () {
         if (!core.hasSelection()) return;
-        core.change('Delete', () => core.removeItems([...core.selection.nodes], [...core.selection.edges]));
+        // Locked cards are not deleted: unlock them first.
+        const doomed = [...core.selection.nodes].filter(id => !S.isLocked(core.getNode(id)));
+        const kept = core.selection.nodes.size - doomed.length;
+        if (kept) core.toast(kept === 1 ? 'A locked card was kept. Unlock it to delete it.' : `${kept} locked cards were kept. Unlock them to delete them.`);
+        if (!doomed.length && !core.selection.edges.size) return;
+        core.change('Delete', () => core.removeItems(doomed, [...core.selection.edges]));
         core.emit('selection');
     };
 
@@ -385,7 +407,7 @@
 
     /** Align selected nodes: 'left'|'hcenter'|'right'|'top'|'vcenter'|'bottom'. */
     interact.align = function (how) {
-        const sel = core.selectedNodes();
+        const sel = core.selectedNodes().filter(n => !S.isLocked(n));
         if (sel.length < 2) return;
         const b = S.bbox(sel);
         core.change('Align', () => {
@@ -408,7 +430,7 @@
 
     /** Distribute selected nodes with equal gaps: 'h' | 'v'. */
     interact.distribute = function (axis) {
-        const sel = core.selectedNodes();
+        const sel = core.selectedNodes().filter(n => !S.isLocked(n));
         if (sel.length < 3) return;
         const k = axis === 'h' ? 'x' : 'y', size = axis === 'h' ? 'width' : 'height';
         const N = (v) => Number(v) || 0;
@@ -496,6 +518,8 @@
     interact.nudge = function (dx, dy) {
         if (!core.selection.nodes.size) return;
         const ids = core.expandWithGroupContents([...core.selection.nodes]);
+        for (const id of [...ids]) if (S.isLocked(core.getNode(id))) ids.delete(id);
+        if (!ids.size) return;
         core.change('Nudge', () => {
             for (const id of ids) { const n = core.getNode(id); n.x = (Number(n.x) || 0) + dx; n.y = (Number(n.y) || 0) + dy; }
             Flow.edges.refreshAutoSides([...ids]);
@@ -619,11 +643,14 @@
             ['Ctrl + A', 'Select all'], ['Ctrl + G', 'Group selection'], ['Ctrl + Shift + G', 'Ungroup'],
             ['Arrows / Shift + Arrows', 'Nudge 1px / one grid step'], ['Ctrl + ] / [', 'Bring to front / send to back'],
             ['Ctrl while dragging', 'Move without snapping'],
+            ['Alt + L', 'Lock / unlock (no moving, resizing or deleting)'], ['Alt + G', 'Collapse / expand the selected group'],
+            ['Ctrl + Alt + C / V', 'Copy / paste style (or use the brush in the panel)'],
         ]],
         ['View', [
             ['Scroll / Shift + scroll', 'Pan'], ['Ctrl + scroll / pinch', 'Zoom'], ['Shift + 1', 'Zoom to fit'],
             ['Shift + 2', 'Zoom to selection'], ['Shift + 0', 'Reset zoom'], ['Ctrl + = / -', 'Zoom in / out'],
             ["Ctrl + '", 'Toggle snap to grid'], ["Ctrl + Shift + '", 'Toggle grid dots'],
+            ['Ctrl + F', 'Find on canvas (Enter / Shift + Enter for next / previous)'], ['M', 'Toggle the minimap'],
         ]],
         ['File', [
             ['Ctrl + S', 'Save to Snippets'], ['Ctrl + O', 'Open from Snippets'], ['Ctrl + Shift + O', 'Import .canvas'],
@@ -641,6 +668,17 @@
         ['flow-ico-step', 'Step label', 'What runs the step (sql, python, api...): the chip in the corner, set in the panel'],
         ['flow-ico-group', 'Group', 'Steps that belong together: a phase, a system or an owner'],
         ['flow-ico-line', 'Arrow label', 'The condition for taking that path ("Yes", "No", "Timeout")'],
+    ];
+
+    /** The selection panel's buttons and two on-canvas states, for the help sheet: [Font Awesome classes, name, meaning]. */
+    interact.PANEL = [
+        ['fa-solid fa-paintbrush', 'Format painter', 'Copy the selected card or connector style, then click what should get it (Esc cancels)'],
+        ['fa-solid fa-sitemap', 'Tidy layout', 'Line up the selected cards (or the whole chart) in layers that follow the arrows, flowing down or right'],
+        ['fa-solid fa-up-down-left-right', 'Same size', 'Make the selected cards the same width, height or both, matching the largest'],
+        ['fa-solid fa-vector-square', 'Fit group', 'Resize a group to hug the cards inside it'],
+        ['fa-regular fa-square-minus', 'Collapse group', 'Shrink a group to its title bar and hide its cards; connectors attach to the bar. Also the chevron on the group'],
+        ['fa-solid fa-lock', 'Lock', 'A locked card or group cannot be moved, resized or deleted. A padlock shows in its corner'],
+        ['fa-solid fa-font', 'Connector labels', 'Yes / No / Success / Failure / Retry / Timeout in one click; click the active one to clear it'],
     ];
 
     const TOOL_KEYS = { v: 'select', '1': 'select', h: 'hand', '2': 'hand', t: 'card', c: 'card', '3': 'card', a: 'connect', '4': 'connect', g: 'group', '5': 'group', l: 'link', '6': 'link' };
@@ -664,7 +702,13 @@
         if (mod && key === 'e' && e.shiftKey) { e.preventDefault(); Flow.io && Flow.io.exportPNG(); return; }
         if (e.altKey && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); Flow.io && Flow.io.copyPNG(); return; }
         if (e.altKey && !mod && e.code === 'KeyN') { e.preventDefault(); Flow.app && Flow.app.newChart(); return; }
-        if (mod && key === 'a') { e.preventDefault(); core.select(core.nodes().map(n => n.id), core.edges().map(ed => ed.id)); return; }
+        if (mod && key === 'a') {
+            e.preventDefault();
+            const sc = core.scene();
+            const vis = (id) => !(sc && sc.hidden.has(id));
+            core.select(core.nodes().map(n => n.id).filter(vis), core.edges().filter(ed => vis(ed.fromNode) || vis(ed.toNode)).map(ed => ed.id));
+            return;
+        }
         if (mod && key === 'd') { e.preventDefault(); interact.duplicate(); return; }
         if (mod && key === 'g' && !e.shiftKey) { e.preventDefault(); interact.groupSelection(); return; }
         if (mod && key === 'g' && e.shiftKey) { e.preventDefault(); interact.ungroupSelection(); return; }

@@ -1251,6 +1251,58 @@
         return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
     }
 
+    // ── Collapsed groups ────────────────────────────────────────────────────
+
+    /** Height a collapsed group is drawn at: just its title bar. */
+    const COLLAPSED_H = 44;
+
+    const isLocked = (n) => !!(n && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.locked === true);
+
+    const isCollapsed = (n) => !!(n && n.type === 'group' && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.collapsed === true);
+
+    /**
+     * What is drawn when some groups are collapsed, or null when none are (callers keep their normal path).
+     * The document is untouched: a collapsed group keeps its real size and members (groups are geometric),
+     * it is only DRAWN as a bar with its members hidden. Returns
+     * { nodes, byId, edges, hidden, bars }: `nodes` = visible nodes with each collapsed group replaced by a
+     * bar-height copy; `byId` = nodeById where hidden members map to their group's bar, so a connector
+     * into a hidden card lands on the bar; `edges` = the edges still drawn (those wholly inside one
+     * collapsed group are dropped); `hidden` = ids of hidden nodes; `bars` = group id -> bar copy.
+     */
+    function collapsedScene(nodes, edges, nodeById) {
+        let groups = null;
+        for (const n of nodes) if (isCollapsed(n)) (groups || (groups = [])).push(n);
+        if (!groups) return null;
+        const N = (v) => num(v);
+        groups.sort((a, b) => N(b.width) * N(b.height) - N(a.width) * N(a.height));   // outermost first
+        const hidden = new Set(), bars = new Map(), owner = new Map();
+        for (const g of groups) {
+            if (hidden.has(g.id)) continue;   // inside a bigger collapsed group
+            const gx = N(g.x), gy = N(g.y), gx2 = gx + N(g.width), gy2 = gy + N(g.height);
+            const bar = { ...g, height: COLLAPSED_H };
+            bars.set(g.id, bar);
+            for (const n of nodes) {
+                if (n === g || hidden.has(n.id)) continue;
+                const x = N(n.x), y = N(n.y);
+                if (x >= gx && y >= gy && x + N(n.width) <= gx2 && y + N(n.height) <= gy2) { hidden.add(n.id); owner.set(n.id, bar); }
+            }
+        }
+        for (const id of hidden) bars.delete(id);   // a collapsed group inside another one has no bar of its own
+        const byId = new Map(nodeById || nodes.map(n => [n.id, n]));
+        for (const [id, bar] of bars) byId.set(id, bar);
+        for (const [id, bar] of owner) if (hidden.has(id)) byId.set(id, bar);
+        const shown = [];
+        for (const n of nodes) {
+            if (hidden.has(n.id)) continue;
+            shown.push(bars.get(n.id) || n);
+        }
+        const keep = (e) => {
+            const a = owner.get(e.fromNode), b = owner.get(e.toNode);
+            return !(a && a === b);
+        };
+        return { nodes: shown, byId, edges: edges.filter(keep), hidden, bars };
+    }
+
     // ── Paint (colour strategy) ─────────────────────────────────────────────
 
     /** Live paint: emits CSS custom properties so the drawing follows the page theme. */
@@ -1541,13 +1593,16 @@
         const paint = opts.paint || varPaint();
         const pad = opts.padding == null ? 40 : opts.padding;
         // Draw from numeric copies: a file may store "x": "100" (kept as-is in the data).
-        const nodes = (doc && Array.isArray(doc.nodes) ? doc.nodes : [])
+        let nodes = (doc && Array.isArray(doc.nodes) ? doc.nodes : [])
             .filter(n => n && typeof n === 'object')
             .map(n => (typeof n.x === 'number' && typeof n.y === 'number' && typeof n.width === 'number' && typeof n.height === 'number') ? n
                 : { ...n, x: Number(n.x), y: Number(n.y), width: Number(n.width), height: Number(n.height) })
             .filter(n => isFinite(n.x) && isFinite(n.y) && n.width > 0 && n.height > 0);
-        const edges = doc && Array.isArray(doc.edges) ? doc.edges : [];
-        const byId = new Map(nodes.map(n => [n.id, n]));
+        let edges = doc && Array.isArray(doc.edges) ? doc.edges : [];
+        let byId = new Map(nodes.map(n => [n.id, n]));
+        // Collapsed groups are drawn as their title bar, members hidden, like the editor.
+        const scene = collapsedScene(nodes, edges, byId);
+        if (scene) { nodes = scene.nodes; edges = scene.edges; byId = scene.byId; }
         // Edge geometry first: routed connectors can run outside the cards' bounds.
         const geos = layoutEdges(edges, byId, { nodes });
         const labelAt = layoutLabels(edges, geos, geos.idx);
@@ -1725,6 +1780,6 @@
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, escapeHtml, sanitize, safeHref, str,
-        toSVG,
+        toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H,
     };
 })();

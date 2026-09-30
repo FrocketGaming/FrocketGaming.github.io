@@ -2,7 +2,7 @@
 
 Vanilla JS, classic `<script>` tags, no build. Load order (see `index.html`):
 `flow-static.js` -> `flow-core.js` -> `flow-canvas.js` -> `flow-nodes.js` -> `flow-edges.js` ->
-`flow-interact.js` -> `flow-panel.js` -> `flow-io.js` -> `flow-snippets.js` -> `flow-app.js`.
+`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-io.js` -> `flow-snippets.js` -> `flow-app.js`.
 Everything hangs off `window.Flow` (plus the standalone `window.FlowStatic`). Each piece
 module exposes `init()`; `flow-app.js` calls them in that order and then loads a document.
 
@@ -14,6 +14,9 @@ module exposes `init()`; `flow-app.js` calls them in that order and then loads a
 | `flow-nodes.js` | P2 | DOM for text/link/file/group nodes, markdown display, inline editors, resize handles, selection frame, `createCard` / `createGroup`. |
 | `flow-edges.js` | P3 | SVG connectors + labels, hover ports, drag-to-connect (or drop on empty space for a new card), endpoint reconnect, label editor, auto-side refresh. |
 | `flow-interact.js` | P4 | Select/marquee/multi-drag with alignment guides + grid snap, creation tools, double-click, keyboard map (`SHORTCUTS`), clipboard, duplicate, group/ungroup, align/distribute, `addConnectedCard` (Ctrl+Arrow), `navigate` (Alt+Arrow). |
+| `flow-arrange.js` | P7 | Lock, collapse/expand groups, fit group to contents, equal size, auto layout (`Flow.arrange.layout` is the pure layered layout), format painter (copy/paste style, armed brush), connector label presets. |
+| `flow-find.js` | P8 | Find on canvas (Ctrl+F): bar, match list over card text / link / file / group titles / step labels / connector labels, ring overlay layer. Never writes to the document. |
+| `flow-minimap.js` | P9 | Minimap canvas (M or footer button, pref `minimap`): whole-chart overview, click or drag to move the view. |
 | `flow-panel.js` | P2/P3 UI | Left properties panel: colour (6 presets + custom), card shape, arrowheads, route, line style, arrange, actions. Stateless: reads the selection, writes through `core.change`. |
 | `flow-io.js` | P5 | `parse` / `serialize`, import (file picker, drag-drop, paste of files), export `.canvas`; the Export image dialog (PNG/SVG, scale 1x/2x/3x, whole chart by default or "Only selected", background on/off), copy PNG; the portable SVG text layout. |
 | `flow-snippets.js` | P6 | `Flow.store`: per-chart localStorage working copies, cross-tab sync, boot restore. `Flow.snippets`: save to / open from the IndexedDB `snippets` store (versions like Snippets), conflict + delete detection, Open dialog (incl. Unsaved work), Save-as-new, inline new category, Firebase push when signed in. |
@@ -36,6 +39,17 @@ export untouched. Rules for every module:
 - Extensions beyond the spec live in `styleAttributes` (Advanced Canvas compatible):
   nodes `styleAttributes.shape` = `pill|diamond|circle`; edges `styleAttributes.pathfindingMethod`
   = `direct|square` and `styleAttributes.path` = `dashed|dotted`. Other apps ignore them; we keep them.
+- `styleAttributes.locked = true` (cards and groups): cannot be moved, resized, nudged, aligned or deleted
+  (`interact.startMove/nudge/align/distribute/deleteSelection` skip it; no resize handles); text, colour and
+  connectors stay editable. Duplicates made by Alt-drag are unlocked.
+- `styleAttributes.collapsed = true` (groups): the group is DRAWN as a 44px title bar (`FlowStatic.COLLAPSED_H`) and
+  the cards inside it are hidden. The document is not rewritten: the group keeps its real size and members (groups
+  are geometric), so expanding restores everything. `FlowStatic.collapsedScene(nodes, edges, byId)` is the one
+  place that works out what is drawn: visible nodes (group replaced by a bar-height copy), a `byId` where hidden
+  members map to their group's bar (a connector into a hidden card lands on the bar), the edges still drawn
+  (those wholly inside one collapsed group are dropped), `hidden` ids and `bars`. The editor gets it from
+  `core.scene()` (null when nothing is collapsed; `core.isHidden(id)`), `toSVG` calls it directly, so export
+  and the Snippets preview match. Hidden cards are skipped by marquee, Ctrl+A, find and drop targets.
 - Step labels: a text card's `styleAttributes.step` (free text, max 32 chars; presets `sql python api
   email schedule manual` in `FlowStatic.STEP_TYPES`, each with a colour preset; a custom label takes the
   card's colour) is drawn as a chip: top-left on rects, centred over the text on pills, diamonds and
@@ -217,6 +231,11 @@ to low until one returns true. `hit` comes from `core.hitTest(target)` and data 
   - Dragging a connector back onto its own card, after leaving it or moving 24px or more, makes a
     self-loop on a neighbouring side. A small wiggle that stays on the card does nothing.
 - `Flow.interact`: `init, finishEditing, addConnectedCard(id, 'up'|'down'|'left'|'right'), navigate(dir), nudge, duplicate, deleteSelection, groupSelection, ungroupSelection, reorder(toFront), align(how), distribute(axis), cloneItems, pasteText(text), SHORTCUTS`
+- `Flow.arrange`: `init, toggleLock, toggleCollapse(groupIds?), fitGroups, equalSize('w'|'h'|'both'), autoLayout('down'|'right'), layout(nodes, edges, dir), setLabel(text), copyStyle(arm), pasteStyle, hasBrush, isPainting, setStyleAttr, LABEL_PRESETS`
+  - Auto layout tidies the selection (2+ unlocked cards), or the whole chart when fewer are selected (cards inside groups stay put). Layers by longest path (cycles broken by ignoring the closing edge), barycentre ordering, snapped to the grid, anchored at the old top-left. One undo step.
+  - Format painter: the brush is `{ kind: 'node' | 'edge', ... }` (colour and shape for cards, colour / arrowheads / route / line for connectors). Armed = body class `flow-painting`; the pointer handler at priority 550 paints the next card or connector and disarms; Esc cancels.
+- `Flow.find`: `init, open, close, isOpen`
+- `Flow.minimap`: `init, toggle`
 - `Flow.panel`: `init, render`
 - `Flow.io`: `init, parse(text), serialize(doc?), importFile(file), importText(text, title), chooseImport, exportCanvas, openExport('png'|'svg'), exportSVG(opts?), exportPNG(opts?), copyPNG(opts?), renderPNG(opts), buildSVG(opts), download`
   - `exportPNG()` / `exportSVG()` with no argument open the Export image dialog (menu items and

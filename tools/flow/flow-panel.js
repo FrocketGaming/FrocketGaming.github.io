@@ -115,6 +115,14 @@
             html += btn('dash', 'dashed', '<span class="flow-ico-line is-dashed"></span>', 'Dashed', dash === 'dashed');
             html += btn('dash', 'dotted', '<span class="flow-ico-line is-dotted"></span>', 'Dotted', dash === 'dotted');
             html += '</div></div>';
+            // Label presets: one click sets the branch name on every selected connector; the active one clears it.
+            const lab = common(edges, e => S.str(e.label));
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Label</div><div class="flow-step-opts">';
+            for (const t of Flow.arrange.LABEL_PRESETS) {
+                const on = lab === t;
+                html += `<button type="button" class="flow-step-opt${on ? ' is-active' : ''}" data-action="edge-label" data-value="${S.escapeHtml(t)}" title="${on ? 'Remove the label' : 'Label this connector ' + t}" aria-pressed="${on ? 'true' : 'false'}">${S.escapeHtml(t)}</button>`;
+            }
+            html += '</div></div>';
             if (edges.length === 1) {
                 html += `<div class="flow-panel-section"><button type="button" class="flow-pwide" data-action="label"><i class="fa-solid fa-font"></i> ${edges[0].label ? 'Edit label' : 'Add label'} <kbd>Enter</kbd></button></div>`;
             }
@@ -140,11 +148,40 @@
                 html += btn('distribute', 'h', '<i class="fa-solid fa-ellipsis"></i>', 'Distribute horizontally', false);
                 html += btn('distribute', 'v', '<i class="fa-solid fa-ellipsis-vertical"></i>', 'Distribute vertically', false);
             }
+            if (nodes.filter(n => n.type !== 'group').length >= 2) {
+                html += '</div><div class="flow-pbtns">';
+                html += btn('equal', 'w', '<i class="fa-solid fa-arrows-left-right"></i>', 'Same width (the widest)', false);
+                html += btn('equal', 'h', '<i class="fa-solid fa-arrows-up-down"></i>', 'Same height (the tallest)', false);
+                html += btn('equal', 'both', '<i class="fa-solid fa-up-down-left-right"></i>', 'Same size (the largest)', false);
+            }
+            if (nodes.filter(n => n.type !== 'group').length >= 2) {
+                html += '</div><div class="flow-pbtns">';
+                html += btn('layout', 'down', '<i class="fa-solid fa-sitemap"></i>', 'Tidy layout, flowing down', false);
+                html += btn('layout', 'right', '<i class="fa-solid fa-sitemap fa-rotate-270"></i>', 'Tidy layout, flowing right', false);
+            }
+            html += '</div></div>';
+        }
+
+        // Groups: collapse to the title bar, fit to the cards inside
+        const groups = nodes.filter(n => n.type === 'group');
+        if (groups.length) {
+            const allCollapsed = groups.every(S.isCollapsed);
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Group</div><div class="flow-pbtns">';
+            html += btn('collapse', '', allCollapsed ? '<i class="fa-regular fa-square-plus"></i>' : '<i class="fa-regular fa-square-minus"></i>', (allCollapsed ? 'Expand' : 'Collapse') + ' (Alt+G)', allCollapsed);
+            html += btn('fit-group', '', '<i class="fa-solid fa-vector-square"></i>', 'Fit to its contents', false);
             html += '</div></div>';
         }
 
         // Actions
         html += '<div class="flow-panel-section"><div class="flow-panel-label">Actions</div><div class="flow-pbtns">';
+        if (nodes.length) {
+            const allLocked = nodes.every(S.isLocked);
+            html += btn('lock', '', allLocked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>', (allLocked ? 'Unlock' : 'Lock: no moving, resizing or deleting') + ' (Alt+L)', allLocked);
+        }
+        if (nodes.length || edges.length) {
+            html += btn('paint', '', '<i class="fa-solid fa-paintbrush"></i>', 'Format painter: copy this style, then click what to paint (Esc cancels)', Flow.arrange.isPainting());
+            if (Flow.arrange.hasBrush()) html += btn('paste-style', '', '<i class="fa-solid fa-fill-drip"></i>', 'Paste the copied style onto the selection (Ctrl+Alt+V)', false);
+        }
         if (nodes.length) html += btn('duplicate', '', '<i class="fa-regular fa-clone"></i>', 'Duplicate (Ctrl+D)', false);
         if (nodes.length) html += btn('group', '', '<i class="fa-regular fa-object-group"></i>', 'Group (Ctrl+G)', false);
         if (nodes.some(n => n.type === 'group')) html += btn('ungroup', '', '<i class="fa-regular fa-object-ungroup"></i>', 'Ungroup (Ctrl+Shift+G)', false);
@@ -236,6 +273,14 @@
                 core.change('Line style', () => edges.forEach(ed => setStyleAttr(ed, 'path', v === 'solid' ? null : v)));
                 break;
             case 'label': Flow.edges.editLabel(edges[0].id); break;
+            case 'edge-label': Flow.arrange.setLabel(v && v === common(edges, ed => S.str(ed.label)) ? '' : v); break;
+            case 'equal': Flow.arrange.equalSize(v); break;
+            case 'layout': Flow.arrange.autoLayout(v); break;
+            case 'collapse': Flow.arrange.toggleCollapse(); break;
+            case 'fit-group': Flow.arrange.fitGroups(); break;
+            case 'lock': Flow.arrange.toggleLock(); break;
+            case 'paint': Flow.arrange.copyStyle(true); break;
+            case 'paste-style': Flow.arrange.pasteStyle(); break;
             case 'order': Flow.interact.reorder(v === 'front'); break;
             case 'align': Flow.interact.align(v); break;
             case 'distribute': Flow.interact.distribute(v); break;

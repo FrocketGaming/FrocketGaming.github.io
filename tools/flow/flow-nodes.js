@@ -61,6 +61,14 @@
         });
         core.viewportEl.addEventListener('dblclick', (e) => promote(e.target), true);
 
+        // Group chevron: collapse / expand that group.
+        groupsLayer.addEventListener('click', (e) => {
+            const b = e.target.closest('.flow-group-toggle');
+            if (!b) return;
+            e.stopPropagation();
+            Flow.arrange.toggleCollapse([b.closest('[data-node-id]').dataset.nodeId]);
+        });
+
         // Link cards: explicit open button
         nodesLayer.addEventListener('click', (e) => {
             const b = e.target.closest('.flow-link-open');
@@ -84,6 +92,7 @@
     function renderNodes(d) {
         const full = d.all || d.structure;
         const list = core.nodes();
+        update.scene = core.scene();
         if (full) {
             const seen = new Set();
             const count = new Map();
@@ -155,7 +164,8 @@
                 <div class="flow-group-edge flow-group-edge-r" data-node-id="${hid}"></div>
                 <div class="flow-group-edge flow-group-edge-b" data-node-id="${hid}"></div>
                 <div class="flow-group-edge flow-group-edge-l" data-node-id="${hid}"></div>
-                <div class="flow-group-label" data-node-id="${hid}" data-group-label></div>`;
+                <div class="flow-group-label" data-node-id="${hid}" data-group-label></div>
+                <button type="button" class="flow-group-toggle" data-ui aria-expanded="true"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>`;
         } else {
             el.className = 'flow-node';
             el.innerHTML = '<div class="flow-node-content"></div>';
@@ -164,10 +174,29 @@
     }
 
     function update(n, el) {
+        const scene = update.scene;   // set once per render pass by renderNodes (null: nothing collapsed)
+        const hidden = !!scene && scene.hidden.has(n.id);
+        const bar = n.type === 'group' && !!scene && scene.bars.has(n.id);
+        if (el._hidden !== hidden) { el._hidden = hidden; el.classList.toggle('is-collapsed-hidden', hidden); }
+        if (el._bar !== bar) { el._bar = bar; el.classList.toggle('is-collapsed', bar); }
+        const locked = S.isLocked(n);
+        if (el._locked !== locked) { el._locked = locked; el.classList.toggle('is-locked', locked); }
         el.style.left = n.x + 'px';
         el.style.top = n.y + 'px';
         el.style.width = n.width + 'px';
-        el.style.height = n.height + 'px';
+        el.style.height = (bar ? S.COLLAPSED_H : n.height) + 'px';
+        if (n.type === 'group') {
+            const cnt = bar ? core.groupChildren(n).length : 0;
+            const note = bar ? `${cnt} card${cnt === 1 ? '' : 's'} hidden` : '';
+            if (el._note !== note) {
+                el._note = note;
+                el.dataset.note = note;
+                const t = el.querySelector('.flow-group-toggle');
+                t.setAttribute('aria-expanded', bar ? 'false' : 'true');
+                t.title = bar ? 'Expand group (Alt+G)' : 'Collapse group (Alt+G)';
+                t.setAttribute('aria-label', t.title);
+            }
+        }
         const key = el.dataset.nodeKey || n.id;
         const sig = signature(n);
         if (sigs.get(key) === sig) return;
@@ -260,7 +289,9 @@
 
     function renderSelectionFrame(d) {
         if (!(d.all || d.selection || d.structure || d.nodes.size)) return;
-        const sel = core.selectedNodes();
+        const scene = core.scene();
+        // Hidden cards have no frame; a collapsed group is framed at its bar height.
+        const sel = core.selectedNodes().filter(n => !(scene && scene.hidden.has(n.id))).map(n => (scene && scene.bars.get(n.id)) || n);
         let frame = selUI.querySelector('.flow-sel-frame');
         if (!sel.length || (editor && sel.length === 1 && editor.kind !== 'group')) {
             if (frame) frame.remove();
@@ -278,10 +309,13 @@
         frame.style.top = b.y + 'px';
         frame.style.width = b.width + 'px';
         frame.style.height = b.height + 'px';
-        const want = single ? sel[0].id : '';
+        // No resize handles on a locked card or a collapsed bar.
+        const still = single && (S.isLocked(sel[0]) || S.isCollapsed(sel[0]) || (scene && scene.bars.has(sel[0].id)));
+        frame.classList.toggle('is-locked', !!still);
+        const want = single && !still ? sel[0].id : '';
         if (frame.dataset.for !== want) {
             frame.dataset.for = want;
-            frame.innerHTML = single ? HANDLES.map(h => `<div class="flow-handle flow-handle-${h}" data-handle="${h}" data-node-id="${S.escapeHtml(want)}"></div>`).join('') : '';
+            frame.innerHTML = want ? HANDLES.map(h => `<div class="flow-handle flow-handle-${h}" data-handle="${h}" data-node-id="${S.escapeHtml(want)}"></div>`).join('') : '';
         }
     }
 

@@ -161,7 +161,9 @@
         if (!grid.childElementCount) {
             const shapes = `<section class="flow-sc-shapes"><h4>Shapes</h4>${Flow.interact.SHAPES.map(([ico, name, d]) =>
                 `<div class="flow-sc-row"><span class="flow-sc-shape"><span class="flow-sc-ico"><span class="${ico}"></span></span>${name}</span><span>${d}</span></div>`).join('')}</section>`;
-            grid.innerHTML = shapes + Flow.interact.SHORTCUTS.map(([group, rows]) =>
+            const panelTools = `<section class="flow-sc-shapes"><h4>Selection panel</h4>${Flow.interact.PANEL.map(([ico, name, d]) =>
+                `<div class="flow-sc-row"><span class="flow-sc-shape"><span class="flow-sc-ico"><i class="${ico}" aria-hidden="true"></i></span>${name}</span><span>${d}</span></div>`).join('')}</section>`;
+            grid.innerHTML = shapes + panelTools + Flow.interact.SHORTCUTS.map(([group, rows]) =>
                 `<section><h4>${group}</h4>${rows.map(([k, d]) => `<div class="flow-sc-row"><span class="flow-sc-keys">${k.split(' / ').map(part => part.split(' + ').map(x => `<kbd>${x}</kbd>`).join('+')).join(' / ')}</span><span>${d}</span></div>`).join('')}</section>`).join('');
         }
         app.openDialog('flowShortcuts', grid.closest('.flow-dialog').querySelector('[data-close]'));
@@ -234,6 +236,9 @@
         Flow.nodes.init();
         Flow.edges.init();
         Flow.interact.init();
+        Flow.arrange.init();
+        Flow.find.init();
+        Flow.minimap.init();
         Flow.panel.init();
         Flow.io.init();
         Flow.snippets.init();

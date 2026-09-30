@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
     <link rel="stylesheet" href="../../src/firebase-sync.css">
-    <link rel="stylesheet" href="flow-styles.css?v=61a3032d">
+    <link rel="stylesheet" href="flow-styles.css?v=9aa89ffe">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -94,8 +94,19 @@
         </div>
         <div class="flow-hint" id="flowHint" aria-live="polite"></div>
 
+        <!-- Find on canvas (Ctrl+F) -->
+        <div class="flow-find" id="flowFind" role="search" data-ui hidden>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" id="flowFindInput" placeholder="Find on canvas" autocomplete="off" spellcheck="false" aria-label="Find on canvas">
+            <span class="flow-find-count" id="flowFindCount" aria-live="polite"></span>
+            <button type="button" class="flow-icon-btn" data-find-step="-1" title="Previous match — Shift+Enter" aria-label="Previous match" disabled><i class="fa-solid fa-chevron-up"></i></button>
+            <button type="button" class="flow-icon-btn" data-find-step="1" title="Next match — Enter" aria-label="Next match" disabled><i class="fa-solid fa-chevron-down"></i></button>
+            <button type="button" class="flow-icon-btn" data-find-close title="Close — Esc" aria-label="Close find"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
         <!-- Top-right: file actions -->
         <div class="flow-actions" data-ui>
+            <button class="flow-icon-btn" id="flowFindBtn" title="Find on canvas — Ctrl+F" aria-label="Find on canvas"><i class="fa-solid fa-magnifying-glass"></i></button>
             <button class="flow-btn" id="flowOpenBtn" title="Open from Snippets — Ctrl+O"><i class="fa-regular fa-folder-open"></i><span>Open</span></button>
             <button class="flow-btn flow-btn-primary" id="flowSaveBtn" title="Save to Snippets — Ctrl+S"><i class="fa-regular fa-floppy-disk"></i><span id="flowSaveBtnLabel">Save to Snippets</span></button>
             <div class="flow-menu-wrap">
@@ -137,7 +148,11 @@
         </div>
 
         <!-- Bottom-right -->
+        <div class="flow-minimap" id="flowMinimap" data-ui hidden>
+            <canvas id="flowMinimapCanvas" width="200" height="140" role="img" aria-label="Minimap: click or drag to move the view"></canvas>
+        </div>
         <div class="flow-footer-right" data-ui>
+            <button class="flow-icon-btn flow-pill-solo" id="flowMinimapBtn" title="Minimap — M" aria-label="Minimap" aria-pressed="false"><i class="fa-regular fa-map"></i></button>
             <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Shapes and shortcuts — ?" aria-label="Shapes and shortcuts"><i class="fa-regular fa-circle-question"></i></button>
         </div>
 
@@ -193,16 +208,19 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="../../src/vendor/purify.min.js"></script>
-    <script src="flow-static.js?v=61a3032d"></script>
-    <script src="flow-core.js?v=61a3032d"></script>
-    <script src="flow-canvas.js?v=61a3032d"></script>
-    <script src="flow-nodes.js?v=61a3032d"></script>
-    <script src="flow-edges.js?v=61a3032d"></script>
-    <script src="flow-interact.js?v=61a3032d"></script>
-    <script src="flow-panel.js?v=61a3032d"></script>
-    <script src="flow-io.js?v=61a3032d"></script>
-    <script src="flow-snippets.js?v=61a3032d"></script>
-    <script src="flow-app.js?v=61a3032d"></script>
+    <script src="flow-static.js?v=9aa89ffe"></script>
+    <script src="flow-core.js?v=9aa89ffe"></script>
+    <script src="flow-canvas.js?v=9aa89ffe"></script>
+    <script src="flow-nodes.js?v=9aa89ffe"></script>
+    <script src="flow-edges.js?v=9aa89ffe"></script>
+    <script src="flow-interact.js?v=9aa89ffe"></script>
+    <script src="flow-arrange.js?v=9aa89ffe"></script>
+    <script src="flow-find.js?v=9aa89ffe"></script>
+    <script src="flow-minimap.js?v=9aa89ffe"></script>
+    <script src="flow-panel.js?v=9aa89ffe"></script>
+    <script src="flow-io.js?v=9aa89ffe"></script>
+    <script src="flow-snippets.js?v=9aa89ffe"></script>
+    <script src="flow-app.js?v=9aa89ffe"></script>
 </body>
 
 </html>
