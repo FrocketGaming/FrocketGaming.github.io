@@ -749,7 +749,7 @@
             b.id = 'flowSaveAsBtn';
             b.title = 'Save as a new chart — Ctrl+Alt+S';
             b.setAttribute('aria-label', 'Save as a new chart');
-            b.innerHTML = '<i class="fa-regular fa-clone"></i>';
+            b.innerHTML = '<i class="fa-solid fa-plus"></i><span>Save as new</span>';
             b.hidden = true;
             saveBtn.after(b);
             b.addEventListener('click', () => snippets.saveAsDialog());
