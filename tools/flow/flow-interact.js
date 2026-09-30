@@ -143,10 +143,19 @@
                 marqueeEl.hidden = false;
                 Object.assign(marqueeEl.style, { left: (x1 - r0.left) + 'px', top: (y1 - r0.top) + 'px', width: (x2 - x1) + 'px', height: (y2 - y1) + 'px' });
                 const a = core.screenToWorld(x1, y1), b = core.screenToWorld(x2, y2);
-                const inside = core.nodes().filter(n => n.x >= a.x && n.y >= a.y && n.x + n.width <= b.x && n.y + n.height <= b.y).map(n => n.id);
+                // Cards are picked up as soon as the box touches them; groups only when fully
+                // enclosed (they are big, so touching one would grab it on almost every drag).
+                // Numbers are coerced because a file can hold "x": "100".
+                const inside = core.nodes().filter(n => {
+                    const nx = Number(n.x) || 0, ny = Number(n.y) || 0;
+                    const nw = Number(n.width) || 0, nh = Number(n.height) || 0;
+                    if (n.type === 'group') return nx >= a.x && ny >= a.y && nx + nw <= b.x && ny + nh <= b.y;
+                    return nx < b.x && ny < b.y && nx + nw > a.x && ny + nh > a.y;
+                }).map(n => n.id);
+                const insideSet = new Set(inside);
                 const nodeSet = new Set([...base.nodes, ...inside]);
                 // Connectors whose both ends are inside come along (so colour/delete apply to them too).
-                const edgeIds = core.edges().filter(ed => inside.includes(ed.fromNode) && inside.includes(ed.toNode)).map(ed => ed.id);
+                const edgeIds = core.edges().filter(ed => insideSet.has(ed.fromNode) && insideSet.has(ed.toNode)).map(ed => ed.id);
                 core.select([...nodeSet], [...base.edges, ...edgeIds]);
             },
             up: () => { marqueeEl.hidden = true; },
