@@ -32,7 +32,12 @@
 
     lanes.init = function () {
         core.onBegin(capture);
-        core.onBeforeCommit(() => { normalizeAll(); cap = null; });
+        core.onBeforeCommit(() => {
+            // The gesture's own redraw only covers what it touched; the lanes and cards moved here
+            // have to be drawn too, or the pool looks torn apart until the next full render.
+            if (normalizeAll()) { core.reindex(); core.invalidate('all'); }
+            cap = null;
+        });
     };
 
     function allLanes() { return core.nodes().filter(n => S.laneOf(n)); }
@@ -61,13 +66,14 @@
 
     function normalizeAll() {
         const ls = allLanes();
-        if (!ls.length) return;
+        if (!ls.length) return false;
         if (!cap) cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set() };
         const pools = new Map();
         for (const l of ls) { const p = S.laneOf(l); if (!pools.has(p)) pools.set(p, []); pools.get(p).push(l); }
         const moved = new Set();
         for (const list of pools.values()) normalizePool(list, moved);
         if (moved.size) Flow.edges.refreshAutoSides([...moved]);
+        return moved.size > 0;
     }
 
     function normalizePool(list, moved) {
@@ -145,21 +151,37 @@
             top = Math.min(...[...cap.lanes].filter(([l]) => S.laneOf(l) === pool).map(([, c]) => c.y));
         }
 
+        // Cards ride along sideways only when their lane was dragged (it snaps back into the pool's
+        // column with them). When the pool is widened or narrowed, the lane edges move and the
+        // cards stay where they are.
+        const dragged = (l) => { const c = capOf(l), g = geom(l); return edited.has(l) && !!c && g.w === c.w && g.h === c.h; };
+        const inset = S.LANE_HEAD + 10;
+
+        // Narrowing from the left stops short of the cards that stay put (never under the strip).
+        for (const l of list) {
+            if (dragged(l)) continue;
+            for (const m of members.get(l)) {
+                if (placed.has(m) || N(m.x) - inset >= X) continue;
+                W += X - (N(m.x) - inset);
+                X = N(m.x) - inset;
+            }
+        }
+        const shift = (l) => (dragged(l) ? X - geom(l).x : 0);
+
         // Something dropped across the lane's top edge or onto its name strip settles just inside.
         for (const l of list) {
-            const g = geom(l);
+            const g = geom(l), sx = shift(l);
             for (const m of members.get(l)) {
                 if (!placed.has(m)) continue;
                 if (N(m.y) < g.y + 10) { setNum(m, 'y', g.y + 10); moved.add(m.id); }
-                if (N(m.x) < g.x + S.LANE_HEAD + 10) { setNum(m, 'x', g.x + S.LANE_HEAD + 10); moved.add(m.id); }
+                if (N(m.x) + sx < X + inset) { setNum(m, 'x', X + inset - sx); moved.add(m.id); }
             }
         }
 
         // A lane is never shorter than what is in it, and the pool never narrower.
         for (const l of list) {
-            const g = geom(l);
-            // A member moves with its lane to x = X, so it needs W >= its offset in the lane + width.
-            for (const m of members.get(l)) W = Math.max(W, N(m.x) + N(m.width) - g.x + PAD);
+            const sx = shift(l);
+            for (const m of members.get(l)) W = Math.max(W, N(m.x) + sx + N(m.width) + PAD - X);
         }
         W = Math.max(MIN_W, W);
 
@@ -170,10 +192,10 @@
             if (topResized.has(l)) h = capOf(l).y + capOf(l).h - y;
             for (const m of members.get(l)) h = Math.max(h, N(m.y) + N(m.height) - g.y + PAD);
             h = Math.max(MIN_H, h);
-            const dx = X - g.x, dy = y - g.y;
-            if (dx || dy) {
+            const dx = X - g.x, dy = y - g.y, mdx = shift(l);
+            if (mdx || dy) {
                 for (const m of members.get(l)) {
-                    setNum(m, 'x', N(m.x) + dx); setNum(m, 'y', N(m.y) + dy);
+                    setNum(m, 'x', N(m.x) + mdx); setNum(m, 'y', N(m.y) + dy);
                     moved.add(m.id);
                 }
             }
