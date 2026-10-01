@@ -30,11 +30,15 @@
 
     function anchor(n, side) {
         const x = num(n.x), y = num(n.y), w = num(n.width), h = num(n.height);
+        // The side's midpoint on the drawn outline: a parallelogram's slanted sides and a
+        // document's wavy bottom sit inside the bounding box.
+        const shape = n.type === 'group' ? 'rect' : nodeShape(n);
+        const slant = shape === 'parallelogram' ? shapeDims(w, h).s / 2 : 0;
         switch (side) {
             case 'top': return { x: x + w / 2, y };
-            case 'bottom': return { x: x + w / 2, y: y + h };
-            case 'left': return { x, y: y + h / 2 };
-            case 'right': return { x: x + w, y: y + h / 2 };
+            case 'bottom': return { x: x + w / 2, y: y + h - (shape === 'document' ? shapeDims(w, h).a : 0) };
+            case 'left': return { x: x + slant, y: y + h / 2 };
+            case 'right': return { x: x + w - slant, y: y + h / 2 };
         }
         return center(n);
     }
@@ -302,7 +306,7 @@
         return out;
     }
 
-    /** Strictly inside node n's drawn shape, shrunk by m (rect, pill, diamond, circle). */
+    /** Strictly inside node n's drawn shape, shrunk by m (every card shape; groups are boxes). */
     function inShape(n, p, m) {
         const x = num(n.x), y = num(n.y), w = num(n.width), h = num(n.height);
         const shape = nodeShape(n);
@@ -312,7 +316,22 @@
             const dx = Math.abs(p.x - (x + w / 2)) / rx, dy = Math.abs(p.y - (y + h / 2)) / ry;
             return shape === 'diamond' ? dx + dy < 1 : dx * dx + dy * dy < 1;
         }
-        return p.x > x + m && p.x < x + w - m && p.y > y + m && p.y < y + h - m;
+        if (!(p.x > x + m && p.x < x + w - m && p.y > y + m && p.y < y + h - m)) return false;
+        const d = shapeDims(w, h);
+        if (shape === 'parallelogram') {
+            const xl = x + d.s * (1 - (p.y - y) / h);
+            return p.x > xl + m && p.x < xl + w - d.s - m;
+        }
+        if (shape === 'hexagon') {
+            const ins = d.s * Math.abs(p.y - (y + h / 2)) / (h / 2);
+            return p.x > x + ins + m && p.x < x + w - ins - m;
+        }
+        if (shape === 'cylinder') {
+            const u = (p.x - (x + w / 2)) / (w / 2), k = d.c * Math.sqrt(Math.max(0, 1 - u * u));
+            return p.y > y + d.c - k + m && p.y < y + h - d.c + k - m;
+        }
+        if (shape === 'document') return p.y < y + h - d.a + d.a * Math.sin(2 * Math.PI * ((p.x - x) / w - 0.5)) - m;
+        return true;
     }
 
     /** True when a sampled path runs through a card, or crosses a group's border more than it must. */
@@ -596,7 +615,7 @@
     /** Straight-sided (rect, or the flat top/bottom of a pill): spreading there is free. */
     function spreadable(n, side) {
         const shape = nodeShape(n);
-        return !(shape === 'diamond' || shape === 'circle' || (shape === 'pill' && (side === 'left' || side === 'right')));
+        return !(shape === 'diamond' || shape === 'circle' || ((shape === 'pill' || shape === 'hexagon') && (side === 'left' || side === 'right')));
     }
 
     /**
@@ -616,6 +635,10 @@
         if (shape === 'diamond') inset = Math.abs(o) * across / along;
         else if (shape === 'circle') inset = across - across * Math.sqrt(Math.max(0, 1 - (o / along) ** 2));
         else if (shape === 'pill' && !horiz) { const r = Math.min(w, h) / 2; inset = r - Math.sqrt(Math.max(0, r * r - o * o)); }
+        else if (shape === 'hexagon' && !horiz) inset = Math.abs(o) * shapeDims(w, h).s / along;
+        else if (shape === 'parallelogram' && !horiz) inset = (side === 'left' ? -o : o) * shapeDims(w, h).s / h;
+        else if (shape === 'cylinder' && horiz) { const c = shapeDims(w, h).c; inset = c - c * Math.sqrt(Math.max(0, 1 - (o / along) ** 2)); }
+        else if (shape === 'document' && side === 'bottom') inset = -shapeDims(w, h).a * Math.sin(2 * Math.PI * o / w);
         const nv = NORMAL[side];
         return horiz ? { x: base.x + o, y: base.y - nv[1] * inset } : { x: base.x - nv[0] * inset, y: base.y + o };
     }
@@ -935,9 +958,61 @@
         return '';
     }
 
+    /** Card shapes, in the panel's order. Anything else in styleAttributes.shape draws as a rect. */
+    const SHAPES = ['rect', 'pill', 'diamond', 'circle', 'parallelogram', 'hexagon', 'cylinder', 'document'];
     function nodeShape(node) {
         const s = node.styleAttributes && node.styleAttributes.shape;
-        return s === 'pill' || s === 'diamond' || s === 'circle' ? s : 'rect';
+        return typeof s === 'string' && s !== 'rect' && SHAPES.includes(s) ? s : 'rect';
+    }
+
+    /**
+     * Fixed-size features of the newer shapes, in world px (shrunk on very small cards):
+     * s = parallelogram slant / hexagon point depth, c = cylinder cap half-height, a = document wave.
+     */
+    function shapeDims(w, h) {
+        return { s: Math.min(20, w / 4), c: Math.min(10, h / 5), a: Math.min(6, h / 10) };
+    }
+
+    /** Text in these shapes is centred (a short label); rects, cylinders and documents can hold markdown. */
+    function centredShape(shape) {
+        return !(shape === 'rect' || shape === 'cylinder' || shape === 'document');
+    }
+
+    /**
+     * The text area inside a card's outline (before cardPadding). Diamonds and circles use the
+     * inscribed box; the others drop fixed strips. The editor's CSS uses the same numbers.
+     */
+    const SHAPE_INSET = { parallelogram: [0, 16, 0, 16], hexagon: [0, 14, 0, 14], cylinder: [20, 0, 6, 0], document: [0, 0, 10, 0] };
+    function shapeInner(n, shape) {
+        const x = num(n.x), y = num(n.y), w = num(n.width), h = num(n.height);
+        if (shape === 'diamond') return { x: x + w / 4, y: y + h / 4, w: w / 2, h: h / 2 };
+        if (shape === 'circle') return { x: x + w * 0.146, y: y + h * 0.146, w: w * 0.708, h: h * 0.708 };
+        const [t, r, b, l] = SHAPE_INSET[shape] || [0, 0, 0, 0];
+        return { x: x + l, y: y + t, w: Math.max(0, w - l - r), h: Math.max(0, h - t - b) };
+    }
+
+    /**
+     * SVG path data for a card outline drawn as a path (everything but rect and pill), in world
+     * px. A cylinder adds the front edge of its top cap as a second, open subpath.
+     */
+    function shapePath(shape, x, y, w, h) {
+        const d = shapeDims(w, h), r = x + w, b = y + h, cx = x + w / 2, cy = y + h / 2;
+        switch (shape) {
+            case 'diamond': return `M${f(cx)} ${f(y)} L${f(r)} ${f(cy)} L${f(cx)} ${f(b)} L${f(x)} ${f(cy)} Z`;
+            case 'circle': return `M${f(x)} ${f(cy)} A${f(w / 2)} ${f(h / 2)} 0 1 1 ${f(r)} ${f(cy)} A${f(w / 2)} ${f(h / 2)} 0 1 1 ${f(x)} ${f(cy)} Z`;
+            case 'parallelogram': return `M${f(x + d.s)} ${f(y)} L${f(r)} ${f(y)} L${f(r - d.s)} ${f(b)} L${f(x)} ${f(b)} Z`;
+            case 'hexagon': return `M${f(x + d.s)} ${f(y)} L${f(r - d.s)} ${f(y)} L${f(r)} ${f(cy)} L${f(r - d.s)} ${f(b)} L${f(x + d.s)} ${f(b)} L${f(x)} ${f(cy)} Z`;
+            case 'cylinder': {
+                const rx = f(w / 2), c = f(d.c);
+                return `M${f(x)} ${f(y + d.c)} A${rx} ${c} 0 0 1 ${f(r)} ${f(y + d.c)} L${f(r)} ${f(b - d.c)} A${rx} ${c} 0 0 1 ${f(x)} ${f(b - d.c)} Z`
+                    + ` M${f(x)} ${f(y + d.c)} A${rx} ${c} 0 0 0 ${f(r)} ${f(y + d.c)}`;
+            }
+            case 'document': {
+                const m = b - d.a;
+                return `M${f(x)} ${f(y)} L${f(r)} ${f(y)} L${f(r)} ${f(m)} Q${f(x + w * 0.75)} ${f(m + 2 * d.a)} ${f(cx)} ${f(m)} T${f(x)} ${f(m)} Z`;
+            }
+        }
+        return '';
     }
 
     // ── Step labels: what runs a card's step (styleAttributes.step), drawn as a chip ──
@@ -966,22 +1041,23 @@
      * reserves room above the text. The editor's CSS (.flow-node-text rules) uses the same numbers.
      */
     function cardPadding(n, shape) {
-        const boxed = shape === 'rect' || shape === 'pill';
+        const boxed = shape !== 'diamond' && shape !== 'circle';
         const top = stepType(n) ? (boxed ? 22 : 18) : (boxed ? 7 : 0);
         return boxed ? [top, 12, 7, 12] : [top, 0, 0, 0];
     }
 
     /**
      * The chip's box in world px ({ x, y, w, h, text }, text ellipsised to fit), or null.
-     * inner = the shape's text area. Rects: top-left corner; other shapes: centred over the text.
+     * inner = the shape's text area (shapeInner). Rects, cylinders and documents: top-left corner;
+     * other shapes: centred over the text.
      */
     function stepChip(n, shape, inner) {
         const t = stepType(n);
         if (!t) return null;
-        const boxed = shape === 'rect' || shape === 'pill';
+        const boxed = shape !== 'diamond' && shape !== 'circle';
         const text = fitLabel(t, STEP_FONT, Math.max(20, inner.w - 34));
         const w = labelWidth(text, STEP_FONT) + 10;
-        const x = shape === 'rect' ? inner.x + 7 : inner.x + (inner.w - w) / 2;
+        const x = !centredShape(shape) ? inner.x + 7 : inner.x + (inner.w - w) / 2;
         return { x, y: inner.y + (boxed ? 5 : 0), w, h: STEP_H, text };
     }
 
@@ -1573,8 +1649,8 @@
     function shapeSvg(node, shape, fill, stroke, sw, style) {
         const { x, y, width: w, height: h } = node;
         const st = `style="fill:${fill};stroke:${stroke};stroke-width:${sw}${style || ''}"`;
-        if (shape === 'diamond') return `<path d="M${f(x + w / 2)} ${f(y)} L${f(x + w)} ${f(y + h / 2)} L${f(x + w / 2)} ${f(y + h)} L${f(x)} ${f(y + h / 2)} Z" stroke-linejoin="round" ${st}/>`;
         if (shape === 'circle') return `<ellipse cx="${f(x + w / 2)}" cy="${f(y + h / 2)}" rx="${f(w / 2)}" ry="${f(h / 2)}" ${st}/>`;
+        if (shape !== 'rect' && shape !== 'pill') return `<path d="${shapePath(shape, x, y, w, h)}" stroke-linejoin="round" ${st}/>`;
         const r = shape === 'pill' ? Math.min(w, h) / 2 : 8;
         return `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${f(r)}" ${st}/>`;
     }
@@ -1695,7 +1771,7 @@
             if (n.type === 'text') {
                 const html = opts.markdown === false ? escapeHtml(n.text || '') : renderMarkdown(n.text || '');
                 const cp = cardPadding(n, shape).map(v => v + 'px').join(' ');
-                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${isSimpleText(n.text) || shape !== 'rect' ? ' simple' : ''}" style="padding:${cp}">${toXhtml(html)}</div>`;
+                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${isSimpleText(n.text) || centredShape(shape) ? ' simple' : ''}" style="padding:${cp}">${toXhtml(html)}</div>`;
             } else if (n.type === 'link') {
                 let host = n.url || '';
                 try { host = new URL(n.url).hostname; } catch (e) { /* keep raw */ }
@@ -1705,9 +1781,7 @@
             } else {
                 inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fm"><div class="s">${escapeHtml(n.type || 'node')}</div></div>`;
             }
-            let ix = n.x, iy = n.y, iw = n.width, ih = n.height;
-            if (shape === 'diamond') { ix += n.width / 4; iy += n.height / 4; iw /= 2; ih /= 2; }
-            else if (shape === 'circle') { ix += n.width * 0.146; iy += n.height * 0.146; iw *= 0.708; ih *= 0.708; }
+            const { x: ix, y: iy, w: iw, h: ih } = shapeInner(n, shape);
             // opts.cardContent(node, innerBox, shape) -> SVG markup: portable <text> instead of
             // HTML-in-foreignObject (used by file exports; see Flow.io).
             if (opts.cardContent) {
@@ -1777,6 +1851,7 @@
         SIDES, NORMAL, OPPOSITE, PRESETS, PRESET_NAMES,
         center, anchor, autoSides, bestSides, routeContext, nearestSide, facingSide, bbox, setInteractive,
         connectorGeometry, edgeGeometry, layoutEdges, layoutLabels, labelBox, labelPoint, labelLines, LABEL_MAX_EM, LABEL_RESERVE, sceneIndex, inShape, arrowPath, edgeRoute, edgeDash, nodeShape,
+        SHAPES, shapeDims, shapeInner, shapePath, centredShape,
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, escapeHtml, sanitize, safeHref, str,

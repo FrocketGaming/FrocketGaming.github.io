@@ -78,6 +78,11 @@
             html += btn('shape', 'pill', '<span class="flow-ico-pill"></span>', 'Pill: start or end', shape === 'pill');
             html += btn('shape', 'diamond', '<span class="flow-ico-diamond"></span>', 'Diamond: a decision (if / else)', shape === 'diamond');
             html += btn('shape', 'circle', '<span class="flow-ico-circle"></span>', 'Circle: a jump point', shape === 'circle');
+            html += '</div><div class="flow-pbtns">';
+            html += btn('shape', 'parallelogram', '<span class="flow-ico-parallelogram"></span>', 'Parallelogram: input or output', shape === 'parallelogram');
+            html += btn('shape', 'hexagon', '<span class="flow-ico-hexagon"></span>', 'Hexagon: preparation or setup', shape === 'hexagon');
+            html += btn('shape', 'cylinder', '<span class="flow-ico-cylinder"></span>', 'Cylinder: a database or table', shape === 'cylinder');
+            html += btn('shape', 'document', '<span class="flow-ico-document"></span>', 'Document: a file or report', shape === 'document');
             html += '</div></div>';
 
             // Step label: what runs this step. Presets carry their own colour; a custom one uses the card's.

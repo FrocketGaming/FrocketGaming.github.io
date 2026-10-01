@@ -281,7 +281,7 @@
         if (id && id !== hoverNodeId) {
             const n = core.getNode(id);
             const shape = n && S.nodeShape(n);
-            if (shape === 'diamond' || shape === 'circle') {
+            if (shape && shape !== 'rect' && shape !== 'pill') {
                 const p = core.screenToWorld(e.clientX, e.clientY);
                 if (!S.inShape(n, p, -8)) id = null;
             }
@@ -321,6 +321,19 @@
         portsEl.style.top = n.y + 'px';
         portsEl.style.width = n.width + 'px';
         portsEl.style.height = n.height + 'px';
+        placeDots(portsEl, n);
+    }
+
+    /** Put side dots on the drawn outline (a parallelogram's slanted sides, a document's wave). */
+    function placeDots(box, n) {
+        const x = Number(n.x) || 0, y = Number(n.y) || 0;
+        for (const d of box.children) {
+            const side = d.dataset.port || d.dataset.side;
+            if (!side) continue;
+            const a = S.anchor(n, side);
+            d.style.left = (a.x - x) + 'px';
+            d.style.top = (a.y - y) + 'px';
+        }
     }
     core.addRenderer('ports', (d) => { if (portsEl && (d.nodes.size || d.all || d.structure)) positionPorts(); }, 70);
 
@@ -413,6 +426,7 @@
         const st = dropPortsEl.style;
         st.left = Number(n.x) + 'px'; st.top = Number(n.y) + 'px';
         st.width = Number(n.width) + 'px'; st.height = Number(n.height) + 'px';
+        placeDots(dropPortsEl, n);
         for (const d of dropPortsEl.children) d.classList.toggle('is-snap', d.dataset.side === side);
     }
 

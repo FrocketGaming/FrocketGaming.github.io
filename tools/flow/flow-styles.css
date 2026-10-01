@@ -149,7 +149,11 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 
 .flow-node.flow-shape-pill { border-radius: 999px; }
 .flow-node.flow-shape-diamond,
-.flow-node.flow-shape-circle {
+.flow-node.flow-shape-circle,
+.flow-node.flow-shape-parallelogram,
+.flow-node.flow-shape-hexagon,
+.flow-node.flow-shape-cylinder,
+.flow-node.flow-shape-document {
     background: none;
     border-color: transparent;
     box-shadow: none;
@@ -173,6 +177,17 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-node.flow-shape-diamond .flow-node-editor { inset: 25%; padding: 0; }
 .flow-node.flow-shape-circle .flow-node-content,
 .flow-node.flow-shape-circle .flow-node-editor { inset: 14.6%; padding: 0; }
+/* Text area inside the other outlines: FlowStatic.shapeInner (SHAPE_INSET) uses the same numbers. */
+.flow-node.flow-shape-parallelogram .flow-node-content,
+.flow-node.flow-shape-parallelogram .flow-node-editor { left: 16px; right: 16px; width: auto; }
+.flow-node.flow-shape-hexagon .flow-node-content,
+.flow-node.flow-shape-hexagon .flow-node-editor { left: 14px; right: 14px; width: auto; }
+.flow-node.flow-shape-cylinder .flow-node-content,
+.flow-node.flow-shape-cylinder .flow-node-editor:not(.is-simple) { top: 20px; bottom: 6px; height: auto; }
+.flow-node.flow-shape-document .flow-node-content,
+.flow-node.flow-shape-document .flow-node-editor:not(.is-simple) { bottom: 10px; height: auto; }
+.flow-node.flow-shape-cylinder .flow-node-editor.is-simple { top: calc(50% + 7px); }
+.flow-node.flow-shape-document .flow-node-editor.is-simple { top: calc(50% - 5px); }
 
 .flow-node-content {
     position: absolute;
@@ -239,6 +254,9 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-node.flow-shape-pill .flow-step-chip { left: 50%; transform: translateX(-50%); }
 .flow-node.flow-shape-diamond .flow-step-chip { top: 25%; left: 50%; transform: translateX(-50%); max-width: calc(50% - 34px); }
 .flow-node.flow-shape-circle .flow-step-chip { top: 14.6%; left: 50%; transform: translateX(-50%); max-width: calc(70.8% - 34px); }
+.flow-node.flow-shape-parallelogram .flow-step-chip { left: 50%; transform: translateX(-50%); max-width: calc(100% - 66px); }
+.flow-node.flow-shape-hexagon .flow-step-chip { left: 50%; transform: translateX(-50%); max-width: calc(100% - 62px); }
+.flow-node.flow-shape-cylinder .flow-step-chip { top: 25px; }
 
 /* Rendered markdown inside cards */
 .flow-md > :first-child { margin-top: 0; }
@@ -1167,6 +1185,19 @@ body.flow-painting .flow-viewport * { cursor: copy !important; }
 .flow-ico-pill { width: 18px; height: 12px; border-radius: 999px; }
 .flow-ico-diamond { width: 11px; height: 11px; transform: rotate(45deg); border-radius: 2px; }
 .flow-ico-circle { width: 14px; height: 14px; border-radius: 50%; }
+/* Outline icons for the path-drawn shapes: an SVG mask filled with currentColor. */
+.flow-ico-parallelogram, .flow-ico-hexagon, .flow-ico-cylinder, .flow-ico-document {
+    display: block;
+    width: 20px;
+    height: 14px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+.flow-ico-parallelogram { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cpath d='M5.5 1.5H19L14.5 12.5H1Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.flow-ico-hexagon { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cpath d='M5 1.5H15L19 7L15 12.5H5L1 7Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.flow-ico-cylinder { width: 16px; height: 16px; --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.5'%3E%3Cellipse cx='8' cy='3.5' rx='6.5' ry='2.5'/%3E%3Cpath d='M1.5 3.5V12.5A6.5 2.5 0 0 0 14.5 12.5V3.5'/%3E%3C/g%3E%3C/svg%3E"); }
+.flow-ico-document { width: 16px; height: 16px; --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 1.5H14.5V12.5Q11.25 15.5 8 12.5T1.5 12.5Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .flow-ico-line { display: block; width: 18px; border-top: 2px solid currentColor; }
 .flow-ico-line.is-dashed { border-top-style: dashed; }
 .flow-ico-line.is-dotted { border-top-style: dotted; }

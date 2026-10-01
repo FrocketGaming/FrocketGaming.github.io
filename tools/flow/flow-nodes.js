@@ -83,6 +83,28 @@
 
     // ── Rendering ───────────────────────────────────────────────────────────
 
+    /**
+     * Outline for shapes CSS can't draw (all but rect and pill): an SVG path in the card's own
+     * pixels (FlowStatic.shapePath, the same outline the export draws). Fixed-size features
+     * (a cylinder's cap, a parallelogram's slant) don't stretch, so it is redrawn on resize.
+     */
+    function syncShape(el, n) {
+        const shape = S.nodeShape(n);
+        const drawn = shape !== 'rect' && shape !== 'pill';
+        const w = Number(n.width) || 0, h = Number(n.height) || 0;
+        const key = drawn ? shape + '|' + w + '|' + h : '';
+        if (el._shapeKey === key) return;
+        el._shapeKey = key;
+        let svg = el.querySelector(':scope > .flow-node-shape');
+        if (!drawn) { if (svg) svg.remove(); return; }
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'flow-node-shape');
+            el.insertBefore(svg, el.firstChild);
+        }
+        svg.innerHTML = `<path d="${S.shapePath(shape, 0, 0, w, h)}" stroke-linejoin="round"/>`;
+    }
+
     function signature(n) {
         // Any field can hold any JSON value: never let Array.join call an object's toString.
         const v = (x) => (x == null || typeof x !== 'object' ? x : JSON.stringify(x));
@@ -197,6 +219,7 @@
                 t.setAttribute('aria-label', t.title);
             }
         }
+        if (!el._isGroup) syncShape(el, n);
         const key = el.dataset.nodeKey || n.id;
         const sig = signature(n);
         if (sigs.get(key) === sig) return;
@@ -225,25 +248,11 @@
             const sc = S.stepColor(n);
             if (sc) chip.style.setProperty('--step-color', nodes.cssColor(sc)); else chip.style.removeProperty('--step-color');
         } else if (chip) chip.remove();
-        let shapeEl = el.querySelector('.flow-node-shape');
-        if (shape === 'diamond' || shape === 'circle') {
-            if (!shapeEl) {
-                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                shapeEl.setAttribute('class', 'flow-node-shape');
-                shapeEl.setAttribute('viewBox', '0 0 100 100');
-                shapeEl.setAttribute('preserveAspectRatio', 'none');
-                el.insertBefore(shapeEl, el.firstChild);
-            }
-            shapeEl.innerHTML = shape === 'diamond'
-                ? '<path d="M50 1 L99 50 L50 99 L1 50 Z" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>'
-                : '<ellipse cx="50" cy="50" rx="49" ry="49" vector-effect="non-scaling-stroke"/>';
-        } else if (shapeEl) shapeEl.remove();
-
         const c = el.querySelector('.flow-node-content');
         c.className = 'flow-node-content';
         if (n.type === 'text') {
             c.classList.add('flow-md');
-            if (S.isSimpleText(n.text) || shape !== 'rect') c.classList.add('is-simple');
+            if (S.isSimpleText(n.text) || S.centredShape(shape)) c.classList.add('is-simple');
             c.innerHTML = n.text ? S.renderMarkdown(n.text) : '<p class="flow-placeholder">Empty card</p>';
         } else if (n.type === 'link') {
             const url = S.str(n.url);
@@ -418,7 +427,7 @@
         } else if (n.type === 'text') {
             kind = 'text';
             input = document.createElement('textarea');
-            input.className = 'flow-node-editor' + (S.nodeShape(n) !== 'rect' || S.isSimpleText(n.text) ? ' is-simple' : '');
+            input.className = 'flow-node-editor' + (S.centredShape(S.nodeShape(n)) || S.isSimpleText(n.text) ? ' is-simple' : '');
             input.value = opts.initialText != null ? opts.initialText : S.str(n.text);
             input.spellcheck = true;
             input.placeholder = 'Type… (Markdown)';
@@ -487,8 +496,11 @@
         const need = ta.scrollHeight;
         ta.style.height = simple ? need + 'px' : '';
         if (!userEdit) return;
-        const avail = editor.el.clientHeight * frac;
-        const target = Math.ceil((need / frac + (shape === 'rect' || shape === 'pill' ? 3 : 24)) / 20) * 20;
+        // Boxed shapes lose fixed strips to their outline (a cylinder's cap, a document's wave).
+        const boxed = shape !== 'diamond' && shape !== 'circle';
+        const vIns = boxed ? (Number(n.height) || 0) - S.shapeInner(n, shape).h : 0;
+        const avail = editor.el.clientHeight * frac - vIns;
+        const target = Math.ceil((need / frac + (boxed ? 3 + vIns : 24)) / 20) * 20;
         let h = Number(n.height) || 0;
         if (need > avail + 1) h = Math.max(h, target);
         else if (h > editor.baseH) h = Math.max(editor.baseH, Math.min(h, target));

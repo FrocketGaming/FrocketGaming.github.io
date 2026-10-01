@@ -38,7 +38,7 @@ export untouched. Rules for every module:
 - Only write a field when the user asked for it. Clearing a value deletes the key
   (e.g. `delete node.color`), it doesn't write `null`.
 - Extensions beyond the spec live in `styleAttributes` (Advanced Canvas compatible):
-  nodes `styleAttributes.shape` = `pill|diamond|circle`; edges `styleAttributes.pathfindingMethod`
+  nodes `styleAttributes.shape` = `pill|diamond|circle|parallelogram|hexagon|cylinder|document` (`FlowStatic.SHAPES`); edges `styleAttributes.pathfindingMethod`
   = `direct|square` and `styleAttributes.path` = `dashed|dotted`. Other apps ignore them; we keep them.
 - `styleAttributes.locked = true` (cards and groups): cannot be moved, resized, nudged, aligned or deleted
   (`interact.startMove/nudge/align/distribute/deleteSelection` skip it; no resize handles); text, colour and
@@ -51,6 +51,12 @@ export untouched. Rules for every module:
   (those wholly inside one collapsed group are dropped), `hidden` ids and `bars`. The editor gets it from
   `core.scene()` (null when nothing is collapsed; `core.isHidden(id)`), `toSVG` calls it directly, so export
   and the Snippets preview match. Hidden cards are skipped by marquee, Ctrl+A, find and drop targets.
+- Shapes other than rect and pill are drawn as an SVG path from `FlowStatic.shapePath` (editor: in the
+  card's own pixels, redrawn on resize; export the same path). The newer shapes have fixed-size features
+  (`shapeDims`: parallelogram slant / hexagon point 20px, cylinder cap 10px, document wave 6px, shrunk on
+  tiny cards). `shapeInner` is the text box inside the outline (`SHAPE_INSET` strips, mirrored in the CSS);
+  `anchor`, `sidePoint` and `inShape` follow the drawn outline, so side dots and connector ends sit on it.
+  Text is centred in every shape except rect, cylinder and document (`centredShape`).
 - Step labels: a text card's `styleAttributes.step` (free text, max 32 chars; presets `sql python api
   email schedule manual` in `FlowStatic.STEP_TYPES`, each with a colour preset; a custom label takes the
   card's colour) is drawn as a chip: top-left on rects, centred over the text on pills, diamonds and

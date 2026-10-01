@@ -303,7 +303,7 @@
     function cardContent(pal, chars) {
         return (n, box, shape) => {
             const note = (s) => { for (const ch of S.str(s)) chars.add(ch); return s; };
-            const padded = shape === 'rect' || shape === 'pill';
+            const padded = shape !== 'diamond' && shape !== 'circle';
             // Text cards: the editor's padding (room for a step label included); others as before.
             const [pt, pr, pb, pl] = n.type === 'text' ? S.cardPadding(n, shape) : padded ? [10, 14, 10, 14] : [0, 0, 0, 0];
             const x0 = box.x + pl, y0 = box.y + pt, w = Math.max(10, box.w - pl - pr), h = Math.max(10, box.h - pt - pb);
@@ -314,7 +314,7 @@
                 const text = S.str(n.text);
                 if (!text.trim()) return '';
                 note(text); '•☐☑.|0123456789 '.split('').forEach(c => chars.add(c));
-                const simple = S.isSimpleText(text) || shape !== 'rect';
+                const simple = S.isSimpleText(text) || S.centredShape(shape);
                 const blocks = mdBlocks(text);
                 // Lay out every block first so the whole stack can be centred for simple cards.
                 const laid = blocks.map(b => {

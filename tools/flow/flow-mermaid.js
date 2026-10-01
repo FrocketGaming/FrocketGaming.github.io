@@ -3,6 +3,7 @@
  * Export only (Mermaid has no positions, so nothing round-trips). Builds from the live document
  * and never changes it. Mapping:
  *   text card shapes   rect -> [..]   pill -> ([..])   diamond -> {..}   circle -> ((..))
+ *                      parallelogram -> [/../]   hexagon -> {{..}}   cylinder -> [(..)]   document -> [..]
  *   link / file cards  a rectangle labelled with the host or file name
  *   step label         prefixed to the card text as "[sql] "
  *   groups             subgraph (nested by containment, like the editor)
@@ -63,6 +64,11 @@
         if (shape === 'pill') return `${id}(["${text}"])`;
         if (shape === 'diamond') return `${id}{"${text}"}`;
         if (shape === 'circle') return `${id}(("${text}"))`;
+        if (shape === 'parallelogram') return `${id}[/"${text}"/]`;
+        if (shape === 'hexagon') return `${id}{{"${text}"}}`;
+        if (shape === 'cylinder') return `${id}[("${text}")]`;
+        // document: Mermaid only has it in the v11 `@{ shape: doc }` syntax, which older
+        // renderers (and some docs sites) reject outright, so it stays a rectangle.
         return `${id}["${text}"]`;
     }
 
