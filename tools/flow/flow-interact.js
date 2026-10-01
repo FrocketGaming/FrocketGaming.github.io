@@ -550,6 +550,12 @@
         if (Flow.canvas.isTyping(e) || dialogOpen() || core.editing) return;
         const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
         const files = e.clipboardData ? [...e.clipboardData.files] : [];
+        // A copied picture or screenshot: an image card where the pointer is.
+        if (files.some(f => Flow.images && Flow.images.isImageFile(f))) {
+            e.preventDefault();
+            Flow.images.addFiles(files, core.lastPointer || core.viewCenter());
+            return;
+        }
         if (!text && files.length && Flow.io) {
             const f = files.find(x => /\.(canvas|json)$/i.test(x.name));
             if (f) { e.preventDefault(); Flow.io.importFile(f); }
@@ -628,7 +634,7 @@
     interact.SHORTCUTS = [
         ['Tools', [
             ['V / 1', 'Select'], ['H / 2', 'Pan (or hold Space)'], ['T / 3', 'Card'], ['A / 4', 'Connector'],
-            ['G / 5', 'Group'], ['L / 6', 'Link card'], ['Q', 'Keep tool active'],
+            ['G / 5', 'Group'], ['L / 6', 'Link card'], ['I / 7', 'Image (or drop / paste a picture)'], ['Q', 'Keep tool active'],
         ]],
         ['Build fast', [
             ['Double-click', 'New card here'], ['Ctrl + Arrow', 'New connected card in that direction (also while typing)'],
@@ -763,6 +769,7 @@
             return;
         }
         if (!mod && !e.altKey && key === 'q') { core.setTool(core.tool, !core.toolLocked); return; }
+        if (!mod && !e.altKey && !e.shiftKey && (key === 'i' || key === '7') && Flow.images) { Flow.images.choose(); return; }
         if (!mod && !e.altKey && !e.shiftKey && TOOL_KEYS[key]) { core.setTool(TOOL_KEYS[key], core.toolLocked); return; }
     }
 })();

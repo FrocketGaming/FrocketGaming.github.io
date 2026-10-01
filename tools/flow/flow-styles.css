@@ -217,6 +217,9 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
     user-select: text;
 }
 .flow-node.is-editing .flow-node-content { visibility: hidden; }
+/* Image cards: the whole picture, letterboxed inside the border (the export draws the same). */
+.flow-node .flow-node-content.flow-image { padding: 2px; align-items: center; justify-content: center; }
+.flow-node-content.flow-image img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
 
 /* Text cards: padding matches FlowStatic.cardPadding (the exports use the same numbers). A step
    label reserves room above the text: 22px on rects and pills, 18px inside diamonds and circles. */
@@ -1416,6 +1419,12 @@ body.flow-painting .flow-viewport * { cursor: copy !important; }
     .flow-hint, .flow-stats, .flow-doc-status { display: none; }
     .flow-actions .flow-btn span { display: none; }
     .flow-doc { max-width: 40vw; }
+    .flow-toolbar { top: 64px; }
+    .flow-panel { top: 116px; }
+}
+
+/* Below this the centred toolbar would run into the title and the Open/Save buttons: own row. */
+@media (max-width: 1080px) {
     .flow-toolbar { top: 64px; }
     .flow-panel { top: 116px; }
 }

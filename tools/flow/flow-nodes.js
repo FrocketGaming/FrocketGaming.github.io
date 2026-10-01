@@ -250,7 +250,17 @@
         } else if (chip) chip.remove();
         const c = el.querySelector('.flow-node-content');
         c.className = 'flow-node-content';
-        if (n.type === 'text') {
+        const img = S.imageCard(n);
+        el.classList.toggle('is-image', !!img);
+        if (img) {
+            // src is a validated base64 data URL (FlowStatic.imageCard); set through the DOM, never as HTML.
+            c.classList.add('flow-image');
+            const im = document.createElement('img');
+            im.src = img.src;
+            im.alt = img.alt;
+            im.draggable = false;
+            c.replaceChildren(im);
+        } else if (n.type === 'text') {
             c.classList.add('flow-md');
             if (S.isSimpleText(n.text) || S.centredShape(shape)) c.classList.add('is-simple');
             c.innerHTML = n.text ? S.renderMarkdown(n.text) : '<p class="flow-placeholder">Empty card</p>';
@@ -405,6 +415,13 @@
         opts = opts || {};
         const n = core.getNode(id);
         if (!n) return;
+        // An image card's text is the picture's data: "editing" it means choosing a new picture.
+        if (S.imageCard(n)) {
+            if (opts.ownTxn) core.commit();
+            core.select([id], []);
+            if (Flow.images) Flow.images.choose(id);
+            return;
+        }
         if (editor) nodes.stopEdit();
         core.renderNow();
         const el = nodes.elementFor(id);

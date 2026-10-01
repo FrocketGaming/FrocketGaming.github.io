@@ -52,7 +52,7 @@
         const items = [...nodes, ...edges];
         const color = common(items, x => x.color || '');
         const title = items.length > 1 ? `${items.length} selected`
-            : nodes.length ? ({ text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
+            : nodes.length ? (S.imageCard(nodes[0]) ? 'Image' : { text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
                 : 'Connector';
 
         let html = `<div class="flow-panel-title">${title}</div>`;
@@ -77,7 +77,7 @@
         html += '</div></div>';
 
         // Shape (text cards)
-        const textCards = nodes.filter(n => n.type === 'text');
+        const textCards = nodes.filter(n => n.type === 'text' && !S.imageCard(n));
         if (textCards.length && textCards.length === nodes.length) {
             const shape = common(textCards, S.nodeShape);
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Shape</div><div class="flow-pbtns">';
@@ -197,6 +197,7 @@
             html += btn('paint', '', '<i class="fa-solid fa-paintbrush"></i>', 'Format painter: copy this style, then click what to paint (Esc cancels)', Flow.arrange.isPainting());
             if (Flow.arrange.hasBrush()) html += btn('paste-style', '', '<i class="fa-solid fa-fill-drip"></i>', 'Paste the copied style onto the selection (Ctrl+Alt+V)', false);
         }
+        if (nodes.length === 1 && S.imageCard(nodes[0])) html += btn('replace-image', '', '<i class="fa-regular fa-image"></i>', 'Replace image (Enter)', false);
         if (nodes.length) html += btn('duplicate', '', '<i class="fa-regular fa-clone"></i>', 'Duplicate (Ctrl+D)', false);
         if (nodes.length) html += btn('group', '', '<i class="fa-regular fa-object-group"></i>', 'Group (Ctrl+G)', false);
         if (nodes.some(n => n.type === 'group')) html += btn('ungroup', '', '<i class="fa-regular fa-object-ungroup"></i>', 'Ungroup (Ctrl+Shift+G)', false);
@@ -301,6 +302,7 @@
             case 'align': Flow.interact.align(v); break;
             case 'distribute': Flow.interact.distribute(v); break;
             case 'duplicate': Flow.interact.duplicate(); break;
+            case 'replace-image': Flow.images.choose(nodes[0].id); break;
             case 'group': Flow.interact.groupSelection(); break;
             case 'ungroup': Flow.interact.ungroupSelection(); break;
             case 'delete': Flow.interact.deleteSelection(); break;

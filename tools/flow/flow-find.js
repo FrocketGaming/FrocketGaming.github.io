@@ -18,6 +18,7 @@
     function nodeText(n) {
         const parts = [];
         if (n.type === 'group') parts.push(S.str(n.label));
+        else if (S.imageCard(n)) parts.push(S.imageCard(n).alt);   // never the picture's base64
         else if (n.type === 'text') parts.push(S.str(n.text));
         else if (n.type === 'link') parts.push(S.str(n.url));
         else if (n.type === 'file') parts.push(S.str(n.file), S.str(n.subpath));

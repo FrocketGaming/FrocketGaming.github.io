@@ -48,7 +48,9 @@
         const step = S.stepType(n);
         if (n.type === 'group') return label(plainLines(n.label), 'Group');
         let lines;
-        if (n.type === 'text') lines = plainLines(n.text);
+        const img = S.imageCard(n);
+        if (img) lines = [img.alt || 'Image'];
+        else if (n.type === 'text') lines = plainLines(n.text);
         else if (n.type === 'link') {
             const url = S.str(n.url);
             try { const u = new URL(url); lines = [(u.hostname.replace(/^www\./, '') + u.pathname).replace(/\/$/, '')]; } catch (e) { lines = url ? [url] : []; }

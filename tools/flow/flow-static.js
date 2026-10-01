@@ -962,7 +962,8 @@
     const SHAPES = ['rect', 'pill', 'diamond', 'circle', 'parallelogram', 'hexagon', 'cylinder', 'document'];
     function nodeShape(node) {
         const s = node.styleAttributes && node.styleAttributes.shape;
-        return typeof s === 'string' && s !== 'rect' && SHAPES.includes(s) ? s : 'rect';
+        // Image cards are always drawn as rectangles (a shape set before the picture is kept, unused).
+        return typeof s === 'string' && s !== 'rect' && SHAPES.includes(s) && !imageCard(node) ? s : 'rect';
     }
 
     /**
@@ -1627,6 +1628,27 @@
         return html;
     }
 
+    /**
+     * An image card: a text card whose whole text is one inline image, `![alt](data:image/...;base64,...)`.
+     * Returns { alt, src } or null. src is only ever a base64 data URL of a raster type (safe to
+     * put in an attribute); cached per text, since the text can be hundreds of kB.
+     */
+    const IMAGE_CARD = /^!\[([^\]\r\n]{0,300})\]\((data:image\/(?:png|gif|jpe?g|webp);base64,[A-Za-z0-9+/=]+)\)$/;
+    const imageCache = new Map();
+    function imageCard(n) {
+        if (!n || n.type !== 'text' || typeof n.text !== 'string' || n.text.length < 40) return null;
+        const t = n.text.trim();
+        if (t.charCodeAt(0) !== 33) return null;   // '!'
+        let v = imageCache.get(t);
+        if (v === undefined) {
+            const m = IMAGE_CARD.exec(t);
+            v = m ? { alt: m[1], src: m[2] } : null;
+            if (imageCache.size > 200) imageCache.clear();
+            imageCache.set(t, v);
+        }
+        return v;
+    }
+
     /** True when a text card is a short "label" (no block markdown) and reads best centred. */
     function isSimpleText(text) {
         const t = str(text).trim();
@@ -1764,9 +1786,15 @@
         for (const n of nodes) {
             if (n.type === 'group') continue;
             const col = hasColor(n.color) ? paint.color(n.color, '--border-color') : null;
-            const shape = nodeShape(n);
+            const img = imageCard(n);
+            const shape = img ? 'rect' : nodeShape(n);
             const fill = col ? paint.mix(col, 16, '--bg-secondary') : cardBg;
             out.push(shapeSvg(n, shape, fill, col || border, 1.5));
+            if (img) {
+                // Same as the editor: the whole picture, letterboxed inside the card's border.
+                out.push(`<image href="${escapeHtml(img.src)}" x="${f(n.x + 2)}" y="${f(n.y + 2)}" width="${f(Math.max(0, n.width - 4))}" height="${f(Math.max(0, n.height - 4))}" preserveAspectRatio="xMidYMid meet"/>`);
+                continue;
+            }
             let inner;
             if (n.type === 'text') {
                 const html = opts.markdown === false ? escapeHtml(n.text || '') : renderMarkdown(n.text || '');
@@ -1854,7 +1882,7 @@
         SHAPES, shapeDims, shapeInner, shapePath, centredShape,
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
-        renderMarkdown, isSimpleText, escapeHtml, sanitize, safeHref, str,
+        renderMarkdown, isSimpleText, imageCard, escapeHtml, sanitize, safeHref, str,
         toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H,
     };
 })();

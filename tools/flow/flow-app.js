@@ -243,6 +243,7 @@
         Flow.minimap.init();
         Flow.panel.init();
         Flow.io.init();
+        Flow.images.init();
         Flow.snippets.init();
         initDialogs();
         initMenu();

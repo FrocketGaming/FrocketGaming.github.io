@@ -2,7 +2,7 @@
 
 Vanilla JS, classic `<script>` tags, no build. Load order (see `index.html`):
 `flow-static.js` -> `flow-core.js` -> `flow-canvas.js` -> `flow-nodes.js` -> `flow-edges.js` ->
-`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-mermaid.js` -> `flow-io.js` -> `flow-snippets.js` -> `flow-app.js`.
+`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-mermaid.js` -> `flow-io.js` -> `flow-images.js` -> `flow-snippets.js` -> `flow-app.js`.
 Everything hangs off `window.Flow` (plus the standalone `window.FlowStatic`). Each piece
 module exposes `init()`; `flow-app.js` calls them in that order and then loads a document.
 
@@ -20,6 +20,7 @@ module exposes `init()`; `flow-app.js` calls them in that order and then loads a
 | `flow-mermaid.js` | P10 | Mermaid export: `build()` turns the chart into a `flowchart` (shapes, subgraphs from group containment, arrow/dash/label/colour, TD or LR from how connectors run); copy or `.mmd` download from the menu. Export only. |
 | `flow-panel.js` | P2/P3 UI | Left properties panel: colour (6 presets + custom), card shape, arrowheads, route, line style, arrange, actions. Stateless: reads the selection, writes through `core.change`. |
 | `flow-io.js` | P5 | `parse` / `serialize`, import (file picker, drag-drop, paste of files), export `.canvas`; the Export image dialog (PNG/SVG, scale 1x/2x/3x, whole chart by default or "Only selected", background on/off), copy PNG; the portable SVG text layout. |
+| `flow-images.js` | P11 | Image cards: add from the file picker (toolbar, I / 7), drop or paste; downscale + re-encode (WebP, longest side 1200px, data URL under ~400k chars); replace the picture (Enter / double-click / panel). |
 | `flow-snippets.js` | P6 | `Flow.store`: per-chart localStorage working copies, cross-tab sync, boot restore. `Flow.snippets`: save to / open from the IndexedDB `snippets` store (versions like Snippets), conflict + delete detection, Open dialog (incl. Unsaved work), Save-as-new, inline new category, Firebase push when signed in. |
 | `flow-app.js` | glue | Chart identity state (title, snippetId/draftId, saved content + updatedAt, conflict/detached flags), the debounced autosave timer (writes via `Flow.store.write`), status line, menu, dialogs, shortcuts sheet. |
 
@@ -57,6 +58,11 @@ export untouched. Rules for every module:
   tiny cards). `shapeInner` is the text box inside the outline (`SHAPE_INSET` strips, mirrored in the CSS);
   `anchor`, `sidePoint` and `inShape` follow the drawn outline, so side dots and connector ends sit on it.
   Text is centred in every shape except rect, cylinder and document (`centredShape`).
+- Image cards are plain text cards whose whole text is `![alt](data:image/(png|gif|jpeg|webp);base64,...)`
+  (`FlowStatic.imageCard(n)` -> `{ alt, src }`, cached per text). No new node type, so other canvas apps
+  show the picture as markdown. They always draw as rects (`nodeShape`), show the picture letterboxed
+  (editor `.flow-image`, export `<image>` in `toSVG`), and never expose the base64: find and Mermaid use the
+  alt text, the panel hides shape/step, and "editing" one opens the picker to replace the picture.
 - Step labels: a text card's `styleAttributes.step` (free text, max 32 chars; presets `sql python api
   email schedule manual` in `FlowStatic.STEP_TYPES`, each with a colour preset; a custom label takes the
   card's colour) is drawn as a chip: top-left on rects, centred over the text on pills, diamonds and

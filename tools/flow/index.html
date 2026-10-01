@@ -71,7 +71,7 @@
                 <p class="flow-empty-title">Double-click anywhere to add a card</p>
                 <p class="flow-empty-keys"><kbd>T</kbd> card <kbd>G</kbd> group <kbd>Ctrl</kbd>+<kbd>&rarr;</kbd> next connected card <kbd>?</kbd> shapes and shortcuts</p>
             </div>
-            <div class="flow-drop-hint" id="flowDropHint" hidden><i class="fa-solid fa-file-import"></i> Drop a .canvas file to open it</div>
+            <div class="flow-drop-hint" id="flowDropHint" hidden><i class="fa-solid fa-file-import"></i> Drop a picture to add it, or a .canvas file to open it</div>
         </div>
 
         <!-- Top-left: document identity -->
@@ -89,6 +89,7 @@
             <button class="flow-tool" data-tool="connect" title="Connector — A or 4" aria-label="Connector"><i class="fa-solid fa-arrow-right-long"></i><span class="flow-tool-key">4</span></button>
             <button class="flow-tool" data-tool="group" title="Group — G or 5" aria-label="Group"><i class="fa-regular fa-object-group"></i><span class="flow-tool-key">5</span></button>
             <button class="flow-tool" data-tool="link" title="Link card — L or 6" aria-label="Link card"><i class="fa-solid fa-link"></i><span class="flow-tool-key">6</span></button>
+            <button class="flow-tool" id="flowImageBtn" title="Image — I or 7 (or drop / paste a picture)" aria-label="Add image"><i class="fa-regular fa-image"></i><span class="flow-tool-key">7</span></button>
             <span class="flow-toolbar-sep"></span>
             <button class="flow-tool flow-tool-lock" id="flowToolLock" title="Keep tool active after drawing — Q" aria-label="Keep tool active" aria-pressed="false"><i class="fa-solid fa-lock-open"></i></button>
         </div>
@@ -222,6 +223,7 @@
     <script src="flow-panel.js?v=512ae8ba"></script>
     <script src="flow-mermaid.js?v=512ae8ba"></script>
     <script src="flow-io.js?v=512ae8ba"></script>
+    <script src="flow-images.js?v=512ae8ba"></script>
     <script src="flow-snippets.js?v=512ae8ba"></script>
     <script src="flow-app.js?v=512ae8ba"></script>
 </body>
