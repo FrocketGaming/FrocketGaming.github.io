@@ -1007,7 +1007,9 @@
             case 'cylinder': {
                 const rx = f(w / 2), c = f(d.c);
                 return `M${f(x)} ${f(y + d.c)} A${rx} ${c} 0 0 1 ${f(r)} ${f(y + d.c)} L${f(r)} ${f(b - d.c)} A${rx} ${c} 0 0 1 ${f(x)} ${f(b - d.c)} Z`
-                    + ` M${f(x)} ${f(y + d.c)} A${rx} ${c} 0 0 0 ${f(r)} ${f(y + d.c)}`;
+                    // Front edge of the lid, drawn right to left: the same winding as the outline,
+                    // so under the nonzero fill rule the lid stays filled instead of cancelling out.
+                    + ` M${f(r)} ${f(y + d.c)} A${rx} ${c} 0 0 1 ${f(x)} ${f(y + d.c)}`;
             }
             case 'document': {
                 const m = b - d.a;
