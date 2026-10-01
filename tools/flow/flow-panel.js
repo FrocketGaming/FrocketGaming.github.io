@@ -31,6 +31,9 @@
         });
     };
 
+    /** Swatches beyond JSON Canvas's six presets: stored as plain hex, so any canvas app reads them. */
+    const EXTRA_COLORS = [['#4c8dff', 'Blue'], ['#e8609f', 'Pink']];
+
     const btn = (action, value, icon, title, active, extra) =>
         `<button type="button" class="flow-pbtn${active ? ' is-active' : ''}" data-action="${S.escapeHtml(action)}" data-value="${S.escapeHtml(value)}" title="${S.escapeHtml(title)}" aria-label="${S.escapeHtml(title)}" aria-pressed="${active ? 'true' : 'false'}"${extra || ''}>${icon}</button>`;
 
@@ -63,7 +66,11 @@
         // `color` comes from the file: only its validated, browser-normalised form is ever displayed
         // (S.safeColor -> preset key, #hex or rgba()), and it is escaped anyway.
         const safe = color ? S.safeColor(color) : null;
-        const isCustom = !!safe && !S.PRESETS[safe];
+        const extra = safe ? EXTRA_COLORS.find(([hex]) => hex === safe.toLowerCase()) : null;
+        for (const [hex, name] of EXTRA_COLORS) {
+            html += `<button type="button" class="flow-swatch${extra && extra[0] === hex ? ' is-active' : ''}" style="--sw:${hex}" data-action="color" data-value="${hex}" title="${name}" aria-label="${name}"></button>`;
+        }
+        const isCustom = !!safe && !S.PRESETS[safe] && !extra;
         const hex6 = isCustom && /^#[0-9a-f]{6}$/i.test(safe) ? safe : isCustom && /^#[0-9a-f]{3}$/i.test(safe) ? '#' + [...safe.slice(1)].map(c => c + c).join('') : '#888888';
         html += `<label class="flow-swatch flow-swatch-custom${isCustom ? ' is-active' : ''}" title="Custom colour"${isCustom ? ` style="--sw:${S.escapeHtml(safe)}"` : ''}>
             <input type="color" data-action="custom-color" value="${S.escapeHtml(hex6)}" aria-label="Custom colour"></label>`;

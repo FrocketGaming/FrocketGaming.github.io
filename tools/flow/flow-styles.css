@@ -1109,7 +1109,7 @@ body.flow-painting .flow-viewport * { cursor: copy !important; }
 .flow-panel-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--chrome-text, var(--text-primary)); }
 .flow-panel-section + .flow-panel-section { margin-top: 12px; }
 .flow-panel-label { font-size: 12px; color: var(--chrome-muted, var(--text-secondary)); margin-bottom: 6px; }
-.flow-swatches { display: grid; grid-template-columns: repeat(4, 28px); gap: 6px; }
+.flow-swatches { display: grid; grid-template-columns: repeat(5, 28px); gap: 6px; }
 .flow-swatch {
     position: relative;
     width: 28px;
