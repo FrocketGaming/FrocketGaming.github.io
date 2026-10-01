@@ -1423,6 +1423,43 @@ body.flow-painting .flow-viewport * { cursor: copy !important; }
     .flow-panel { top: 116px; }
 }
 
+/* ── View only (flow-view.js) ─────────────────────────────────────────── */
+.flow-viewbar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 4px 4px 14px;
+    border-radius: 8px;
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+    color: var(--chrome-muted, var(--text-secondary));
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.flow-viewbar .flow-btn { height: 34px; }
+body.flow-view-only #flowToolbar,
+body.flow-view-only #flowPanel,
+body.flow-view-only #flowSaveBtn,
+body.flow-view-only .flow-pillgroup:has(#flowUndo),
+body.flow-view-only .flow-hint,
+body.flow-view-only .flow-ports,
+body.flow-view-only .flow-sel-frame,
+body.flow-view-only .flow-empty { display: none !important; }
+body.flow-view-only .flow-viewport,
+body.flow-view-only .flow-node,
+body.flow-view-only .flow-group-edge,
+body.flow-view-only .flow-group-label,
+body.flow-view-only .flow-edge-hit { cursor: grab; }
+body.flow-view-only .flow-viewport.is-panning,
+body.flow-view-only .flow-viewport.is-panning * { cursor: grabbing; }
+
 /* Below this the centred toolbar would run into the title and the Open/Save buttons: own row. */
 @media (max-width: 1080px) {
     .flow-toolbar { top: 64px; }

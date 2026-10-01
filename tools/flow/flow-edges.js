@@ -272,7 +272,7 @@
     // ── Hover ports ─────────────────────────────────────────────────────────
 
     function onHoverMove(e) {
-        if (core.dragging || core.editing || core.tool === 'hand' || core.viewportEl.classList.contains('is-space')) { if (!core.dragging) hidePorts(); return; }
+        if (core.viewOnly || core.dragging || core.editing || core.tool === 'hand' || core.viewportEl.classList.contains('is-space')) { if (!core.dragging) hidePorts(); return; }
         const t = e.target;
         if (t.closest('.flow-ports')) { clearTimeout(hideTimer); return; }
         // A group is only hit on its frame and title tab, so that is where its dots appear.

@@ -301,7 +301,7 @@
     // ── Double click ────────────────────────────────────────────────────────
 
     function onDoubleClick(e) {
-        if (e.target.closest('input, textarea')) return;
+        if (core.viewOnly || e.target.closest('input, textarea')) return;
         if (core.tool === 'hand') return;
         const hit = core.hitTest(e.target);
         const p = core.screenToWorld(e.clientX, e.clientY);
@@ -536,7 +536,7 @@
     }
 
     function onClipboard(e, kind) {
-        if (Flow.canvas.isTyping(e) || dialogOpen() || core.editing) return;
+        if (Flow.canvas.isTyping(e) || dialogOpen() || core.editing || core.viewOnly) return;
         if (!core.selection.nodes.size) return;
         const data = JSON.stringify(selectionAsCanvas(), null, '\t');
         e.clipboardData.setData('text/plain', data);
@@ -548,6 +548,7 @@
 
     function onPaste(e) {
         if (Flow.canvas.isTyping(e) || dialogOpen() || core.editing) return;
+        if (core.viewOnly) { core.emit('blocked', 'Paste'); return; }
         const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
         const files = e.clipboardData ? [...e.clipboardData.files] : [];
         // A copied picture or screenshot: an image card where the pointer is.
@@ -658,6 +659,7 @@
             ['Shift + 2', 'Zoom to selection'], ['Shift + 0', 'Reset zoom'], ['Ctrl + = / -', 'Zoom in / out'],
             ["Ctrl + '", 'Toggle snap to grid'], ["Ctrl + Shift + '", 'Toggle grid dots'],
             ['Ctrl + F', 'Find on canvas (Enter / Shift + Enter for next / previous)'], ['M', 'Toggle the minimap'],
+            ['Alt + V', 'View only: hide the editing tools, drag or arrows to pan (or open with ?view=1)'],
         ]],
         ['File', [
             ['Ctrl + S', 'Save to Snippets'], ['Ctrl + O', 'Open from Snippets'], ['Ctrl + Shift + O', 'Import .canvas'],
@@ -705,6 +707,19 @@
         if (mod && key === 's' && !e.shiftKey && !e.altKey) { e.preventDefault(); if (typing) e.target.blur(); Flow.snippets && Flow.snippets.quickSave(); return; }
         if (typing || dialogOpen()) return;
         if (core.dragging && key !== 'Escape') return;
+        if (core.viewOnly) {
+            // View only: arrows pan; zoom, fit, open, export and help keys fall through; nothing else.
+            if (key.startsWith('Arrow') && !mod) {
+                e.preventDefault();
+                const step = e.shiftKey ? 240 : 60, [ux, uy] = DIRS[key.slice(5).toLowerCase()];
+                core.setView({ x: core.view.x - ux * step, y: core.view.y - uy * step });
+                return;
+            }
+            const allowed = (mod && ['=', '+', '-', '0', 'o'].includes(key)) || (mod && e.shiftKey && key === 'e')
+                || (e.shiftKey && !mod && /^Digit[012]$/.test(e.code)) || key === '?' || (e.shiftKey && e.code === 'Slash')
+                || (e.altKey && e.shiftKey && e.code === 'KeyC') || key === 'Escape';
+            if (!allowed) return;
+        }
 
         if (mod && key === 'z' && !e.shiftKey) { e.preventDefault(); core.undo(); return; }
         if ((mod && key === 'z' && e.shiftKey) || (mod && key === 'y')) { e.preventDefault(); core.redo(); return; }

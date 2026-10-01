@@ -227,6 +227,7 @@
                 case 'snap': core.setPref('snap', !core.prefs.snap); break;
                 case 'grid': core.setPref('grid', !core.prefs.grid); break;
                 case 'shortcuts': app.showShortcuts(); break;
+                case 'view-only': Flow.view.toggle(); break;
             }
         });
     }
@@ -244,6 +245,7 @@
         Flow.panel.init();
         Flow.io.init();
         Flow.images.init();
+        Flow.view.init();
         Flow.snippets.init();
         initDialogs();
         initMenu();

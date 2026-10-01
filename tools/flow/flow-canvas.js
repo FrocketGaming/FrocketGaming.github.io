@@ -253,6 +253,7 @@
         }
     }
 
+    canvas.startPan = (e) => startPan(e);
     function startPan(e, tapClears) {
         cancelAnimationFrame(anim); animTo = null;
         const sx = e.clientX, sy = e.clientY, vx = core.view.x, vy = core.view.y;

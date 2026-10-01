@@ -179,6 +179,8 @@
 
     /** Run fn as one undoable step. fn may mutate core.doc freely. */
     core.change = function (label, fn) {
+        // View only (flow-view.js): no edits from any button, key or menu.
+        if (core.viewOnly) { core.emit('blocked', label); return false; }
         core.begin(label);
         try { fn(core.doc); } catch (e) { console.error('Flow: change failed', e); }
         core.reindex();

@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
     <link rel="stylesheet" href="../../src/firebase-sync.css">
-    <link rel="stylesheet" href="flow-styles.css?v=512ae8ba">
+    <link rel="stylesheet" href="flow-styles.css?v=caa76bdc">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -94,6 +94,11 @@
             <button class="flow-tool flow-tool-lock" id="flowToolLock" title="Keep tool active after drawing — Q" aria-label="Keep tool active" aria-pressed="false"><i class="fa-solid fa-lock-open"></i></button>
         </div>
         <div class="flow-hint" id="flowHint" aria-live="polite"></div>
+        <!-- Shown instead of the tools while the chart is view only (flow-view.js) -->
+        <div class="flow-viewbar" id="flowViewBar" data-ui hidden>
+            <i class="fa-regular fa-eye" aria-hidden="true"></i><span>View only</span>
+            <button type="button" class="flow-btn" id="flowViewExit" title="Back to editing — Alt+V"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+        </div>
 
         <!-- Find on canvas (Ctrl+F) -->
         <div class="flow-find" id="flowFind" role="search" data-ui hidden>
@@ -123,6 +128,7 @@
                     <button role="menuitem" data-action="export-mermaid"><i class="fa-solid fa-file-code"></i><span>Export Mermaid (.mmd)</span></button>
                     <button role="menuitem" data-action="copy-png"><i class="fa-regular fa-copy"></i><span>Copy as PNG</span><kbd>Shift+Alt+C</kbd></button>
                     <div class="flow-menu-sep"></div>
+                    <button role="menuitem" data-action="view-only"><i class="fa-regular fa-eye"></i><span>View only</span><kbd>Alt+V</kbd></button>
                     <button role="menuitem" data-action="snap"><i class="fa-solid fa-magnet"></i><span>Snap to grid</span><kbd>Ctrl+'</kbd></button>
                     <button role="menuitem" data-action="grid"><i class="fa-solid fa-border-none"></i><span>Show grid</span><kbd>Ctrl+Shift+'</kbd></button>
                     <div class="flow-menu-sep"></div>
@@ -211,21 +217,22 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="../../src/vendor/purify.min.js"></script>
-    <script src="flow-static.js?v=512ae8ba"></script>
-    <script src="flow-core.js?v=512ae8ba"></script>
-    <script src="flow-canvas.js?v=512ae8ba"></script>
-    <script src="flow-nodes.js?v=512ae8ba"></script>
-    <script src="flow-edges.js?v=512ae8ba"></script>
-    <script src="flow-interact.js?v=512ae8ba"></script>
-    <script src="flow-arrange.js?v=512ae8ba"></script>
-    <script src="flow-find.js?v=512ae8ba"></script>
-    <script src="flow-minimap.js?v=512ae8ba"></script>
-    <script src="flow-panel.js?v=512ae8ba"></script>
-    <script src="flow-mermaid.js?v=512ae8ba"></script>
-    <script src="flow-io.js?v=512ae8ba"></script>
-    <script src="flow-images.js?v=512ae8ba"></script>
-    <script src="flow-snippets.js?v=512ae8ba"></script>
-    <script src="flow-app.js?v=512ae8ba"></script>
+    <script src="flow-static.js?v=caa76bdc"></script>
+    <script src="flow-core.js?v=caa76bdc"></script>
+    <script src="flow-canvas.js?v=caa76bdc"></script>
+    <script src="flow-nodes.js?v=caa76bdc"></script>
+    <script src="flow-edges.js?v=caa76bdc"></script>
+    <script src="flow-interact.js?v=caa76bdc"></script>
+    <script src="flow-arrange.js?v=caa76bdc"></script>
+    <script src="flow-find.js?v=caa76bdc"></script>
+    <script src="flow-minimap.js?v=caa76bdc"></script>
+    <script src="flow-panel.js?v=caa76bdc"></script>
+    <script src="flow-mermaid.js?v=caa76bdc"></script>
+    <script src="flow-io.js?v=caa76bdc"></script>
+    <script src="flow-images.js?v=caa76bdc"></script>
+    <script src="flow-view.js?v=caa76bdc"></script>
+    <script src="flow-snippets.js?v=caa76bdc"></script>
+    <script src="flow-app.js?v=caa76bdc"></script>
 </body>
 
 </html>

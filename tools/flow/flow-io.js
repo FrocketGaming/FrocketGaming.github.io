@@ -54,6 +54,7 @@
             if (!hasFiles(e)) return;
             e.preventDefault();
             const files = [...e.dataTransfer.files];
+            if (core.viewOnly) { core.emit('blocked', 'Drop'); return; }
             // Pictures become image cards where they were dropped; anything else opens as a chart.
             if (Flow.images && files.some(Flow.images.isImageFile)) { Flow.images.addFiles(files, core.screenToWorld(e.clientX, e.clientY)); return; }
             const f = files[0];
