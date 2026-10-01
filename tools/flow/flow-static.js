@@ -291,7 +291,8 @@
         return {
             a, b, idx, key: key(a) + '/' + key(b),
             cardsIn(r) { return idx.query(r).filter(it => !it.g && it.n !== a && it.n !== b).map(it => it.n); },
-            groupsIn(r) { return idx.query(r).filter(it => it.g && it.n !== a && it.n !== b).map(it => group(it.n)); },
+            // Swimlanes tile a pool edge to edge, so a connector crossing them is the point: not obstacles.
+            groupsIn(r) { return idx.query(r).filter(it => it.g && it.n !== a && it.n !== b && !laneOf(it.n)).map(it => group(it.n)); },
         };
     }
 
@@ -1335,7 +1336,20 @@
 
     const isLocked = (n) => !!(n && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.locked === true);
 
-    const isCollapsed = (n) => !!(n && n.type === 'group' && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.collapsed === true);
+    // A swimlane never collapses: the lanes below would have to move, and the pool would no longer tile.
+    const isCollapsed = (n) => !!(n && n.type === 'group' && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.collapsed === true && !laneOf(n));
+
+    /**
+     * Swimlanes: a group with styleAttributes.lane = "<pool id>" is one lane of that pool. Lanes of a
+     * pool are stacked edge to edge with one x and width (kept so by flow-lanes.js); the name sits in
+     * a LANE_HEAD-wide strip down the left side. Other canvas apps just see stacked groups.
+     */
+    const LANE_HEAD = 40;
+    function laneOf(n) {
+        const sa = n && n.type === 'group' && n.styleAttributes;
+        const p = sa && typeof sa === 'object' ? sa.lane : null;
+        return typeof p === 'string' && p ? p : '';
+    }
 
     /**
      * What is drawn when some groups are collapsed, or null when none are (callers keep their normal path).
@@ -1752,6 +1766,15 @@
             if (n.type !== 'group') continue;
             const col = paint.color(n.color, '--text-secondary');
             const colored = hasColor(n.color);
+            if (laneOf(n)) {
+                // Same as the editor: square lane, header strip on the left, name reading upwards.
+                const stroke = colored ? col : border;
+                out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${stroke};stroke-width:1.5"/>`);
+                out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${LANE_HEAD}" height="${f(n.height)}" style="fill:${paint.mix(col, colored ? 22 : 12, '--bg-primary')};stroke:${stroke};stroke-width:1.5"/>`);
+                const label = fitLabel(str(n.label) || 'Lane', `600 15px ${font}`, n.height - 16);
+                out.push(`<text transform="translate(${f(n.x + LANE_HEAD / 2 + 5)} ${f(n.y + n.height / 2)}) rotate(-90)" text-anchor="middle" xml:space="preserve" style="fill:${colored ? col : textCol};font-size:15px;font-weight:600">${escapeHtml(label)}</text>`);
+                continue;
+            }
             out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" rx="10" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${colored ? col : border};stroke-width:1.5"/>`);
             if (n.label) {
                 // Same as the editor: one line, ellipsised to the group's width.
@@ -1883,6 +1906,6 @@
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, imageCard, escapeHtml, sanitize, safeHref, str,
-        toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H,
+        toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H, laneOf, LANE_HEAD,
     };
 })();

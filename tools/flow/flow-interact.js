@@ -364,8 +364,12 @@
     interact.deleteSelection = function () {
         if (!core.hasSelection()) return;
         // Locked cards are not deleted: unlock them first.
-        const doomed = [...core.selection.nodes].filter(id => !S.isLocked(core.getNode(id)));
-        const kept = core.selection.nodes.size - doomed.length;
+        // A swimlane goes with what is in it (like deleting a row), so the lanes below can close up.
+        const sel = [...core.selection.nodes];
+        const lanes = sel.filter(id => S.laneOf(core.getNode(id)));
+        const ids = lanes.length ? [...new Set([...sel, ...core.expandWithGroupContents(lanes)])] : sel;
+        const doomed = ids.filter(id => !S.isLocked(core.getNode(id)));
+        const kept = ids.length - doomed.length;
         if (kept) core.toast(kept === 1 ? 'A locked card was kept. Unlock it to delete it.' : `${kept} locked cards were kept. Unlock them to delete them.`);
         if (!doomed.length && !core.selection.edges.size) return;
         core.change('Delete', () => core.removeItems(doomed, [...core.selection.edges]));
@@ -689,6 +693,7 @@
         ['fa-solid fa-sitemap', 'Tidy layout', 'Line up the selected cards (or the whole chart) in layers that follow the arrows, flowing down or right'],
         ['fa-solid fa-up-down-left-right', 'Same size', 'Make the selected cards the same width, height or both, matching the largest'],
         ['fa-solid fa-vector-square', 'Fit group', 'Resize a group to hug the cards inside it'],
+        ['fa-solid fa-table-list', 'Swimlanes', 'Bands that stack edge to edge, one per system or owner (menu: Insert swimlanes, or make selected groups lanes). Resize a lane and the rest follow; drag a lane by its name to reorder it'],
         ['fa-regular fa-square-minus', 'Collapse group', 'Shrink a group to its title bar and hide its cards; connectors attach to the bar. Also the chevron on the group'],
         ['fa-solid fa-lock', 'Lock', 'A locked card or group cannot be moved, resized or deleted. A padlock shows in its corner'],
         ['fa-solid fa-right-left', 'Reverse direction', 'Flip a connector so it runs the other way: the arrow points at the card it started from'],

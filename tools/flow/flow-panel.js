@@ -52,7 +52,7 @@
         const items = [...nodes, ...edges];
         const color = common(items, x => x.color || '');
         const title = items.length > 1 ? `${items.length} selected`
-            : nodes.length ? (S.imageCard(nodes[0]) ? 'Image' : { text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
+            : nodes.length ? (S.imageCard(nodes[0]) ? 'Image' : S.laneOf(nodes[0]) ? 'Swimlane' : { text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
                 : 'Connector';
 
         let html = `<div class="flow-panel-title">${title}</div>`;
@@ -178,12 +178,27 @@
         }
 
         // Groups: collapse to the title bar, fit to the cards inside
-        const groups = nodes.filter(n => n.type === 'group');
+        const groups = nodes.filter(n => n.type === 'group' && !S.laneOf(n));
         if (groups.length) {
             const allCollapsed = groups.every(S.isCollapsed);
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Group</div><div class="flow-pbtns">';
             html += btn('collapse', '', allCollapsed ? '<i class="fa-regular fa-square-plus"></i>' : '<i class="fa-regular fa-square-minus"></i>', (allCollapsed ? 'Expand' : 'Collapse') + ' (Alt+G)', allCollapsed);
             html += btn('fit-group', '', '<i class="fa-solid fa-vector-square"></i>', 'Fit to its contents', false);
+            html += btn('make-lanes', '', '<i class="fa-solid fa-table-list"></i>', groups.length > 1 ? 'Make these groups swimlanes (top to bottom)' : 'Make this group a swimlane', false);
+            html += '</div></div>';
+        }
+
+        // Swimlanes: one lane selected gets add / move; any lane can dissolve its pool.
+        const laneSel = nodes.filter(n => S.laneOf(n));
+        if (laneSel.length) {
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Swimlane</div><div class="flow-pbtns">';
+            if (laneSel.length === 1) {
+                html += btn('lane-add', 'above', '<i class="fa-solid fa-arrow-up"></i><i class="fa-solid fa-plus flow-pbtn-sub"></i>', 'Add a lane above', false);
+                html += btn('lane-add', 'below', '<i class="fa-solid fa-arrow-down"></i><i class="fa-solid fa-plus flow-pbtn-sub"></i>', 'Add a lane below', false);
+                html += btn('lane-move', '-1', '<i class="fa-solid fa-angles-up"></i>', 'Move lane up (or drag it by its name)', false);
+                html += btn('lane-move', '1', '<i class="fa-solid fa-angles-down"></i>', 'Move lane down (or drag it by its name)', false);
+            }
+            html += btn('unpool', '', '<i class="fa-solid fa-object-ungroup"></i>', 'Turn this pool back into plain groups', false);
             html += '</div></div>';
         }
 
@@ -302,6 +317,10 @@
             case 'align': Flow.interact.align(v); break;
             case 'distribute': Flow.interact.distribute(v); break;
             case 'duplicate': Flow.interact.duplicate(); break;
+            case 'make-lanes': Flow.lanes.makePool(); break;
+            case 'lane-add': Flow.lanes.addLane(nodes[0], v); break;
+            case 'lane-move': Flow.lanes.moveLane(nodes[0], Number(v)); break;
+            case 'unpool': Flow.lanes.unpool(); break;
             case 'replace-image': Flow.images.choose(nodes[0].id); break;
             case 'group': Flow.interact.groupSelection(); break;
             case 'ungroup': Flow.interact.ungroupSelection(); break;

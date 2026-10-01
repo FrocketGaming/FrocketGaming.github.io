@@ -146,10 +146,18 @@
         core._redo = [];
     };
 
+    // Layout rules that must hold after every edit (swimlanes, flow-lanes.js) look at the document
+    // when a transaction starts and fix it up just before it is recorded, in the same undo step.
+    const beginHooks = [], commitHooks = [];
+    core.onBegin = (fn) => beginHooks.push(fn);
+    core.onBeforeCommit = (fn) => commitHooks.push(fn);
+    const runHooks = (list, t) => { for (const fn of list) { try { fn(t); } catch (e) { console.error('Flow: transaction hook failed', e); } } };
+
     /** Start a transaction (for drags). Nested begins are folded into the outer one. */
     core.begin = function (label) {
         if (core._txn) { core._txn.depth++; return; }
         core._txn = { label, before: core.snapshot(), depth: 1 };
+        runHooks(beginHooks, core._txn);
     };
 
     /** Finish a transaction; records an undo step only if the document actually changed. */
@@ -157,6 +165,7 @@
         const t = core._txn;
         if (!t) return false;
         if (--t.depth > 0) return false;
+        runHooks(commitHooks, t);
         core._txn = null;
         const now = JSON.stringify(core.doc);
         if (now === t.before.doc) return false;

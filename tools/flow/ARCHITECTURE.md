@@ -2,7 +2,7 @@
 
 Vanilla JS, classic `<script>` tags, no build. Load order (see `index.html`):
 `flow-static.js` -> `flow-core.js` -> `flow-canvas.js` -> `flow-nodes.js` -> `flow-edges.js` ->
-`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-mermaid.js` -> `flow-io.js` -> `flow-images.js` -> `flow-view.js` -> `flow-snippets.js` -> `flow-app.js`.
+`flow-interact.js` -> `flow-arrange.js` -> `flow-find.js` -> `flow-minimap.js` -> `flow-panel.js` -> `flow-mermaid.js` -> `flow-io.js` -> `flow-images.js` -> `flow-view.js` -> `flow-lanes.js` -> `flow-snippets.js` -> `flow-app.js`.
 Everything hangs off `window.Flow` (plus the standalone `window.FlowStatic`). Each piece
 module exposes `init()`; `flow-app.js` calls them in that order and then loads a document.
 
@@ -22,6 +22,7 @@ module exposes `init()`; `flow-app.js` calls them in that order and then loads a
 | `flow-io.js` | P5 | `parse` / `serialize`, import (file picker, drag-drop, paste of files), export `.canvas`; the Export image dialog (PNG/SVG, scale 1x/2x/3x, whole chart by default or "Only selected", background on/off), copy PNG; the portable SVG text layout. |
 | `flow-images.js` | P11 | Image cards: add from the file picker (toolbar, I / 7), drop or paste; downscale + re-encode (WebP, longest side 1200px, data URL under ~400k chars); replace the picture (Enter / double-click / panel). |
 | `flow-view.js` | P12 | View only (menu, eye pill, Alt+V, `?view=1`): `core.viewOnly`, body class `flow-view-only` hides the editing chrome; pointer handler 3000 turns every press into a pan; `core.change` refuses (emits `blocked`, toasted); interact keys, paste/cut, drop, double-click and hover dots check the flag. |
+| `flow-lanes.js` | P13 | Swimlanes: lanes are groups with `styleAttributes.lane = "<pool id>"` (`FlowStatic.laneOf`, `LANE_HEAD` strip). `core.onBegin` captures pool geometry + membership; `core.onBeforeCommit` restacks every pool in the same undo step (bottom resize pushes, top edge shared, width pool-wide, drag-by-name reorders by top edge, lanes grow to fit, dropped cards settle inside). `live(n)` re-runs it during a resize drag. Commands: `insertPool`, `makePool`, `addLane`, `moveLane`, `unpool`. Lanes never collapse, aren't routing obstacles, and deleting one deletes its contents. |
 | `flow-snippets.js` | P6 | `Flow.store`: per-chart localStorage working copies, cross-tab sync, boot restore. `Flow.snippets`: save to / open from the IndexedDB `snippets` store (versions like Snippets), conflict + delete detection, Open dialog (incl. Unsaved work), Save-as-new, inline new category, Firebase push when signed in. |
 | `flow-app.js` | glue | Chart identity state (title, snippetId/draftId, saved content + updatedAt, conflict/detached flags), the debounced autosave timer (writes via `Flow.store.write`), status line, menu, dialogs, shortcuts sheet. |
 

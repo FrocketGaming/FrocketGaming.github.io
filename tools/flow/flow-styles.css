@@ -547,6 +547,43 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-group.is-locked .flow-group-toggle { right: 34px; }
 .flow-sel-frame.is-locked { border-style: dashed; }
 
+/* Swimlanes (flow-lanes.js): square lanes that tile a pool; the name reads upwards in a strip on
+   the left (FlowStatic.LANE_HEAD wide), which is also the handle to drag the lane up or down. */
+.flow-group.is-lane .flow-group-fill { border-radius: 0; }
+.flow-group.is-lane .flow-group-toggle { display: none; }
+.flow-group.is-lane .flow-group-label {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    max-width: none;
+    margin: 0;
+    padding: 8px 0;
+    box-sizing: border-box;
+    border-radius: 0;
+    border: 1.5px solid var(--group-color);
+    background: color-mix(in srgb, var(--group-color) 16%, var(--bg-primary));
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    cursor: grab;
+}
+.flow-group.is-lane .flow-group-label.is-empty { opacity: 1; }
+.flow-group.is-lane.is-selected .flow-group-label { border-color: var(--accent-primary); }
+/* Renaming: the input reads normally, laid over the lane's top-left corner. */
+.flow-group.is-lane .flow-group-label:has(input) {
+    writing-mode: horizontal-tb;
+    transform: none;
+    bottom: auto;
+    width: auto;
+    padding: 4px;
+    z-index: 3;
+}
+.flow-pbtn-sub { font-size: 8px; margin-left: 1px; }
+
 .flow-group-label-input {
     font: inherit;
     color: var(--text-primary);
@@ -1443,6 +1480,7 @@ body.flow-painting .flow-viewport * { cursor: copy !important; }
     font-weight: 600;
     white-space: nowrap;
 }
+.flow-viewbar[hidden] { display: none; }
 .flow-viewbar .flow-btn { height: 34px; }
 body.flow-view-only #flowToolbar,
 body.flow-view-only #flowPanel,

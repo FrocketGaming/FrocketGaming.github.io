@@ -108,7 +108,7 @@
     function signature(n) {
         // Any field can hold any JSON value: never let Array.join call an object's toString.
         const v = (x) => (x == null || typeof x !== 'object' ? x : JSON.stringify(x));
-        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
+        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), S.laneOf(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
     }
 
     function renderNodes(d) {
@@ -229,10 +229,12 @@
         el.classList.toggle('has-color', colored);
         el.style.setProperty('--node-color', colored ? nodes.cssColor(n.color) : '');
         if (el._isGroup) {
+            const lane = !!S.laneOf(n);
+            el.classList.toggle('is-lane', lane);   // name in a strip down the left (flow-lanes.js)
             const label = el.querySelector('.flow-group-label');
             label.textContent = S.str(n.label);
             label.classList.toggle('is-empty', !S.str(n.label));
-            if (!S.str(n.label)) label.textContent = 'Group';
+            if (!S.str(n.label)) label.textContent = lane ? 'Lane' : 'Group';
             el.classList.toggle('has-bg', !!n.background);
             return;
         }
@@ -367,6 +369,7 @@
                 set('x', Math.round(x1)); set('y', Math.round(y1));
                 set('width', Math.round(x2 - x1)); set('height', Math.round(y2 - y1));
                 core.invalidate('nodes', [n.id]);
+                if (Flow.lanes) Flow.lanes.live(n);   // the rest of a swimlane pool follows
             },
             up: () => { document.body.classList.remove('flow-resizing', 'flow-cursor-' + handle); core.commit(); dropSig(n.id); core.invalidate('nodes', [n.id]); },
             cancel: () => { document.body.classList.remove('flow-resizing', 'flow-cursor-' + handle); core.cancel(); },
