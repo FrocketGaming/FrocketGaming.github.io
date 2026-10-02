@@ -1455,8 +1455,10 @@ class NotesApp {
             return;
         }
 
-        const withLinks = this.resolveWikiLinks(content);
-        preview.innerHTML = marked.parse(withLinks || '');
+        const { text, rendered } = this.extractMath(content || '');
+        const withLinks = this.resolveWikiLinks(text);
+        preview.innerHTML = marked.parse(withLinks || '')
+            .replace(/(\d+)/g, (match, i) => rendered[i] ?? match);
 
         if (typeof hljs !== 'undefined') {
             preview.querySelectorAll('pre code:not(.language-mermaid)').forEach(block => {
@@ -1466,6 +1468,28 @@ class NotesApp {
 
         const token = ++this.previewRenderToken;
         this.renderMermaidBlocks(preview, token);
+    }
+
+    // Pull $…$ and $$…$$ out before marked runs (it would read _ and * as emphasis and eat
+    // backslashes), render them with KaTeX, and leave private-use placeholders to swap back in.
+    // Code blocks, inline code and escaped \$ are matched first so they pass through untouched.
+    // Inline math must hug its dollars ($x$, not $ x $) and the closing $ can't precede a digit,
+    // so prices like "$5 and $10" stay plain text.
+    extractMath(content) {
+        const rendered = [];
+        if (typeof katex === 'undefined') return { text: content, rendered };
+
+        const pattern = /(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|(`+)[^\n]*?\2)|\\\$|\$\$([\s\S]+?)\$\$|\$(?![\s$])((?:\\.|[^$\\\n])+?)(?<![\s\\])\$(?!\d)/g;
+        const text = content.replace(pattern, (match, code, ticks, display, inline) => {
+            if (display === undefined && inline === undefined) return match;
+            const tex = display !== undefined ? display : inline;
+            rendered.push(katex.renderToString(tex.trim(), {
+                displayMode: display !== undefined,
+                throwOnError: false
+            }));
+            return `${rendered.length - 1}`;
+        });
+        return { text, rendered };
     }
 
     async renderMermaidBlocks(container, token) {
