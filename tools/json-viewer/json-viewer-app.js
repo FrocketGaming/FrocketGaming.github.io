@@ -7,6 +7,7 @@ class JsonViewerApp {
         this.jsonError     = document.getElementById('jsonError');
         this.jsonStats     = document.getElementById('jsonStats');
         this.formatBtn     = document.getElementById('formatBtn');
+        this.fromPythonBtn = document.getElementById('fromPythonBtn');
         this.expandAllBtn  = document.getElementById('expandAllBtn');
         this.collapseAllBtn= document.getElementById('collapseAllBtn');
         this.copyFormattedBtn = document.getElementById('copyFormattedBtn');
@@ -54,6 +55,7 @@ class JsonViewerApp {
             this.scheduleSaveTabs();
         });
         this.formatBtn.addEventListener('click', () => this.formatInput());
+        this.fromPythonBtn.addEventListener('click', () => this.convertFromPython());
         this.expandAllBtn.addEventListener('click', () => this.expandAll());
         this.collapseAllBtn.addEventListener('click', () => this.collapseAll());
         this.copyFormattedBtn.addEventListener('click', () => this.copyFormatted());
@@ -109,7 +111,9 @@ class JsonViewerApp {
         } catch (e) {
             this.parsed = null;
             this.jsonTree.innerHTML = '';
-            this.showError(e.message);
+            this.showError(this.looksLikePython(raw)
+                ? e.message + ' — this looks like a Python literal; click "From Python" to convert it.'
+                : e.message);
             this.jsonStats.textContent = '';
             this.downloadBtn.disabled = true;
         }
@@ -397,6 +401,25 @@ class JsonViewerApp {
             this.render();
         } catch (e) {
             this.showError(e.message);
+        }
+    }
+
+    looksLikePython(raw) {
+        if (!/^[[{(]/.test(raw)) return false;
+        try { pythonToJson(raw); return true; } catch { return false; }
+    }
+
+    convertFromPython() {
+        const raw = this.jsonInput.value.trim();
+        if (!raw) return;
+        try {
+            this.jsonInput.value = JSON.stringify(pythonToJson(raw), null, 2);
+            const tab = this.getActiveTab();
+            if (tab) tab.input = this.jsonInput.value;
+            this.saveTabsToStorage();
+            this.render();
+        } catch (e) {
+            this.showError('Could not read as Python: ' + e.message);
         }
     }
 
