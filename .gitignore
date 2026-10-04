@@ -176,3 +176,6 @@ claude.md
 
 # Gauntlet-loop build scratch (reference screenshots, working notes)
 .gauntlet/
+
+# Local newsletter preview helper
+newsletter/preview.nu
