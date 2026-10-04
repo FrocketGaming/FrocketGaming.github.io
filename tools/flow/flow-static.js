@@ -1139,16 +1139,44 @@
             const { node, side } = list[0];
             const horiz = side === 'top' || side === 'bottom';
             const key = (x) => horiz ? x.other.x : x.other.y;
-            list.sort((p, q) => key(p) - key(q) || (p.end < q.end ? -1 : 1));
+            // Connectors that arrive here alike (same look, same label) share one entry point and
+            // one arrowhead; they run together over the last stretch. Everything else gets its own slot.
+            const slots = [];
+            const merged = new Map();
+            for (const x of list) {
+                const mk = x.end === 'to' ? mergeKey(x.it.e) : null;
+                let slot = mk ? merged.get(mk) : null;
+                if (!slot) {
+                    slot = { members: [], end: x.end };
+                    slots.push(slot);
+                    if (mk) merged.set(mk, slot);
+                }
+                slot.members.push(x);
+            }
+            for (const s of slots) {
+                s.k = s.members.reduce((acc, x) => acc + key(x), 0) / s.members.length;
+                if (s.members.length > 1) for (const x of s.members) x.it.mergedTo = s;
+            }
+            slots.sort((p, q) => p.k - q.k || (p.end < q.end ? -1 : 1));
             const L = horiz ? num(node.width) : num(node.height);
             // Mixed in/out on one side get extra room so each arrowhead reads as its own connector.
             const mixed = list.some(x => x.end === 'from') && list.some(x => x.end === 'to');
-            const step = spreadable(node, side) ? Math.min(mixed ? 32 : 26, L / (list.length + 1)) : Math.min(mixed ? 28 : 20, L * 0.65 / list.length);
-            list.forEach((x, i) => {
-                const pt = sidePoint(node, side, (i - (list.length - 1) / 2) * step);
-                if (x.end === 'from') { x.it.from = pt; x.it.fromGap = step; } else { x.it.to = pt; x.it.toGap = step; }
+            const n = slots.length;
+            const step = spreadable(node, side) ? Math.min(mixed ? 32 : 26, L / (n + 1)) : Math.min(mixed ? 28 : 20, L * 0.65 / n);
+            slots.forEach((s, i) => {
+                const pt = n < 2 && s.members.length > 1 ? sidePoint(node, side, 0) : sidePoint(node, side, (i - (n - 1) / 2) * step);
+                for (const x of s.members) {
+                    if (x.end === 'from') { x.it.from = pt; x.it.fromGap = n > 1 ? step : undefined; }
+                    else { x.it.to = pt; x.it.toGap = n > 1 ? step : undefined; }
+                }
             });
         }
+    }
+
+    /** Connectors that end on one side of a card with the same key draw as one merged line into it. */
+    function mergeKey(e) {
+        const sa = e.styleAttributes && typeof e.styleAttributes === 'object' ? e.styleAttributes : {};
+        return JSON.stringify([str(e.color), e.toEnd === 'none' ? 0 : 1, e.fromEnd === 'arrow' ? 1 : 0, edgeRoute(e), str(sa.path), str(e.label)]);
     }
 
     /**
@@ -1241,6 +1269,9 @@
                     if (seen.has(j)) continue;
                     const o = segs[j];
                     if (o.it === sa.it || Math.abs(o.c - sa.c) > TOL) continue;
+                    // Connectors merged into one entry point keep sharing their last stretch.
+                    if (sa.it.mergedTo && sa.it.mergedTo === o.it.mergedTo && Math.abs(o.c - sa.c) < 0.5
+                        && sa.i + 4 >= sa.it.plan.pts.length && o.i + 4 >= o.it.plan.pts.length) continue;
                     if (Math.min(sa.hi, o.hi) - Math.max(sa.lo, o.lo) < 2) continue;
                     seen.add(j); cluster.push(j);
                 }
