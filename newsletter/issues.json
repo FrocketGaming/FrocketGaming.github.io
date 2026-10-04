@@ -1,5 +1,18 @@
 [
     {
+        "date": "2026-10-05",
+        "number": 2,
+        "title": "Big Querying made simple",
+        "intro": "This issue will deep dive into zbq or lazy bigquery which is a package I wrote a few years ago that I've been slowly improving on. The aim was to make interacting with BigQuery and GCS simpler. You'll notice that the majority of this issue is simply the deep dive, so I hope you enjoy!",
+        "sections": [
+            "BigQuery Cost Habits",
+            "Package Reviews",
+            "Repos to Watch",
+            "New to Python?",
+            "Deep Dive: zbq"
+        ]
+    },
+    {
         "date": "2026-09-19",
         "number": 1,
         "title": "Welcome to Snake Charmer",
