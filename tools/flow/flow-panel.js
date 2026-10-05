@@ -52,7 +52,7 @@
         const items = [...nodes, ...edges];
         const color = common(items, x => x.color || '');
         const title = items.length > 1 ? `${items.length} selected`
-            : nodes.length ? (S.imageCard(nodes[0]) ? 'Image' : S.laneOf(nodes[0]) ? 'Swimlane' : { text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
+            : nodes.length ? (S.imageCard(nodes[0]) ? 'Image' : S.laneOf(nodes[0]) ? 'Swimlane' : S.poolOf(nodes[0]) ? 'Pool title' : { text: 'Card', group: 'Group', link: 'Link card', file: 'File card' }[nodes[0].type] || 'Node')
                 : 'Connector';
 
         let html = `<div class="flow-panel-title">${title}</div>`;
@@ -103,6 +103,17 @@
             html += '</div><div class="flow-step-custom">';
             html += `<input type="text" class="flow-step-input" data-action="step-custom" maxlength="32" placeholder="Custom…" aria-label="Custom step label" value="${step && !preset ? S.escapeHtml(step) : ''}">`;
             if (step) html += btn('step', '', '<i class="fa-solid fa-xmark"></i>', 'Remove the step label', false);
+            html += '</div></div>';
+        }
+
+        // Status: where the step is in the process (no flag = not started).
+        const flaggable = nodes.filter(n => n.type !== 'group');
+        if (flaggable.length) {
+            const status = common(flaggable, S.statusOf);
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Status</div><div class="flow-pbtns">';
+            html += btn('status', '', '<i class="fa-regular fa-circle"></i>', 'No status (Alt+S cycles)', status === '');
+            html += btn('status', 'doing', '<i class="fa-solid fa-circle-half-stroke flow-status-doing"></i>', 'In progress (Alt+S cycles)', status === 'doing');
+            html += btn('status', 'done', '<i class="fa-solid fa-circle-check flow-status-done"></i>', 'Done (Alt+S cycles)', status === 'done');
             html += '</div></div>';
         }
 
@@ -178,7 +189,7 @@
         }
 
         // Groups: collapse to the title bar, fit to the cards inside
-        const groups = nodes.filter(n => n.type === 'group' && !S.laneOf(n));
+        const groups = nodes.filter(n => n.type === 'group' && !S.laneOf(n) && !S.poolOf(n));
         if (groups.length) {
             const allCollapsed = groups.every(S.isCollapsed);
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Group</div><div class="flow-pbtns">';
@@ -189,10 +200,14 @@
         }
 
         // Swimlanes: one lane selected gets add / move; any lane can dissolve its pool.
-        const laneSel = nodes.filter(n => S.laneOf(n));
+        const laneSel = nodes.filter(n => S.laneOf(n) || S.poolOf(n));
         if (laneSel.length) {
             html += '<div class="flow-panel-section"><div class="flow-panel-label">Swimlane</div><div class="flow-pbtns">';
-            if (laneSel.length === 1) {
+            const titled = new Set(core.nodes().map(S.poolOf).filter(Boolean));
+            if (laneSel.length === 1 && S.laneOf(laneSel[0]) && !titled.has(S.laneOf(laneSel[0]))) {
+                html += btn('pool-title', '', '<i class="fa-solid fa-heading"></i>', 'Title the whole pool', false);
+            }
+            if (laneSel.length === 1 && S.laneOf(laneSel[0])) {
                 html += btn('lane-add', 'above', '<i class="fa-solid fa-arrow-up"></i><i class="fa-solid fa-plus flow-pbtn-sub"></i>', 'Add a lane above', false);
                 html += btn('lane-add', 'below', '<i class="fa-solid fa-arrow-down"></i><i class="fa-solid fa-plus flow-pbtn-sub"></i>', 'Add a lane below', false);
                 html += btn('lane-move', '-1', '<i class="fa-solid fa-angles-up"></i>', 'Move lane up (or drag it by its name)', false);
@@ -321,6 +336,8 @@
             case 'lane-add': Flow.lanes.addLane(nodes[0], v); break;
             case 'lane-move': Flow.lanes.moveLane(nodes[0], Number(v)); break;
             case 'unpool': Flow.lanes.unpool(); break;
+            case 'pool-title': Flow.lanes.addTitle(nodes[0]); break;
+            case 'status': Flow.arrange.setStatus(v); break;
             case 'replace-image': Flow.images.choose(nodes[0].id); break;
             case 'group': Flow.interact.groupSelection(); break;
             case 'ungroup': Flow.interact.ungroupSelection(); break;

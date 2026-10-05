@@ -292,7 +292,7 @@
             a, b, idx, key: key(a) + '/' + key(b),
             cardsIn(r) { return idx.query(r).filter(it => !it.g && it.n !== a && it.n !== b).map(it => it.n); },
             // Swimlanes tile a pool edge to edge, so a connector crossing them is the point: not obstacles.
-            groupsIn(r) { return idx.query(r).filter(it => it.g && it.n !== a && it.n !== b && !laneOf(it.n)).map(it => group(it.n)); },
+            groupsIn(r) { return idx.query(r).filter(it => it.g && it.n !== a && it.n !== b && !laneOf(it.n) && !poolOf(it.n)).map(it => group(it.n)); },
         };
     }
 
@@ -1065,6 +1065,58 @@
         return { x, y: inner.y + (boxed ? 5 : 0), w, h: STEP_H, text };
     }
 
+    // ── Status flags: where a card is in the process (styleAttributes.status), a badge on its top edge ──
+
+    /** [value, name] in cycle order; no status = not started (no badge). */
+    const STATUSES = [['doing', 'In progress'], ['done', 'Done']];
+    const STATUS_R = 11;
+
+    /** A card's status ('doing' | 'done'), or '' when none. Groups never have one. */
+    function statusOf(n) {
+        if (!n || n.type === 'group' || !n.styleAttributes || typeof n.styleAttributes !== 'object') return '';
+        const s = n.styleAttributes.status;
+        return s === 'doing' || s === 'done' ? s : '';
+    }
+
+    /**
+     * Centre of the status badge in world px: on the top edge near the right, clear of the
+     * corner resize handle (circles and diamonds: on the outline, up and to the right).
+     */
+    function statusPoint(n, shape) {
+        const x = num(n.x), y = num(n.y), w = num(n.width), h = num(n.height), r = x + w, cx = x + w / 2;
+        const d = shapeDims(w, h);
+        switch (shape) {
+            case 'diamond': return { x: x + w * 0.75, y: y + h * 0.25 };
+            case 'circle': return { x: cx + w * 0.3536, y: y + h / 2 - h * 0.3536 };
+            case 'pill': return { x: Math.max(cx, r - Math.min(w, h) / 2), y };
+            case 'hexagon': return { x: Math.max(cx, r - d.s - 8), y };
+            case 'cylinder': {
+                const px = Math.max(cx, r - 18), t = (px - cx) / (w / 2 || 1);
+                return { x: px, y: y + d.c - d.c * Math.sqrt(Math.max(0, 1 - t * t)) };
+            }
+            default: return { x: Math.max(cx, r - 18), y };
+        }
+    }
+
+    /**
+     * The badge as SVG markup centred on (cx, cy). c = { done, doing, ring, fill } paint strings
+     * (CSS var() in the editor, resolved colours in exports).
+     */
+    function statusSvg(status, cx, cy, c) {
+        const R = STATUS_R;
+        if (status === 'done') {
+            return `<circle cx="${f(cx)}" cy="${f(cy)}" r="${R}" style="fill:${c.done};stroke:${c.ring};stroke-width:2"/>`
+                + `<path d="M${f(cx - 5)} ${f(cy + 0.5)} L${f(cx - 1.5)} ${f(cy + 4)} L${f(cx + 5)} ${f(cy - 3.5)}" style="fill:none;stroke:${c.ring};stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"/>`;
+        }
+        if (status === 'doing') {
+            // Half-filled ring: started, not finished.
+            return `<circle cx="${f(cx)}" cy="${f(cy)}" r="${R}" style="fill:${c.ring}"/>`
+                + `<circle cx="${f(cx)}" cy="${f(cy)}" r="${R - 2.5}" style="fill:${c.fill};stroke:${c.doing};stroke-width:2.5"/>`
+                + `<path d="M${f(cx)} ${f(cy - 5)} A5 5 0 0 1 ${f(cx)} ${f(cy + 5)} Z" style="fill:${c.doing}"/>`;
+        }
+        return '';
+    }
+
     /**
      * Full geometry for a JSON Canvas edge given a node lookup.
      * Missing sides are chosen automatically (spec: fromSide/toSide are optional).
@@ -1370,7 +1422,7 @@
     const isLocked = (n) => !!(n && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.locked === true);
 
     // A swimlane never collapses: the lanes below would have to move, and the pool would no longer tile.
-    const isCollapsed = (n) => !!(n && n.type === 'group' && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.collapsed === true && !laneOf(n));
+    const isCollapsed = (n) => !!(n && n.type === 'group' && n.styleAttributes && typeof n.styleAttributes === 'object' && n.styleAttributes.collapsed === true && !laneOf(n) && !poolOf(n));
 
     /**
      * Swimlanes: a group with styleAttributes.lane = "<pool id>" is one lane of that pool. Lanes of a
@@ -1381,6 +1433,18 @@
     function laneOf(n) {
         const sa = n && n.type === 'group' && n.styleAttributes;
         const p = sa && typeof sa === 'object' ? sa.lane : null;
+        return typeof p === 'string' && p ? p : '';
+    }
+
+    /**
+     * Pool title: a group with styleAttributes.pool = "<pool id>" wraps that pool's lanes, with its
+     * label in a POOL_HEAD-tall band across the top (kept in place by flow-lanes.js). Other canvas
+     * apps see a labelled group around the lanes.
+     */
+    const POOL_HEAD = 40;
+    function poolOf(n) {
+        const sa = n && n.type === 'group' && n.styleAttributes;
+        const p = sa && typeof sa === 'object' ? sa.pool : null;
         return typeof p === 'string' && p ? p : '';
     }
 
@@ -1808,6 +1872,15 @@
                 out.push(`<text transform="translate(${f(n.x + LANE_HEAD / 2 + 5)} ${f(n.y + n.height / 2)}) rotate(-90)" text-anchor="middle" xml:space="preserve" style="fill:${colored ? col : textCol};font-size:15px;font-weight:600">${escapeHtml(label)}</text>`);
                 continue;
             }
+            if (poolOf(n)) {
+                // Same as the editor: square frame round the lanes, title in a band across the top.
+                const stroke = colored ? col : border;
+                out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${stroke};stroke-width:1.5"/>`);
+                out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${POOL_HEAD}" style="fill:${paint.mix(col, colored ? 26 : 16, '--bg-primary')};stroke:${stroke};stroke-width:1.5"/>`);
+                const label = fitLabel(str(n.label) || 'Pool', `700 17px ${font}`, n.width - 24);
+                out.push(`<text x="${f(n.x + 12)}" y="${f(n.y + POOL_HEAD / 2 + 6)}" xml:space="preserve" style="fill:${colored ? col : textCol};font-size:17px;font-weight:700">${escapeHtml(label)}</text>`);
+                continue;
+            }
             out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" rx="10" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${colored ? col : border};stroke-width:1.5"/>`);
             if (n.label) {
                 // Same as the editor: one line, ellipsised to the group's width.
@@ -1846,9 +1919,16 @@
             const shape = img ? 'rect' : nodeShape(n);
             const fill = col ? paint.mix(col, 16, '--bg-secondary') : cardBg;
             out.push(shapeSvg(n, shape, fill, col || border, 1.5));
+            const status = statusOf(n);
+            const badge = () => {
+                if (!status) return;
+                const p = statusPoint(n, shape);
+                out.push(statusSvg(status, p.x, p.y, { done: paint.color('4'), doing: paint.color('2'), ring: paint.v('--bg-primary'), fill: cardBg }));
+            };
             if (img) {
                 // Same as the editor: the whole picture, letterboxed inside the card's border.
                 out.push(`<image href="${escapeHtml(img.src)}" x="${f(n.x + 2)}" y="${f(n.y + 2)}" width="${f(Math.max(0, n.width - 4))}" height="${f(Math.max(0, n.height - 4))}" preserveAspectRatio="xMidYMid meet"/>`);
+                badge();
                 continue;
             }
             let inner;
@@ -1879,6 +1959,7 @@
                 out.push(`<rect x="${f(chip.x)}" y="${f(chip.y)}" width="${f(chip.w)}" height="${f(chip.h)}" rx="3" style="fill:${paint.mix(sc, 16, '--bg-secondary')};stroke:${paint.mix(sc, 40, '--bg-secondary')};stroke-width:1"/>`);
                 out.push(`<text x="${f(chip.x + 5)}" y="${f(chip.y + 11)}" xml:space="preserve" style="fill:${sc};font-family:'JetBrains Mono',Consolas,monospace;font-size:10px;font-weight:700">${escapeHtml(chip.text)}</text>`);
             }
+            badge();
         }
         out.push('</svg>');
         return { svg: out.join(''), width: vw, height: vh, box: { x: vx, y: vy, width: vw, height: vh } };
@@ -1937,8 +2018,9 @@
         connectorGeometry, edgeGeometry, layoutEdges, layoutLabels, labelBox, labelPoint, labelLines, LABEL_MAX_EM, LABEL_RESERVE, sceneIndex, inShape, arrowPath, edgeRoute, edgeDash, nodeShape,
         SHAPES, shapeDims, shapeInner, shapePath, centredShape,
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
+        STATUSES, STATUS_R, statusOf, statusPoint, statusSvg,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, imageCard, escapeHtml, sanitize, safeHref, str,
-        toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H, laneOf, LANE_HEAD,
+        toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H, laneOf, LANE_HEAD, poolOf, POOL_HEAD,
     };
 })();

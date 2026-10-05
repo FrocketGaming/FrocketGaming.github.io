@@ -46,6 +46,29 @@
         core.toast(lock ? (sel.length === 1 ? 'Locked' : `${sel.length} locked`) : 'Unlocked');
     };
 
+    // ── Status flags ────────────────────────────────────────────────────────
+
+    /** Set ('doing' | 'done') or with '' clear the status of the selected cards (groups have none). */
+    arrange.setStatus = function (status) {
+        const cards = core.selectedNodes().filter(n => n.type !== 'group');
+        if (!cards.length) return;
+        const name = (S.STATUSES.find(([v]) => v === status) || [])[1];
+        core.change(name ? 'Status: ' + name : 'Clear status', () => {
+            for (const n of cards) setStyleAttr(n, 'status', name ? status : null);
+            core.invalidate('all');
+        });
+    };
+
+    /** Alt+S: no status -> in progress -> done -> no status (from the first selected card's). */
+    arrange.cycleStatus = function () {
+        const cards = core.selectedNodes().filter(n => n.type !== 'group');
+        if (!cards.length) return;
+        const order = ['', ...S.STATUSES.map(([v]) => v)];
+        const next = order[(order.indexOf(S.statusOf(cards[0])) + 1) % order.length];
+        arrange.setStatus(next);
+        core.toast(next ? (S.STATUSES.find(([v]) => v === next) || [])[1] : 'Status cleared');
+    };
+
     // ── Groups: collapse and fit ────────────────────────────────────────────
 
     /** Collapse the selected groups to their title bar; if all of them are collapsed, expand them. */
@@ -350,7 +373,8 @@
             if (mod && e.altKey && e.code === 'KeyV') { e.preventDefault(); arrange.pasteStyle(); return; }
             if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyL') { e.preventDefault(); arrange.toggleLock(); return; }
             if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyG') { e.preventDefault(); arrange.toggleCollapse(); return; }
-            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyR') { e.preventDefault(); arrange.reverseEdges(); }
+            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyR') { e.preventDefault(); arrange.reverseEdges(); return; }
+            if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyS') { e.preventDefault(); arrange.cycleStatus(); }
         }, true);
         core.on('load', () => { if (brush) endPainting(); });
     };

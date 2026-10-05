@@ -58,6 +58,8 @@
         else lines = [];
         if (step && lines.length) lines[0] = `[${step}] ${lines[0]}`;
         else if (step) lines = [`[${step}]`];
+        const status = S.statusOf(n);   // done / in progress as a mark before the text
+        if (status) lines = lines.length ? [(status === 'done' ? '✓ ' : '◐ ') + lines[0], ...lines.slice(1)] : [status === 'done' ? '✓' : '◐'];
         return label(lines, '(empty)');
     }
 

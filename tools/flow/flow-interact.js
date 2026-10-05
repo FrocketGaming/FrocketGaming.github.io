@@ -323,10 +323,16 @@
         const ids = core.expandWithGroupContents(nodeIds);
         const map = new Map();
         const newNodes = [], newEdges = [];
+        // A copied pool title brings all its lanes: the copy is a new pool. A lane copied on its
+        // own keeps its pool id, so it joins that pool as another lane.
+        const pools = new Map();
+        for (const n of core.nodes()) if (ids.has(n.id) && S.poolOf(n)) pools.set(S.poolOf(n), core.newId());
         for (const n of core.nodes()) {
             if (!ids.has(n.id)) continue;
             const c = JSON.parse(JSON.stringify(n));
             c.id = core.newId();
+            if (pools.has(S.laneOf(n))) c.styleAttributes.lane = pools.get(S.laneOf(n));
+            if (pools.has(S.poolOf(n))) c.styleAttributes.pool = pools.get(S.poolOf(n));
             c.x = (Number(n.x) || 0) + ox; c.y = (Number(n.y) || 0) + oy;
             map.set(n.id, c.id);
             core.addNode(c, n.type === 'group' ? undefined : undefined);
@@ -655,7 +661,7 @@
             ['Arrows / Shift + Arrows', 'Nudge 1px / one grid step'], ['Ctrl + ] / [', 'Bring to front / send to back'],
             ['Ctrl while dragging', 'Move without snapping'],
             ['Alt + R', 'Reverse the selected connectors'],
-            ['Alt + L', 'Lock / unlock (no moving, resizing or deleting)'], ['Alt + G', 'Collapse / expand the selected group'],
+            ['Alt + L', 'Lock / unlock (no moving, resizing or deleting)'], ['Alt + S', 'Status: none, in progress, done'], ['Alt + G', 'Collapse / expand the selected group'],
             ['Ctrl + Alt + C / V', 'Copy / paste style (or use the brush in the panel)'],
         ]],
         ['View', [
@@ -694,6 +700,8 @@
         ['fa-solid fa-up-down-left-right', 'Same size', 'Make the selected cards the same width, height or both, matching the largest'],
         ['fa-solid fa-vector-square', 'Fit group', 'Resize a group to hug the cards inside it'],
         ['fa-solid fa-table-list', 'Swimlanes', 'Bands that stack edge to edge, one per system or owner (menu: Insert swimlanes, or make selected groups lanes). Resize a lane and the rest follow; drag a lane by its name to reorder it'],
+        ['fa-solid fa-circle-half-stroke', 'Status', 'Flag a step in progress (half circle) or done (check); no flag = not started. Alt+S cycles. Shows on the card and in exports'],
+        ['fa-solid fa-heading', 'Pool title', 'A title band across the top of a set of swimlanes (Swimlane panel). Drag the band to move the whole pool, its handles to resize every lane together; double-click to rename; delete it to remove the title'],
         ['fa-regular fa-square-minus', 'Collapse group', 'Shrink a group to its title bar and hide its cards; connectors attach to the bar. Also the chevron on the group'],
         ['fa-solid fa-lock', 'Lock', 'A locked card or group cannot be moved, resized or deleted. A padlock shows in its corner'],
         ['fa-solid fa-right-left', 'Reverse direction', 'Flip a connector so it runs the other way: the arrow points at the card it started from'],
