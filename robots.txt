@@ -1,0 +1,6 @@
+# Block OpenAI's training crawler; ChatGPT search and user-triggered fetches stay allowed.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: *
+Allow: /
