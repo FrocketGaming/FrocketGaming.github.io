@@ -49,7 +49,7 @@
         cap = null;
         const ls = allLanes();
         if (!ls.length) return;
-        cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set(), titles: new Map() };
+        cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set(), titles: new Map(), detached: new Map() };
         for (const l of ls) cap.lanes.set(l, geom(l));
         cap.lanes0 = new Map(cap.lanes);   // never rewritten (resizePool rewrites cap.lanes)
         for (const t of allTitles()) cap.titles.set(t, geom(t));
@@ -71,6 +71,7 @@
     };
 
     function normalizeAll() {
+        if (cap) dragOut();
         const ls = allLanes();
         const pools = new Map();
         for (const l of ls) { const p = S.laneOf(l); if (!pools.has(p)) pools.set(p, []); pools.get(p).push(l); }
@@ -82,7 +83,7 @@
         }
         if (drop.length) core.removeItems(drop, []);
         if (!ls.length) return drop.length > 0;
-        if (!cap) cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set() };
+        if (!cap) cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set(), detached: new Map() };
         const moved = new Set();
         for (const [p, list] of pools) {
             if (titles.has(p)) resizePool(titles.get(p), list, moved);
@@ -92,6 +93,47 @@
         }
         if (moved.size) Flow.edges.refreshAutoSides([...moved]);
         return moved.size > 0 || drop.length > 0;
+    }
+
+    /** Where a pool's lanes were when the gesture began (title band included), or null. */
+    function capturedBox(pool) {
+        let box = null;
+        const add = (g) => {
+            if (!box) { box = { x1: g.x, y1: g.y, x2: g.x + g.w, y2: g.y + g.h }; return; }
+            box.x1 = Math.min(box.x1, g.x); box.y1 = Math.min(box.y1, g.y);
+            box.x2 = Math.max(box.x2, g.x + g.w); box.y2 = Math.max(box.y2, g.y + g.h);
+        };
+        for (const [l, g] of cap.lanes) if (S.laneOf(l) === pool) add(g);
+        if (cap.titles) for (const [t, g] of cap.titles) if (S.poolOf(t) === pool) add(g);
+        return box;
+    }
+
+    /** Take a lane out of its pool (it stays a plain group where it is; call inside a transaction). */
+    function detach(l) {
+        const pool = S.laneOf(l);
+        if (!pool) return;
+        if (cap && cap.detached) cap.detached.set(l, pool);   // the pool's top stays where it was
+        delete l.styleAttributes.lane;
+        if (!Object.keys(l.styleAttributes).length) delete l.styleAttributes;
+    }
+
+    /**
+     * A lane dragged (by its name) to where it no longer touches its pool leaves the pool, with its
+     * cards. A pool's only lane never leaves (that would just dissolve the pool: use unpool).
+     */
+    function dragOut() {
+        const ls = allLanes();
+        for (const l of ls) {
+            const c = cap.lanes.get(l), g = geom(l);
+            if (!c || cap.auto.has(l) || g.w !== c.w || g.h !== c.h || (g.x === c.x && g.y === c.y)) continue;
+            const pool = S.laneOf(l);
+            const rest = ls.filter(o => o !== l && S.laneOf(o) === pool && S.laneOf(o));
+            if (!rest.length) continue;
+            // Every other lane still where it was: this one moved alone (not the whole pool).
+            if (rest.some(o => { const oc = cap.lanes.get(o); return !oc || N(o.x) !== oc.x || N(o.y) !== oc.y; })) continue;
+            const b = capturedBox(pool);
+            if (!b || g.x >= b.x2 || g.x + g.w <= b.x1 || g.y >= b.y2 || g.y + g.h <= b.y1) detach(l);
+        }
     }
 
     /**
@@ -215,7 +257,7 @@
             // Where the pool started, counting lanes deleted in this gesture (deleting the top lane
             // pulls the rest up rather than leaving a gap).
             const pool = S.laneOf(list[0]);
-            top = Math.min(...[...cap.lanes].filter(([l]) => S.laneOf(l) === pool).map(([, c]) => c.y));
+            top = Math.min(...[...cap.lanes].filter(([l]) => S.laneOf(l) === pool || (cap.detached && cap.detached.get(l) === pool)).map(([, c]) => c.y));
         }
 
         // Cards ride along sideways only when their lane was dragged (it snaps back into the pool's
@@ -336,6 +378,21 @@
             g.styleAttributes = { lane: S.laneOf(lane) };
             core.reindex();
             core.select([g.id], []);
+        });
+    };
+
+    /** Take `lane` out of its pool: it moves (with its cards) to just right of the pool, and the rest close up. */
+    lanes.detachLane = function (lane) {
+        const pool = S.laneOf(lane);
+        if (!pool) return;
+        const list = allLanes().filter(l => S.laneOf(l) === pool);
+        if (list.length < 2) return;
+        const right = Math.max(...list.map(l => N(l.x) + N(l.width)));
+        core.change('Remove lane from pool', () => {
+            const dx = core.snapToGrid(right + 80 - N(lane.x));
+            for (const id of core.expandWithGroupContents([lane.id])) { const n = core.getNode(id); if (n) setNum(n, 'x', N(n.x) + dx); }
+            detach(lane);
+            Flow.edges.refreshAutoSides([...core.expandWithGroupContents([lane.id])]);
         });
     };
 

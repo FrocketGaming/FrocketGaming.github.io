@@ -212,6 +212,9 @@
                 html += btn('lane-add', 'below', '<i class="fa-solid fa-arrow-down"></i><i class="fa-solid fa-plus flow-pbtn-sub"></i>', 'Add a lane below', false);
                 html += btn('lane-move', '-1', '<i class="fa-solid fa-angles-up"></i>', 'Move lane up (or drag it by its name)', false);
                 html += btn('lane-move', '1', '<i class="fa-solid fa-angles-down"></i>', 'Move lane down (or drag it by its name)', false);
+                if (core.nodes().filter(n => S.laneOf(n) === S.laneOf(laneSel[0])).length > 1) {
+                    html += btn('lane-detach', '', '<i class="fa-solid fa-arrow-right-from-bracket"></i>', 'Remove this lane from the pool, keeping its cards (or drag it by its name off the pool)', false);
+                }
             }
             html += btn('unpool', '', '<i class="fa-solid fa-object-ungroup"></i>', 'Turn this pool back into plain groups', false);
             html += '</div></div>';
@@ -337,6 +340,7 @@
             case 'lane-move': Flow.lanes.moveLane(nodes[0], Number(v)); break;
             case 'unpool': Flow.lanes.unpool(); break;
             case 'pool-title': Flow.lanes.addTitle(nodes[0]); break;
+            case 'lane-detach': Flow.lanes.detachLane(nodes[0]); break;
             case 'status': Flow.arrange.setStatus(v); break;
             case 'replace-image': Flow.images.choose(nodes[0].id); break;
             case 'group': Flow.interact.groupSelection(); break;

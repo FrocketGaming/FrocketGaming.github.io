@@ -699,7 +699,7 @@
         ['fa-solid fa-sitemap', 'Tidy layout', 'Line up the selected cards (or the whole chart) in layers that follow the arrows, flowing down or right'],
         ['fa-solid fa-up-down-left-right', 'Same size', 'Make the selected cards the same width, height or both, matching the largest'],
         ['fa-solid fa-vector-square', 'Fit group', 'Resize a group to hug the cards inside it'],
-        ['fa-solid fa-table-list', 'Swimlanes', 'Bands that stack edge to edge, one per system or owner (menu: Insert swimlanes, or make selected groups lanes). Resize a lane and the rest follow; drag a lane by its name to reorder it'],
+        ['fa-solid fa-table-list', 'Swimlanes', 'Bands that stack edge to edge, one per system or owner (menu: Insert swimlanes, or make selected groups lanes). Resize a lane and the rest follow; drag a lane by its name to reorder it, or off the pool to take it out (also a panel button)'],
         ['fa-solid fa-circle-half-stroke', 'Status', 'Flag a step in progress (half circle) or done (check); no flag = not started. Alt+S cycles. Shows on the card and in exports'],
         ['fa-solid fa-heading', 'Pool title', 'A title band across the top of a set of swimlanes (Swimlane panel). Drag the band to move the whole pool, its handles to resize every lane together; double-click to rename; delete it to remove the title'],
         ['fa-regular fa-square-minus', 'Collapse group', 'Shrink a group to its title bar and hide its cards; connectors attach to the bar. Also the chevron on the group'],
