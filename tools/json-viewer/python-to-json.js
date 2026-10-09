@@ -113,8 +113,12 @@ function pythonToJson(src) {
         }
     };
 
+    // Sticky, so it matches at i without copying the rest of the source.
+    const NUMBER_RE = /(?:0[xX][0-9a-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?)[jJ]?/y;
+
     const parseNumber = () => {
-        const m = /^(?:0[xX][0-9a-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?)[jJ]?/.exec(src.slice(i));
+        NUMBER_RE.lastIndex = i;
+        const m = NUMBER_RE.exec(src);
         if (!m) fail('Bad number');
         i += m[0].length;
         const text = m[0].replace(/_/g, '');

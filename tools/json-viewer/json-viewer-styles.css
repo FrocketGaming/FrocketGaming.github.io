@@ -421,6 +421,22 @@
 .jg-type-object,
 .jg-type-array { color: var(--text-secondary); opacity: 0.85; }
 
+/* "+N more" node: reveals the next chunk of a long child list */
+.jg-node-more {
+    cursor: pointer;
+    border-style: dashed;
+    box-shadow: none;
+}
+
+.jg-node-more .jg-row {
+    justify-content: center;
+}
+
+.jg-more {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
 /* ─── Search highlight (graph) ──────────────────────────── */
 
 .jg-row.jg-match {
@@ -716,6 +732,14 @@
     transition: color 0.15s;
 }
 
+.json-toggle i {
+    transition: transform 0.15s ease-out;
+}
+
+.json-expandable.collapsed > .json-row > .json-toggle i {
+    transform: rotate(-90deg);
+}
+
 .json-row-expandable:hover .json-toggle {
     color: var(--accent-primary);
 }
@@ -792,13 +816,50 @@
 
 /* ─── Collapsed State ────────────────────────────────────── */
 
-.json-expandable.collapsed .json-children,
-.json-expandable.collapsed .json-closing {
+.json-expandable.collapsed > .json-children,
+.json-expandable.collapsed > .json-closing {
     display: none;
 }
 
-.json-expandable.collapsed .json-count-badge {
+.json-expandable.collapsed > .json-row > .json-count-badge {
     opacity: 0.8;
+}
+
+/* ─── Show more (long arrays/objects reveal in chunks) ───── */
+
+.json-more {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 4px 2px 24px;
+    font-family: "Raleway", sans-serif;
+    font-size: 12px;
+}
+
+.json-more-count {
+    color: var(--text-secondary);
+}
+
+.json-more-btn {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    margin: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--accent-primary);
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.json-more-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.json-more-btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 1px;
 }
 
 /* ─── SynthWave: indent guide contrast fix ───────────────── */

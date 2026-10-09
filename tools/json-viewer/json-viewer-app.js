@@ -1,5 +1,13 @@
 const JSON_VIEWER_TABS_STORAGE_KEY = 'json-viewer-tabs-v1';
 
+// The tree is built lazily: a container's children only exist in the DOM once
+// it has been opened, and long arrays/objects reveal TREE_CHUNK entries at a time.
+// The budgets cap how many rows an automatic expansion may build in one go.
+const TREE_CHUNK = 100;
+const TREE_AUTO_BUDGET = 1500;        // on paste and on "show more"
+const TREE_TOGGLE_BUDGET = 1000;      // when a single node is opened by hand
+const TREE_EXPAND_ALL_BUDGET = 20000; // Expand All
+
 class JsonViewerApp {
     constructor() {
         this.jsonInput     = document.getElementById('jsonInput');
@@ -22,9 +30,17 @@ class JsonViewerApp {
         this.searchClear   = document.getElementById('searchClear');
         this.searchMatches = [];
         this.searchIndex   = -1;
+        this.matchByPath   = null;
+        this.activeMatchEl = null;
+        this.searchTimer   = null;
         this.parsed        = null;
+        this.parsedFormat  = 'json';
+        this.treeMetas     = [];
+        this.rootMeta      = null;
+        this.graphStale    = false;
         this.debounceTimer = null;
         this.saveTabsTimer = null;
+        this.warnedQuota   = false;
 
         this.currentView   = 'tree';
         this.treeViewBtn   = document.getElementById('treeViewBtn');
@@ -62,6 +78,11 @@ class JsonViewerApp {
         this.downloadBtn.addEventListener('click', () => this.downloadCurrentView());
         this.clearBtn.addEventListener('click', () => this.clear());
         this.addTabBtn.addEventListener('click', () => this.addTab());
+        this.jsonTree.addEventListener('click', e => this.onTreeClick(e));
+        window.addEventListener('pagehide', () => this.flushSaveTabs());
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') this.flushSaveTabs();
+        });
         this.jsonInput.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -70,12 +91,20 @@ class JsonViewerApp {
         });
 
         // Search
-        this.searchInput.addEventListener('input', () => this.performSearch());
+        this.searchInput.addEventListener('input', () => {
+            this.searchClear.style.display = this.searchInput.value.trim() ? '' : 'none';
+            clearTimeout(this.searchTimer);
+            this.searchTimer = setTimeout(() => { this.searchTimer = null; this.performSearch(); }, 150);
+        });
         this.searchPrev.addEventListener('click', () => this.navigateSearch(-1));
         this.searchNext.addEventListener('click', () => this.navigateSearch(1));
         this.searchClear.addEventListener('click', () => this.clearSearch());
         this.searchInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') { e.shiftKey ? this.navigateSearch(-1) : this.navigateSearch(1); }
+            if (e.key === 'Enter') {
+                // Enter straight after typing runs the pending search instead of skipping a match
+                if (this.flushSearch()) return;
+                e.shiftKey ? this.navigateSearch(-1) : this.navigateSearch(1);
+            }
             if (e.key === 'Escape') { this.clearSearch(); this.searchInput.blur(); }
         });
         document.addEventListener('keydown', e => {
@@ -99,24 +128,68 @@ class JsonViewerApp {
             return;
         }
 
-        try {
-            this.parsed = JSON.parse(raw);
+        const result = this.parseInput(raw);
+        if (result.ok) {
+            this.parsed = result.value;
+            this.parsedFormat = result.format;
             this.jsonError.textContent = '';
             this.jsonError.style.display = 'none';
             this.renderTree(this.parsed);
-            this.graphView.render(this.parsed);
+            // The graph is only built while it is on screen; mark it out of date.
+            this.graphStale = true;
+            if (this.currentView === 'graph') this.syncGraph();
             this.renderStats(this.parsed);
-            if (this.currentView === 'graph') this.graphView.ensureFit();
             this.downloadBtn.disabled = false;
-        } catch (e) {
+        } else {
             this.parsed = null;
+            this.treeMetas = [];
+            this.rootMeta = null;
             this.jsonTree.innerHTML = '';
-            this.showError(this.looksLikePython(raw)
-                ? e.message + ' — this looks like a Python literal; click "From Python" to convert it.'
-                : e.message);
+            this.showError(result.message);
             this.jsonStats.textContent = '';
             this.downloadBtn.disabled = true;
         }
+    }
+
+    parseInput(raw) {
+        try {
+            return { ok: true, value: JSON.parse(raw), format: 'json' };
+        } catch (e) {
+            const lines = this.parseJsonLines(raw);
+            if (lines) return lines;
+            return {
+                ok: false,
+                message: this.looksLikePython(raw)
+                    ? e.message + ' — this looks like a Python literal; click "From Python" to convert it.'
+                    : e.message
+            };
+        }
+    }
+
+    // JSON Lines (one JSON value per line, the way most loggers write) is not
+    // valid JSON as a whole; read it as an array of records instead.
+    parseJsonLines(raw) {
+        if (raw.indexOf('\n') === -1) return null;
+        const lines = raw.split('\n');
+        const records = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            try {
+                records.push(JSON.parse(line));
+            } catch (e) {
+                if (records.length === 0) return null; // first line isn't JSON, so this isn't JSON Lines
+                return { ok: false, message: `JSON Lines, line ${i + 1}: ${e.message}` };
+            }
+        }
+        return records.length > 1 ? { ok: true, value: records, format: 'jsonl' } : null;
+    }
+
+    syncGraph() {
+        if (!this.graphStale || !this.parsed) return;
+        this.graphStale = false;
+        this.graphView.render(this.parsed);
+        this.graphView.ensureFit();
     }
 
     showError(msg) {
@@ -125,38 +198,37 @@ class JsonViewerApp {
     }
 
     renderTree(data) {
+        this.treeMetas = [];
+        this.matchByPath = null;
+        this.activeMatchEl = null;
         const root = document.createElement('div');
         root.className = 'json-root';
-        root.appendChild(this.buildNode(data, null, '', true));
+        const rootNode = this.buildNode(data, null, '');
+        root.appendChild(rootNode);
         this.jsonTree.innerHTML = '';
         this.jsonTree.appendChild(root);
+        this.rootMeta = rootNode.firstChild._jv || null;
+        if (this.rootMeta) this.autoExpand(this.openContainer(this.rootMeta), TREE_AUTO_BUDGET);
         if (this.searchInput.value.trim()) this.performSearch();
     }
 
     // ─── Node Builder ──────────────────────────────────────────
+    // Each non-empty container carries a `_jv` meta record: its value, how many
+    // children are built (`shown`), and the built child nodes by index.
 
-    buildNode(value, key, path, isRoot) {
+    buildNode(value, key, path) {
         const type = this.getType(value);
-        const isExpandable = type === 'object' || type === 'array';
-
         const wrapper = document.createElement('div');
         wrapper.className = 'json-node';
-
-        if (isExpandable) {
-            wrapper.appendChild(this.buildExpandable(value, key, path, type, isRoot));
-        } else {
-            wrapper.appendChild(this.buildLeaf(value, key, path, type));
-        }
-
+        wrapper.appendChild(type === 'object' || type === 'array'
+            ? this.buildExpandable(value, key, path, type === 'array')
+            : this.buildLeaf(value, key, path, type));
         return wrapper;
     }
 
-    buildExpandable(value, key, path, type, isRoot) {
-        const isArray = type === 'array';
-        const count = isArray ? value.length : Object.keys(value).length;
-        const openBracket  = isArray ? '[' : '{';
-        const closeBracket = isArray ? ']' : '}';
-        const empty = count === 0;
+    buildExpandable(value, key, path, isArray) {
+        const keys = isArray ? null : Object.keys(value);
+        const count = isArray ? value.length : keys.length;
 
         const container = document.createElement('div');
         container.className = 'json-expandable';
@@ -164,113 +236,188 @@ class JsonViewerApp {
         // Row: toggle + key + bracket + count badge
         const row = document.createElement('div');
         row.className = 'json-row json-row-expandable';
+        row.dataset.path = path;
 
         const toggle = document.createElement('span');
         toggle.className = 'json-toggle';
         toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-
-        const keyEl = key !== null ? this.buildKeyEl(key, path) : null;
+        row.appendChild(toggle);
+        this.appendKey(row, key, path);
 
         const bracket = document.createElement('span');
         bracket.className = 'json-bracket';
-        bracket.textContent = openBracket;
-
-        const badge = document.createElement('span');
-        badge.className = 'json-count-badge';
-        badge.textContent = empty ? '' : (count + (isArray ? (count === 1 ? ' item' : ' items') : (count === 1 ? ' key' : ' keys')));
-
-        row.appendChild(toggle);
-        if (keyEl) row.appendChild(keyEl);
-        if (key !== null) {
-            const colon = document.createElement('span');
-            colon.className = 'json-colon';
-            colon.textContent = ': ';
-            row.appendChild(colon);
-        }
+        bracket.textContent = isArray ? '[' : '{';
         row.appendChild(bracket);
-        if (!empty) row.appendChild(badge);
-
         container.appendChild(row);
 
-        if (empty) {
+        if (count === 0) {
             const closingInline = document.createElement('span');
             closingInline.className = 'json-bracket';
-            closingInline.textContent = closeBracket;
+            closingInline.textContent = isArray ? ']' : '}';
             row.appendChild(closingInline);
+            if (this.matchByPath) this.applyMatchClasses(row);
             return container;
         }
 
-        // Children container
+        const badge = document.createElement('span');
+        badge.className = 'json-count-badge';
+        badge.textContent = this.countLabel(count, isArray);
+        row.appendChild(badge);
+
         const children = document.createElement('div');
         children.className = 'json-children';
 
-        if (isArray) {
-            value.forEach((item, i) => {
-                const childPath = path ? path + '[' + i + ']' : '[' + i + ']';
-                children.appendChild(this.buildNode(item, i, childPath, false));
-            });
-        } else {
-            Object.keys(value).forEach(k => {
-                const childPath = path ? path + '.' + k : k;
-                children.appendChild(this.buildNode(value[k], k, childPath, false));
-            });
-        }
-
-        // Closing bracket row
         const closingRow = document.createElement('div');
         closingRow.className = 'json-closing';
-        closingRow.textContent = closeBracket;
+        closingRow.textContent = isArray ? ']' : '}';
 
         container.appendChild(children);
         container.appendChild(closingRow);
-
-        // Toggle expand/collapse
-        row.addEventListener('click', (e) => {
-            if (e.target.closest('.json-key')) return; // let key handle path copy
-            const collapsed = container.classList.toggle('collapsed');
-            toggle.innerHTML = collapsed
-                ? '<i class="fa-solid fa-chevron-right"></i>'
-                : '<i class="fa-solid fa-chevron-down"></i>';
-            badge.textContent = collapsed
-                ? (count + (isArray ? (count === 1 ? ' item' : ' items') : (count === 1 ? ' key' : ' keys')))
-                : (count + (isArray ? (count === 1 ? ' item' : ' items') : (count === 1 ? ' key' : ' keys')));
-        });
-
+        container.classList.add('collapsed');
+        container._jv = { value, keys, isArray, count, path, container, children, shown: 0, childEls: [], more: null };
+        this.treeMetas.push(container._jv);
+        if (this.matchByPath) this.applyMatchClasses(row);
         return container;
     }
 
     buildLeaf(value, key, path, type) {
         const row = document.createElement('div');
         row.className = 'json-row';
-
-        if (key !== null) {
-            const keyEl = this.buildKeyEl(key, path);
-            const colon = document.createElement('span');
-            colon.className = 'json-colon';
-            colon.textContent = ': ';
-            row.appendChild(keyEl);
-            row.appendChild(colon);
-        }
+        row.dataset.path = path;
+        this.appendKey(row, key, path);
 
         const val = document.createElement('span');
         val.className = 'json-value json-' + type;
-        val.textContent = type === 'string' ? '"' + this.escapeString(value) + '"' : String(value);
+        val.textContent = this.leafText(value, type);
         row.appendChild(val);
 
+        if (this.matchByPath) this.applyMatchClasses(row);
         return row;
     }
 
-    buildKeyEl(key, path) {
+    appendKey(row, key, path) {
+        if (key === null) return;
         const keyEl = document.createElement('span');
         keyEl.className = 'json-key';
-        keyEl.textContent = typeof key === 'number' ? key : key;
+        keyEl.textContent = key;
         keyEl.dataset.path = path;
         keyEl.title = 'Copy path: ' + path;
-        keyEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.copyPath(path);
-        });
-        return keyEl;
+        const colon = document.createElement('span');
+        colon.className = 'json-colon';
+        colon.textContent = ': ';
+        row.appendChild(keyEl);
+        row.appendChild(colon);
+    }
+
+    // JSON.stringify gives the quoted, escaped form of a string in one native call.
+    leafText(value, type) {
+        return type === 'string' ? JSON.stringify(value) : String(value);
+    }
+
+    countLabel(count, isArray) {
+        return count + (isArray ? (count === 1 ? ' item' : ' items') : (count === 1 ? ' key' : ' keys'));
+    }
+
+    // ─── Lazy expansion ────────────────────────────────────────
+
+    // Opens a container, building its first chunk of children if needed.
+    // Returns the metas of any newly built child containers (all collapsed).
+    openContainer(meta) {
+        meta.container.classList.remove('collapsed');
+        return meta.shown === 0 ? this.showChildren(meta, TREE_CHUNK) : [];
+    }
+
+    showChildren(meta, upTo) {
+        const end = Math.min(meta.count, upTo);
+        const frag = document.createDocumentFragment();
+        const childMetas = [];
+        for (let i = meta.shown; i < end; i++) {
+            const k = meta.isArray ? i : meta.keys[i];
+            const childPath = meta.isArray ? meta.path + '[' + i + ']' : (meta.path ? meta.path + '.' + k : k);
+            const node = this.buildNode(meta.value[k], k, childPath);
+            meta.childEls[i] = node;
+            if (node.firstChild._jv) childMetas.push(node.firstChild._jv);
+            frag.appendChild(node);
+        }
+        meta.shown = end;
+        meta.children.insertBefore(frag, meta.more);
+        this.updateMoreRow(meta);
+        return childMetas;
+    }
+
+    updateMoreRow(meta) {
+        const remaining = meta.count - meta.shown;
+        if (remaining <= 0) {
+            if (meta.more) { meta.more.remove(); meta.more = null; }
+            return;
+        }
+        if (!meta.more) {
+            meta.more = document.createElement('div');
+            meta.more.className = 'json-more';
+            meta.children.appendChild(meta.more);
+        }
+        const noun = meta.isArray ? (remaining === 1 ? 'item' : 'items') : (remaining === 1 ? 'key' : 'keys');
+        const next = Math.min(TREE_CHUNK, remaining);
+        meta.more.innerHTML =
+            `<span class="json-more-count">${remaining.toLocaleString()} more ${noun}</span>` +
+            `<button type="button" class="json-more-btn" data-more="next">Show ${next}</button>` +
+            (remaining > next ? `<button type="button" class="json-more-btn" data-more="all">Show all</button>` : '');
+    }
+
+    // Breadth-first: opens containers in the queue (and the ones they reveal)
+    // until the row budget runs out. Returns true if it stopped short.
+    autoExpand(metas, budget) {
+        const queue = metas.slice();
+        let used = 0, capped = false;
+        for (let i = 0; i < queue.length; i++) {
+            const meta = queue[i];
+            const cost = meta.shown === 0 ? Math.min(meta.count, TREE_CHUNK) : 0;
+            if (used + cost > budget) { capped = true; continue; }
+            used += cost;
+            const opened = this.openContainer(meta);
+            for (let j = 0; j < opened.length; j++) queue.push(opened[j]);
+        }
+        return capped;
+    }
+
+    // One delegated listener for the whole tree: path copy, toggles, "show more".
+    onTreeClick(e) {
+        const keyEl = e.target.closest('.json-key');
+        if (keyEl) {
+            this.copyPath(keyEl.dataset.path);
+            return;
+        }
+        const moreBtn = e.target.closest('.json-more-btn');
+        if (moreBtn) {
+            const meta = moreBtn.closest('.json-expandable')._jv;
+            const upTo = moreBtn.dataset.more === 'all' ? meta.count : meta.shown + TREE_CHUNK;
+            this.autoExpand(this.showChildren(meta, upTo), TREE_AUTO_BUDGET);
+            return;
+        }
+        const row = e.target.closest('.json-row-expandable');
+        const meta = row && row.parentElement._jv;
+        if (!meta) return;
+        if (meta.container.classList.contains('collapsed')) {
+            this.autoExpand(this.openContainer(meta), TREE_TOGGLE_BUDGET);
+        } else {
+            meta.container.classList.add('collapsed');
+        }
+    }
+
+    // Builds and opens everything along a path of child indexes; returns the row.
+    revealPath(segs) {
+        let node = this.jsonTree.querySelector('.json-root > .json-node');
+        let meta = this.rootMeta;
+        for (const idx of segs) {
+            if (!meta || !node) return null;
+            meta.container.classList.remove('collapsed');
+            if (idx >= meta.shown) this.showChildren(meta, Math.ceil((idx + 1) / TREE_CHUNK) * TREE_CHUNK);
+            node = meta.childEls[idx];
+            meta = node.firstChild._jv || null;
+        }
+        if (!node) return null;
+        const first = node.firstChild;
+        return first.classList.contains('json-expandable') ? first.firstChild : first;
     }
 
     // ─── View switching ────────────────────────────────────────
@@ -283,11 +430,23 @@ class JsonViewerApp {
         this.jsonTree.classList.toggle('jg-hidden-view', view !== 'tree');
         this.jsonGraphEl.classList.toggle('jg-active', view === 'graph');
         this.downloadLabel.textContent = view === 'graph' ? 'Graph' : 'Tree';
-        if (view === 'graph') this.graphView.ensureFit();
+        if (view === 'graph') {
+            this.syncGraph();
+            this.graphView.ensureFit();
+        }
         if (this.searchInput.value.trim()) this.performSearch();
     }
 
     // ─── Search ────────────────────────────────────────────────
+
+    // Runs a search the debounce hasn't fired yet. Returns true if it did.
+    flushSearch() {
+        if (!this.searchTimer) return false;
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
+        this.performSearch();
+        return true;
+    }
 
     performSearch() {
         const query = this.searchInput.value.trim();
@@ -300,12 +459,16 @@ class JsonViewerApp {
         this.performTreeSearch(query);
     }
 
+    // Searches the parsed data rather than the DOM, so matches inside nodes that
+    // haven't been built yet are found too; they're built when navigated to.
     performTreeSearch(query) {
         this.jsonTree.querySelectorAll('.search-match, .search-match-active').forEach(el => {
             el.classList.remove('search-match', 'search-match-active');
         });
         this.searchMatches = [];
         this.searchIndex = -1;
+        this.matchByPath = null;
+        this.activeMatchEl = null;
 
         const q = query.toLowerCase();
         if (!q || !this.parsed) {
@@ -315,12 +478,9 @@ class JsonViewerApp {
             return;
         }
 
-        this.jsonTree.querySelectorAll('.json-key, .json-value').forEach(el => {
-            if (el.textContent.toLowerCase().includes(q)) {
-                el.classList.add('search-match');
-                this.searchMatches.push(el);
-            }
-        });
+        this.searchMatches = this.findMatches(this.parsed, q);
+        this.matchByPath = new Map(this.searchMatches.map(m => [m.path, m]));
+        this.jsonTree.querySelectorAll('.json-row[data-path]').forEach(row => this.applyMatchClasses(row));
 
         if (this.searchMatches.length > 0) {
             this.searchIndex = 0;
@@ -331,6 +491,47 @@ class JsonViewerApp {
         }
         this.searchPrev.disabled = this.searchMatches.length === 0;
         this.searchNext.disabled = this.searchMatches.length === 0;
+    }
+
+    // Each match keeps its display path (for highlighting built rows) and the
+    // child indexes from the root (for building its way down to it).
+    findMatches(data, q) {
+        const matches = [];
+        const segs = [];
+        const walk = (value, key, path) => {
+            const type = this.getType(value);
+            const onKey = key !== null && String(key).toLowerCase().includes(q);
+            if (type === 'array') {
+                if (onKey) matches.push({ path, segs: segs.slice(), onKey, onValue: false });
+                for (let i = 0; i < value.length; i++) {
+                    segs.push(i);
+                    walk(value[i], i, path + '[' + i + ']');
+                    segs.pop();
+                }
+            } else if (type === 'object') {
+                if (onKey) matches.push({ path, segs: segs.slice(), onKey, onValue: false });
+                const keys = Object.keys(value);
+                for (let i = 0; i < keys.length; i++) {
+                    segs.push(i);
+                    walk(value[keys[i]], keys[i], path ? path + '.' + keys[i] : keys[i]);
+                    segs.pop();
+                }
+            } else {
+                const onValue = this.leafText(value, type).toLowerCase().includes(q);
+                if (onKey || onValue) matches.push({ path, segs: segs.slice(), onKey, onValue });
+            }
+        };
+        walk(data, null, '');
+        return matches;
+    }
+
+    applyMatchClasses(row) {
+        const m = this.matchByPath.get(row.dataset.path);
+        if (!m) return;
+        const keyEl = m.onKey && row.querySelector(':scope > .json-key');
+        const valEl = m.onValue && row.querySelector(':scope > .json-value');
+        if (keyEl) keyEl.classList.add('search-match');
+        if (valEl) valEl.classList.add('search-match');
     }
 
     performGraphSearch(query) {
@@ -352,20 +553,15 @@ class JsonViewerApp {
     }
 
     activateMatch(index) {
-        this.searchMatches.forEach(el => el.classList.remove('search-match-active'));
-        const el = this.searchMatches[index];
+        if (this.activeMatchEl) this.activeMatchEl.classList.remove('search-match-active');
+        this.activeMatchEl = null;
+        const m = this.searchMatches[index];
+        const row = m && this.revealPath(m.segs);
+        if (!row) return;
+        const el = row.querySelector(m.onKey ? ':scope > .json-key' : ':scope > .json-value');
         if (!el) return;
-        el.classList.add('search-match-active');
-        // Expand any collapsed ancestors
-        let node = el.parentElement;
-        while (node && !node.classList.contains('json-root')) {
-            if (node.classList.contains('json-expandable') && node.classList.contains('collapsed')) {
-                node.classList.remove('collapsed');
-                const toggle = node.querySelector(':scope > .json-row > .json-toggle');
-                if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-            }
-            node = node.parentElement;
-        }
+        el.classList.add('search-match', 'search-match-active');
+        this.activeMatchEl = el;
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
@@ -382,6 +578,8 @@ class JsonViewerApp {
     }
 
     clearSearch() {
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
         this.searchInput.value = '';
         this.searchClear.style.display = 'none';
         this.performSearch();
@@ -392,16 +590,21 @@ class JsonViewerApp {
     formatInput() {
         const raw = this.jsonInput.value.trim();
         if (!raw) return;
-        try {
-            const parsed = JSON.parse(raw);
-            this.jsonInput.value = JSON.stringify(parsed, null, 2);
-            const tab = this.getActiveTab();
-            if (tab) tab.input = this.jsonInput.value;
-            this.saveTabsToStorage();
-            this.render();
-        } catch (e) {
-            this.showError(e.message);
+        const result = this.parseInput(raw);
+        if (!result.ok) {
+            this.showError(result.message);
+            return;
         }
+        if (result.format === 'jsonl') {
+            // Pretty-printing would merge the records into one document; keep one per line
+            this.showCopyNotif('JSON Lines kept one record per line. Copy JSON gives a formatted array.');
+            return;
+        }
+        this.jsonInput.value = JSON.stringify(result.value, null, 2);
+        const tab = this.getActiveTab();
+        if (tab) tab.input = this.jsonInput.value;
+        this.saveTabsToStorage();
+        this.render();
     }
 
     looksLikePython(raw) {
@@ -423,24 +626,24 @@ class JsonViewerApp {
         }
     }
 
+    // Huge documents are expanded up to a row budget so the page stays responsive;
+    // long arrays still open TREE_CHUNK entries at a time.
     expandAll() {
-        this.jsonTree.querySelectorAll('.json-expandable.collapsed').forEach(el => {
-            el.classList.remove('collapsed');
-            const toggle = el.querySelector('.json-toggle');
-            if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-        });
-        this.graphView.expandAll();
+        const treeCapped = this.autoExpand(this.treeMetas, TREE_EXPAND_ALL_BUDGET);
+        const graphCapped = this.graphBuilt() ? this.graphView.expandAll() : false;
+        if (treeCapped || graphCapped) this.showCopyNotif('Too large to expand everything. Open deeper nodes individually.');
     }
 
     collapseAll() {
-        this.jsonTree.querySelectorAll('.json-expandable:not(.collapsed)').forEach(el => {
-            // Don't collapse the root level
-            if (el.closest('.json-root') === el.parentElement) return;
-            el.classList.add('collapsed');
-            const toggle = el.querySelector('.json-toggle');
-            if (toggle) toggle.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+        // Don't collapse the root level
+        this.treeMetas.forEach(meta => {
+            if (meta !== this.rootMeta) meta.container.classList.add('collapsed');
         });
-        this.graphView.collapseAll();
+        if (this.graphBuilt()) this.graphView.collapseAll();
+    }
+
+    graphBuilt() {
+        return !this.graphStale && !!this.graphView.model;
     }
 
     copyFormatted() {
@@ -473,6 +676,11 @@ class JsonViewerApp {
             this.saveTabsToStorage();
         }
         this.parsed = null;
+        this.treeMetas = [];
+        this.rootMeta = null;
+        this.matchByPath = null;
+        this.activeMatchEl = null;
+        this.graphStale = false;
         this.jsonTree.innerHTML = '<div class="json-empty-state"><i class="fa-solid fa-code"></i><p>Paste JSON on the left to explore it here</p></div>';
         this.jsonError.textContent = '';
         this.jsonError.style.display = 'none';
@@ -498,6 +706,7 @@ class JsonViewerApp {
         const stats = { keys: 0, arrays: 0, objects: 0, strings: 0, numbers: 0, booleans: 0, nulls: 0 };
         this.countStats(data, stats);
         const parts = [];
+        if (this.parsedFormat === 'jsonl') parts.push('JSON Lines');
         if (stats.objects)  parts.push(stats.objects + (stats.objects === 1 ? ' object' : ' objects'));
         if (stats.arrays)   parts.push(stats.arrays + (stats.arrays === 1 ? ' array' : ' arrays'));
         if (stats.keys)     parts.push(stats.keys + (stats.keys === 1 ? ' key' : ' keys'));
@@ -525,15 +734,6 @@ class JsonViewerApp {
         if (Array.isArray(val))     return 'array';
         if (typeof val === 'object') return 'object';
         return typeof val; // string, number, boolean
-    }
-
-    escapeString(str) {
-        return String(str)
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
     }
 
     // ─── Download (Tree / Graph → PNG) ────────────────────────
@@ -590,7 +790,14 @@ class JsonViewerApp {
                 addLine(depth, rowToSegments(row, collapsed ? '▸ ' : '▾ '));
                 const childrenEl = expandable.querySelector(':scope > .json-children');
                 if (childrenEl && !collapsed) {
-                    Array.from(childrenEl.children).forEach(childNode => walk(childNode, depth + 1));
+                    Array.from(childrenEl.children).forEach(childNode => {
+                        if (childNode.classList.contains('json-more')) {
+                            const count = childNode.querySelector('.json-more-count');
+                            addLine(depth + 1, [{ text: '… ' + (count ? count.textContent : 'more'), cls: 'muted' }]);
+                        } else {
+                            walk(childNode, depth + 1);
+                        }
+                    });
                 }
                 const closingEl = expandable.querySelector(':scope > .json-closing');
                 if (closingEl && !collapsed) {
@@ -825,17 +1032,34 @@ class JsonViewerApp {
     }
 
     saveTabsToStorage() {
+        clearTimeout(this.saveTabsTimer);
+        this.saveTabsTimer = null;
         try {
             localStorage.setItem(JSON_VIEWER_TABS_STORAGE_KEY, JSON.stringify({
                 tabs: this.tabs,
                 activeTabId: this.activeTabId
             }));
-        } catch (e) {}
+            this.warnedQuota = false;
+        } catch (e) {
+            if (e && e.name === 'QuotaExceededError' && !this.warnedQuota) {
+                this.warnedQuota = true;
+                this.showCopyNotif("Tabs too large to save in this browser. They won't survive a reload.");
+            }
+        }
     }
 
+    // Typing in a large document re-serializes every tab, so wait for a pause
+    // and an idle moment; pagehide/visibilitychange flush anything pending.
     scheduleSaveTabs() {
         clearTimeout(this.saveTabsTimer);
-        this.saveTabsTimer = setTimeout(() => this.saveTabsToStorage(), 500);
+        this.saveTabsTimer = setTimeout(() => {
+            if (window.requestIdleCallback) requestIdleCallback(() => this.flushSaveTabs(), { timeout: 2000 });
+            else this.flushSaveTabs();
+        }, 1000);
+    }
+
+    flushSaveTabs() {
+        if (this.saveTabsTimer) this.saveTabsToStorage();
     }
 }
 
