@@ -92,6 +92,8 @@ class NotesApp {
 
         try {
             this.storage = firebase.storage();
+            // Fail in 20s instead of retrying for 10 minutes, so a missing bucket or rule shows up.
+            this.storage.setMaxUploadRetryTime(20000);
         } catch (err) {
             console.warn('Notes: Storage not available:', err);
         }
@@ -1496,7 +1498,13 @@ class NotesApp {
             markdown = `![${file.name}](${url})`;
         } catch (err) {
             console.error('Notes: Image upload failed:', err);
-            markdown = `![Upload failed: ${file.name}]()`;
+            const reason = err?.code === 'storage/unauthorized'
+                ? 'Storage rules do not allow this upload.'
+                : err?.code === 'storage/retry-limit-exceeded'
+                    ? 'Could not reach Firebase Storage. Check that Storage is enabled for the project.'
+                    : 'Upload failed. See the console for details.';
+            this.showNotice(reason);
+            markdown = '';
         }
 
         ta.value = ta.value.replace(placeholder, markdown);
