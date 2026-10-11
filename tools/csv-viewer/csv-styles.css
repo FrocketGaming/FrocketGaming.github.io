@@ -268,7 +268,7 @@
     padding: 3px 10px;
     border-radius: 12px;
     background-color: var(--bg-tertiary);
-    color: var(--accent-primary);
+    color: var(--accent-secondary);
     border: 1px solid var(--border-color);
 }
 

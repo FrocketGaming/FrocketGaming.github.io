@@ -12,7 +12,7 @@
     --accent-primary: #74a12e;
     --accent-secondary: #c6ee86;
     --text-primary: #ffffff;
-    --text-secondary: #888888;
+    --text-secondary: #a5a5a5;
     --border-color: #444444;
     --shadow-color: #333333;
     --error-color: #ff6b6b;
@@ -44,7 +44,7 @@
     --accent-primary: #bd93f9;
     --accent-secondary: #ff79c6;
     --text-primary: #f8f8f2;
-    --text-secondary: #6272a4;
+    --text-secondary: #b0b8cd;
     --border-color: #44475a;
     --shadow-color: #21222c;
     --error-color: #ff5555;
@@ -70,7 +70,7 @@
     --accent-primary: #cba6f7;
     --accent-secondary: #f5c2e7;
     --text-primary: #cdd6f4;
-    --text-secondary: #6c7086;
+    --text-secondary: #b2b9d5;
     --border-color: #45475a;
     --shadow-color: #11111b;
     --error-color: #f38ba8;
@@ -96,7 +96,7 @@
     --accent-primary: #61afef;
     --accent-secondary: #98c379;
     --text-primary: #abb2bf;
-    --text-secondary: #5c6370;
+    --text-secondary: #abb2bf;
     --border-color: #3e4451;
     --shadow-color: #21252b;
     --error-color: #e06c75;
@@ -122,7 +122,7 @@
     --accent-primary: #88c0d0;
     --accent-secondary: #81a1c1;
     --text-primary: #eceff4;
-    --text-secondary: #7b88a1;
+    --text-secondary: #b6becc;
     --border-color: #434c5e;
     --shadow-color: #242933;
     --error-color: #bf616a;
@@ -148,7 +148,7 @@
     --accent-primary: #268bd2;
     --accent-secondary: #2aa198;
     --text-primary: #839496;
-    --text-secondary: #586e75;
+    --text-secondary: #839496;
     --border-color: #0a4353;
     --shadow-color: #001f27;
     --error-color: #dc322f;
@@ -174,7 +174,7 @@
     --accent-primary: #ff7edb;
     --accent-secondary: #36f9f6;
     --text-primary: #f0e8ff;
-    --text-secondary: #848bbd;
+    --text-secondary: #9196c5;
     --border-color: #3b2d5e;
     --shadow-color: #1a1528;
     --error-color: #fe4450;
@@ -289,7 +289,6 @@ h1 {
     font-size: 2.5em;
     margin-bottom: 1px;
     color: var(--text-primary);
-    text-shadow: 0 0 3px var(--accent-primary);
     text-align: center;
 }
 
@@ -603,8 +602,10 @@ textarea:focus {
         box-shadow 0.3s;
 }
 
-.clear-bnt:hover {
+.clear-bnt:hover,
+.clear-bnt:focus-visible {
     background-color: var(--error-color);
+    color: var(--bg-primary);
 }
 
 .copy-btn {

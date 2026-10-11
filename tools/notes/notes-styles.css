@@ -1,3 +1,12 @@
+/* Notes-local text tokens. --text-secondary is under 4.5:1 on several themes and the
+   old opacity dimming pushed small text lower still, so meta text and placeholders are
+   derived from --text-primary instead. */
+:root {
+    --notes-muted: color-mix(in srgb, var(--text-primary) 72%, var(--bg-primary));
+    --notes-placeholder: color-mix(in srgb, var(--text-primary) 60%, var(--bg-primary));
+    --notes-ring: 2px solid var(--accent-secondary);
+}
+
 /* ─── Modal ──────────────────────────────────────────────── */
 
 .modal {
@@ -36,16 +45,20 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.modal-header h3 {
+.modal-header h2 {
     margin: 0;
     font-size: 16px;
     color: var(--text-primary);
 }
 
 .modal-close {
+    background: transparent;
+    border: none;
+    padding: 0 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 24px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     line-height: 1;
     transition: color 0.2s;
 }
@@ -60,7 +73,7 @@
 
 .modal-body p {
     margin: 0;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -76,6 +89,11 @@
 .modal-footer .format-btn,
 .modal-footer .clear-bnt {
     margin-top: 0;
+}
+
+/* The shared hover is white on red (2.8:1); dark ink on the error fill reads clearly. */
+.modal-footer .clear-bnt:hover {
+    color: var(--bg-primary);
 }
 
 /* ─── Tags ───────────────────────────────────────────────── */
@@ -139,16 +157,21 @@
     padding: 3px 8px;
     background-color: var(--bg-tertiary);
     border: 1px solid var(--accent-primary);
-    border-radius: 12px;
+    border-radius: 999px;
     font-size: 12px;
     color: var(--accent-secondary);
 }
 
 .tag-chip-remove {
+    background: transparent;
+    border: none;
+    padding: 0 2px;
+    color: inherit;
+    font-family: inherit;
     cursor: pointer;
     font-size: 14px;
     line-height: 1;
-    opacity: 0.7;
+    opacity: 0.8;
     transition: opacity 0.2s;
 }
 
@@ -169,8 +192,7 @@
 }
 
 .tag-input::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.6;
+    color: var(--notes-placeholder);
 }
 
 /* ─── Action Buttons ─────────────────────────────────────── */
@@ -182,13 +204,19 @@
     border-radius: 5px;
     color: var(--text-primary);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: color 0.2s, background-color 0.2s;
     font-size: 16px;
 }
 
 .action-btn:hover {
     background-color: transparent;
     color: var(--accent-secondary);
+}
+
+.action-btn[aria-pressed="true"],
+.action-btn.active {
+    color: var(--accent-secondary);
+    background-color: color-mix(in srgb, var(--accent-primary) 18%, transparent);
 }
 
 .action-btn.delete:hover {
@@ -205,21 +233,37 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     padding: 40px;
 }
 
 .empty-state > i {
     font-size: 48px;
     margin-bottom: 20px;
-    color: var(--border-color);
+    color: var(--notes-placeholder);
 }
 
 .empty-state p {
     font-size: 16px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     text-align: center;
     margin: 0;
+}
+
+.empty-state p.empty-state-hint {
+    margin-top: 14px;
+    font-size: 13px;
+}
+
+.empty-state-hint kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 11px;
+    color: var(--text-primary);
 }
 
 .empty-state-cta {
@@ -236,11 +280,11 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: opacity 0.2s;
+    transition: background-color 0.2s;
 }
 
 .empty-state-cta:hover {
-    opacity: 0.85;
+    background: var(--accent-secondary);
 }
 
 /* ─── Search ─────────────────────────────────────────────── */
@@ -255,7 +299,7 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     pointer-events: none;
 }
 
@@ -288,15 +332,37 @@
     margin-bottom: 20px;
 }
 
-.sign-in-card h2 {
+.sign-in-card h1 {
     font-size: 24px;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0 0 12px 0;
 }
 
+/* The one call to action on this screen is the primary action. */
+.sign-in-card .sign-in-btn {
+    display: inline-flex;
+    margin: 0 auto;
+    padding: 10px 20px;
+    font-size: 14px;
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+.sign-in-card .sign-in-btn:hover {
+    background-color: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+}
+
+.sign-in-card p.sign-in-error {
+    margin: 16px 0 0;
+    color: var(--error-color);
+    font-size: 13px;
+}
+
 .sign-in-card p {
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 14px;
     line-height: 1.7;
     margin: 0 0 28px 0;
@@ -318,6 +384,47 @@
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+}
+
+/* One visible keyboard focus ring for every control in the app. Inputs that hide the
+   native outline get their own treatment below. */
+:where(.notes-app, .sign-in-screen, .modal, .command-palette-overlay) :focus-visible {
+    outline: var(--notes-ring);
+    outline-offset: 2px;
+}
+
+.note-list-item:focus-visible,
+.nav-item:focus-visible,
+.nav-tag-item:focus-visible,
+.export-option:focus-visible,
+.command-palette-item:focus-visible {
+    outline-offset: -2px;
+}
+
+.note-title-input:focus-visible {
+    outline: none;
+    box-shadow: 0 2px 0 0 var(--accent-primary);
+}
+
+.note-textarea:focus-visible {
+    outline: none;
+}
+
+#tagInputWrapper:focus-within {
+    box-shadow: inset 0 -2px 0 0 var(--accent-primary);
+}
+
+.bulk-tag-input:focus-visible {
+    outline: none;
+    border-color: var(--accent-secondary);
+}
+
+.command-palette-input-wrapper:focus-within {
+    border-bottom-color: var(--accent-primary);
+}
+
+#commandPaletteInput:focus-visible {
+    outline: none;
 }
 
 .notes-toolbar .format-btn {
@@ -399,8 +506,8 @@
     padding: 7px 10px;
     background: transparent;
     border: none;
-    border-radius: 8px;
-    color: var(--text-secondary);
+    border-radius: 5px;
+    color: var(--notes-muted);
     font-size: 13px;
     font-family: "Raleway", sans-serif;
     cursor: pointer;
@@ -439,8 +546,7 @@
 
 .nav-item-count {
     font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.75;
+    color: var(--notes-muted);
     flex-shrink: 0;
     min-width: 12px;
     text-align: right;
@@ -455,10 +561,9 @@
 .nav-section-title {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    opacity: 0.7;
     padding: 4px 10px 6px 10px;
 }
 
@@ -471,8 +576,7 @@
 .nav-tags-empty {
     padding: 6px 10px;
     font-size: 12px;
-    color: var(--text-secondary);
-    opacity: 0.6;
+    color: var(--notes-muted);
 }
 
 .notes-list-panel {
@@ -488,13 +592,13 @@
 .notes-list {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 12px 12px 8px 8px;
 }
 
 .note-list-item {
     position: relative;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: pointer;
     transition: background 0.15s ease;
     margin-bottom: 2px;
@@ -505,10 +609,10 @@
     /* Floats as a corner badge above the card's own top-right, clear of
        the pin/unsaved indicators that live inside the title row. */
     position: absolute;
-    top: -7px;
-    right: -7px;
-    width: 22px;
-    height: 22px;
+    top: -9px;
+    right: -9px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -516,7 +620,7 @@
     border: 1px solid var(--border-color);
     border-radius: 50%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 11px;
     cursor: pointer;
     opacity: 0;
@@ -524,8 +628,16 @@
     z-index: 2;
 }
 
-.note-list-item:hover .note-list-trash-btn {
+.note-list-item:hover .note-list-trash-btn,
+.note-list-item:focus-within .note-list-trash-btn,
+.note-list-trash-btn:focus-visible {
     opacity: 1;
+}
+
+@media (hover: none) {
+    .note-list-trash-btn {
+        opacity: 1;
+    }
 }
 
 .note-list-trash-btn:hover {
@@ -572,7 +684,7 @@
 
 .note-list-preview {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -595,8 +707,7 @@
 
 .note-list-date {
     font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.65;
+    color: var(--notes-muted);
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -612,8 +723,8 @@
     font-size: 11px;
     padding: 1px 7px;
     background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    border-radius: 10px;
+    color: var(--notes-muted);
+    border-radius: 999px;
     border: 1px solid var(--border-color);
     white-space: nowrap;
 }
@@ -621,10 +732,9 @@
 .notes-list-empty {
     padding: 40px 16px;
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 13px;
     line-height: 1.8;
-    opacity: 0.8;
 }
 
 /* ─── Editor Panel ───────────────────────────────────────── */
@@ -634,7 +744,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--bg-tertiary);
+    background: var(--bg-primary);
 }
 
 .notes-editor-panel .empty-state {
@@ -652,7 +762,7 @@
 .editor-header {
     display: flex;
     align-items: center;
-    padding: 16px 24px 12px 24px;
+    padding: 14px 24px 10px 24px;
     gap: 8px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
@@ -664,16 +774,15 @@
     background: transparent;
     border: none;
     outline: none;
-    font-size: 16px;
-    font-weight: 700;
-    font-family: inherit;
+    font-size: 24px;
+    font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
     color: var(--text-primary);
-    padding: 0;
+    padding: 2px 0 4px;
 }
 
 .note-title-input::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.4;
+    color: var(--notes-placeholder);
 }
 
 .note-title-input:disabled,
@@ -690,23 +799,17 @@
     flex-shrink: 0;
 }
 
-.editor-actions .action-btn.active {
-    color: var(--accent-primary);
-}
-
-#pinBtn {
-    opacity: 0.35;
-}
-
-#pinBtn.active {
-    opacity: 1;
-    color: var(--accent-primary);
+.editor-actions .more-menu-wrapper {
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid var(--border-color);
 }
 
 /* Tags row — override wrapper padding for editor context */
 #tagInputWrapper {
     padding: 8px 24px;
     flex-shrink: 0;
+    background: transparent;
 }
 
 .editor-body {
@@ -734,8 +837,7 @@
 }
 
 .note-textarea::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.4;
+    color: var(--notes-placeholder);
 }
 
 .note-preview {
@@ -757,16 +859,14 @@
 
 .note-meta {
     font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.65;
+    color: var(--notes-muted);
     white-space: nowrap;
 }
 
 .auto-save-status {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     margin-left: auto;
-    opacity: 0.75;
     white-space: nowrap;
 }
 
@@ -803,7 +903,7 @@
 .notes-count {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -863,10 +963,6 @@
 }
 
 /* ─── Word Count & Char Limit ────────────────────────────── */
-
-.word-count {
-    opacity: 0.6;
-}
 
 .char-limit-warning {
     font-size: 11px;
@@ -959,7 +1055,7 @@
     background: var(--bg-hover);
     border-bottom: 1px solid var(--border-color);
     font-size: 13px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     flex-shrink: 0;
 }
 
@@ -1011,23 +1107,23 @@
     bottom: 26px;
     transform: translateX(-50%);
     padding: 7px 10px;
-    background: var(--bg-primary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-secondary);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 18%, transparent);
     border-radius: 10px;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 4px 14px rgba(0, 0, 0, 0.45);
     z-index: 50;
 }
 
 .fmt-btn {
-    width: 31px;
-    height: 31px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
     border-radius: 8px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     cursor: pointer;
     font-size: 13px;
     transition: background 0.15s, color 0.15s;
@@ -1109,7 +1205,7 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     padding: 4px 0;
 }
 
@@ -1191,13 +1287,74 @@
 
     .notes-sidebar {
         width: 100%;
-        height: 220px;
     }
 
-    /* Phone width: the icon rail would eat too much of an already-tight
-       220px list; smart filters/tags stay reachable via search here. */
+    /* Phone width: the nav turns into a horizontally scrolling row of chips above the
+       list, so Archive, Trash and tags stay one tap away. */
+    .notes-sidebar {
+        flex-direction: column;
+        height: 280px;
+    }
+
     .notes-nav-panel {
+        width: 100%;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .notes-nav-header {
         display: none;
+    }
+
+    .notes-nav-scroll {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 6px 8px;
+    }
+
+    .nav-section,
+    .nav-tags-section,
+    .nav-tags-list {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .nav-section-title {
+        display: none;
+    }
+
+    .nav-item,
+    .nav-tag-item {
+        width: auto;
+        flex-shrink: 0;
+        justify-content: flex-start;
+        padding: 7px 12px;
+        white-space: nowrap;
+        border: 1px solid var(--border-color);
+        border-radius: 999px;
+    }
+
+    .nav-item.active,
+    .nav-tag-item.active {
+        border-color: var(--accent-primary);
+    }
+
+    .nav-item-label {
+        display: inline;
+        flex: none;
+    }
+
+    .nav-item-count {
+        display: inline;
     }
 
     .notes-list-panel {
@@ -1213,6 +1370,10 @@
 
     .note-title-input {
         font-size: 16px;
+    }
+
+    .notes-nav-panel {
+        height: auto;
     }
 
     .note-textarea,
@@ -1261,7 +1422,7 @@
     background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border-color);
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     flex-shrink: 0;
 }
 
@@ -1287,8 +1448,8 @@
 }
 
 .bulk-btn {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1344,7 +1505,7 @@
     gap: 10px;
     padding: 14px 18px;
     border-bottom: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     flex-shrink: 0;
 }
 
@@ -1368,13 +1529,13 @@
     align-items: center;
     gap: 10px;
     padding: 9px 10px;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: pointer;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
 }
 
 .command-palette-item i {
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     flex-shrink: 0;
 }
 
@@ -1389,7 +1550,7 @@
 }
 
 .command-palette-item-title {
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
@@ -1399,7 +1560,7 @@
 
 .command-palette-item-preview {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1408,16 +1569,16 @@
 .palette-badge {
     font-size: 11px;
     padding: 2px 7px;
-    border-radius: 10px;
+    border-radius: 999px;
     background: var(--bg-tertiary);
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     flex-shrink: 0;
 }
 
 .command-palette-empty {
     padding: 30px;
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 13px;
 }
 
@@ -1466,7 +1627,7 @@
 
 .version-history-item-preview {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1475,7 +1636,7 @@
 .version-history-empty {
     padding: 30px;
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-size: 13px;
 }
 
@@ -1493,7 +1654,7 @@
 }
 
 .wiki-link-missing {
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     border-bottom: 1px dashed var(--text-secondary);
     cursor: help;
 }
@@ -1539,8 +1700,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-secondary);
-    opacity: 0.75;
+    color: var(--notes-muted);
     margin-bottom: 6px;
     display: flex;
     align-items: center;
@@ -1557,7 +1717,7 @@
     padding: 4px 10px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 999px;
     font-size: 12px;
     color: var(--text-primary);
     cursor: pointer;
@@ -1588,6 +1748,7 @@
 }
 
 .note-preview h1 {
+    text-align: left;
     font-size: 28px;
     color: var(--accent-secondary);
     padding-bottom: 8px;
@@ -1609,7 +1770,7 @@
 .note-preview h5,
 .note-preview h6 {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -1635,7 +1796,7 @@
     padding: 4px 16px;
     border-left: 3px solid var(--accent-primary);
     background: var(--bg-secondary);
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     font-style: italic;
     border-radius: 0 5px 5px 0;
 }
@@ -1859,15 +2020,15 @@
 }
 
 .mermaid-action-btn {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
     border-radius: 5px;
-    color: var(--text-secondary);
+    color: var(--notes-muted);
     cursor: pointer;
     font-size: 12px;
     transition: background 0.15s, color 0.15s;
@@ -1887,4 +2048,34 @@
     font-size: 13px;
     font-family: "Consolas", "Monaco", monospace;
     justify-content: flex-start;
+}
+
+@media (pointer: coarse) {
+    .fmt-btn,
+    .bulk-btn,
+    .mermaid-action-btn,
+    .action-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .notes-panel-header .action-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .nav-item,
+    .nav-tag-item {
+        min-height: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .action-btn,
+    .nav-item,
+    .note-list-item,
+    .modal-close,
+    .empty-state-cta {
+        transition: none;
+    }
 }

@@ -9,7 +9,7 @@ colors:
   terminal-green: "#74a12e"
   lime-highlight: "#c6ee86"
   text-primary: "#ffffff"
-  text-secondary: "#888888"
+  text-secondary: "#a5a5a5"
   border-color: "#444444"
   shadow-color: "#333333"
   error-color: "#ff6b6b"
@@ -112,12 +112,10 @@ components:
 
 QoL Tools is a dark, utilitarian dashboard of small browser-based dev utilities, built by its own owner for daily personal use. Nothing here performs for a first-time visitor — every surface is designed to be glanced at, used, and left alone. The system is deliberately unadorned at rest: flat panels, hairline borders, a single accent color per active theme. The whole site ships 8 interchangeable palettes (Default/green, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary), all driven by one shared CSS custom-property contract — the visual "shape" of the site never changes across themes, only its color values do.
 
-The system currently carries a few generic-AI-interface tells worth naming rather than hiding: a gradient-clipped hero headline on the landing page, and colored top/side accent stripes on cards. This is descriptive of what ships today, not a prescription to keep it that way.
-
 **Key Characteristics:**
 - Flat at rest; every glow, border-color shift, or shadow is a response to hover/focus, never decoration
 - One accent color per theme carries nearly all interactive signal (buttons, focus rings, active nav, links)
-- Two typefaces: Raleway for body copy/controls, JetBrains Mono for all heading tags (`h1`–`h4`) — hierarchy within each voice still comes from size, weight, and glow
+- Two typefaces: Raleway for body copy/controls, JetBrains Mono for all heading tags (`h1`–`h4`) — hierarchy within each voice comes from size and weight
 - Non-directional "ambient glow" shadows (colored, centered) rather than physical drop shadows implying a light source
 
 ## Colors
@@ -138,7 +136,7 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the eight above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
 ### Primary
-- **Terminal Green** (`--accent-primary`, `#74a12e`): the one interactive/signal color — button fills, hover glows, focus rings, active nav-link background, logo text-shadow.
+- **Terminal Green** (`--accent-primary`, `#74a12e`): the one interactive/signal color — button fills, hover glows, focus rings, active nav-link background.
 
 ### Secondary
 - **Lime Highlight** (`--accent-secondary`, `#c6ee86`): the "peak" state — primary-button hover fill, focus-within border color, shimmer highlight on the landing-page divider, logo text color.
@@ -148,7 +146,7 @@ A new theme should pick an accent pair with a clear identity of its own — not 
 - **Panel Gray** (`--bg-secondary`, `#2a2a2a`): card/box/nav-link resting background.
 - **Component Gray** (`--bg-tertiary`, `#383838`): nested control backgrounds (toolbar buttons, icon chips).
 - **Hover Gray** (`--bg-hover`, `#333333`): hover background for list/dropdown rows.
-- **Primary Text** (`--text-primary`, `#ffffff`) / **Secondary Text** (`--text-secondary`, `#888888`): body copy vs. captions and meta text.
+- **Primary Text** (`--text-primary`, `#ffffff`) / **Secondary Text** (`--text-secondary`, `#a5a5a5`): body copy vs. captions and meta text.
 - **Border** (`--border-color`, `#444444`): all panel/card/input borders at rest.
 - **Shadow** (`--shadow-color`, `#333333`): the ambient glow tint for resting panels.
 
@@ -163,7 +161,7 @@ The newsletter page (`newsletter/`) colors its sections with four bands, one per
 
 Two page-local values sit on top of the bands in `newsletter-styles.css`, both derived with `color-mix()` rather than hardcoded:
 - **`--band-ink`** (`--bg-primary` at 40% mixed with black): text on a band. A plain `--bg-primary` fails 4.5:1 on mid-tone bands in Nord and Solarized; this reaches 4.5:1 on every band of every theme except Solarized band 4 (4.2:1, its orange-red is at the ceiling for dark text).
-- **`--nl-muted`** (`--text-primary` at 88% mixed into `--bg-primary`): reading text such as the intro, link summaries, and footer copy. `--text-secondary` is under 4.5:1 on six themes, which is too dim for body copy. Short labels (counts, item numbers) still use `--text-secondary`.
+- **`--nl-muted`** (`--text-primary` at 88% mixed into `--bg-primary`): reading text such as the intro, link summaries, and footer copy. `--text-secondary` was raised on 2026-10-11 so it reaches 4.5:1 on every neutral surface of every theme; the newsletter still mixes `--nl-muted` for body copy. Short labels (counts, item numbers) still use `--text-secondary`.
 
 ### Known Exceptions (not systemized)
 A handful of literal colors exist outside the token list above, each for a specific reason rather than by drift. These are intentionally *not* promoted to named tokens — each is scoped to one job:
@@ -183,10 +181,10 @@ A handful of literal colors exist outside the token list above, each for a speci
 
 **Display Font:** JetBrains Mono (with monospace fallback) — used for every heading tag (`h1`–`h4`) site-wide: page headline, panel headers, modal titles, and the item-title heading inside a panel/view. A deliberate, dedicated design-system addition (added to pair with Raleway and give heading text distinct weight from body copy), not per-page drift — every tool loads it from the same Google Fonts request as Raleway.
 
-**Character:** Two voices, cleanly split by role — JetBrains Mono marks "this is a heading" wherever an `h1`–`h4` tag is used; Raleway carries everything else, including non-heading text that happens to sit at a heading-adjacent size (e.g. list-row item names). Size, weight, and glow still carry hierarchy within each voice.
+**Character:** Two voices, cleanly split by role — JetBrains Mono marks "this is a heading" wherever an `h1`–`h4` tag is used; Raleway carries everything else, including non-heading text that happens to sit at a heading-adjacent size (e.g. list-row item names). Size and weight carry hierarchy within each voice.
 
 ### Hierarchy
-- **Headline** (JetBrains Mono, 400 weight, 2.5em, centered, `text-shadow: 0 0 3px var(--accent-primary)`): page `<h1>` — the accent-colored glow is the only thing distinguishing it from body text at the same weight.
+- **Headline** (JetBrains Mono, 400 weight, 2.5em, centered): page `<h1>`. Headings carry hierarchy through size and weight only; there is no text glow (removed from every heading).
 - **Body** (Raleway, 400 weight, 1em / 16px): general copy, form labels, descriptions.
 - **Title** (JetBrains Mono, 600 weight, 24px): the second-tier heading used inside a panel or view for the current item's name (e.g. the Snippets viewer's title, `.snippet-title-section h2`, and modal `<h3>` titles). Sits between Body and Headline; used once per view, never for list rows.
 - **Micro** (Raleway, 400 weight, 11px): the smallest step — badges, tags, copy-count chips.
@@ -197,10 +195,10 @@ A handful of literal colors exist outside the token list above, each for a speci
 - **Display** (JetBrains Mono / code stack, 800 weight, 72px; 48px on phones for the band numerals): the newsletter's section-band numerals only. The issue title, which is the newsletter page's `h1`, uses the Stat step (48px, 28px on phones) (`newsletter/`). One step above Stat, used for a single dominant word or numeral per view, never for UI text.
 - **Code** (400 weight, 11px, `Consolas, Monaco, monospace`): `<kbd>` keys and rendered code. Monospace is functionally correct for code/key alignment, not a second brand voice.
 - **Math** (400 weight, 12px, italic, `Georgia, Times New Roman, serif`): inline/display math-notation buttons in the Markdown toolbar (`.md-btn-math`, showing literal `$x$`/`$$x$$`). Serif italic is the standard typographic convention for math variables — matches KaTeX's own rendering, which this project already loads.
-- **Logo/Label** (bold, uppercase, 3px letter-spacing, accent-primary text-shadow): the site logo and nav-adjacent labels.
+- **Logo/Label** (bold, uppercase, 3px letter-spacing): the site logo and nav-adjacent labels.
 
 ### Named Rules
-**The Heading/Body Pairing Rule.** Exactly two font families exist site-wide, split by role, never by ad hoc choice: JetBrains Mono for every `h1`–`h4` heading tag, Raleway for everything else. A given element's font is fully determined by whether it's a heading tag — hierarchy within each voice is still carried by size, weight, color, and glow, not by further font switching. Any future work that introduces a third font (beyond the two functional exceptions below) is a deliberate system change, not a drop-in. Two further sanctioned exceptions exist, both functional rather than decorative: `Consolas, Monaco, monospace` for `<kbd>` keys and rendered code, and `Georgia, Times New Roman, serif` (italic) for math-notation buttons matching KaTeX's rendering convention.
+**The Heading/Body Pairing Rule.** Exactly two font families exist site-wide, split by role, never by ad hoc choice: JetBrains Mono for every `h1`–`h4` heading tag, Raleway for everything else. A given element's font is fully determined by whether it's a heading tag — hierarchy within each voice is still carried by size, weight, and color, not by further font switching. Any future work that introduces a third font (beyond the two functional exceptions below) is a deliberate system change, not a drop-in. Two further sanctioned exceptions exist, both functional rather than decorative: `Consolas, Monaco, monospace` for `<kbd>` keys and rendered code, and `Georgia, Times New Roman, serif` (italic) for math-notation buttons matching KaTeX's rendering convention.
 
 **The Fixed-Step Rule.** Every font-size in the codebase snaps to one of: 11px (Micro), 12px (Label), 13px (Small), 14px (Compact), 16px (Body), 24px (Title), 28 / 48px (Stat), 2.5em (Headline). A one-off size outside this list is drift, not a new tier — either it belongs to an existing step or the step list needs a deliberate addition here first. (Markdown-rendered content is the sole exception: `.markdown-preview h1-h4`/`code` use `em` multipliers on the Body base so arbitrary user content keeps a proportional internal hierarchy — that ramp is relative by design, not an absolute step.)
 
@@ -246,7 +244,7 @@ The two steps beyond the original six were already in wide use and are now docum
 - **Corner Style:** 10px radius.
 - **Background:** `--bg-secondary`.
 - **Shadow Strategy:** real drop shadow at rest + colored glow/lift on hover (see Elevation exception above).
-- **Border:** 1px `--border-color`, shifts to `--accent-primary` on hover; a top-edge accent stripe scales in on hover (`::before`, `scaleX(0)` → `scaleX(1)`).
+- **Border:** 1px `--border-color`, shifts to `--accent-primary` on hover.
 - **Internal Padding:** `28px 22px 24px`.
 
 ### Inputs / Fields
@@ -254,7 +252,7 @@ The two steps beyond the original six were already in wide use and are now docum
 - **Focus:** border shifts to `--accent-secondary` plus the shared `0 0 15px var(--accent-primary)` glow (see Shadow Vocabulary) — this exact treatment is reused for every input, textarea, and select on the site.
 
 ### Navigation
-- Fixed header, centered uppercase logo (3px letter-spacing, accent-primary text-shadow glow), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
+- Fixed header, centered uppercase logo (3px letter-spacing), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
 - Newsletter link (`.newsletter-link`): pinned to the far left of the fixed header on every page, out of flow so it never widens the centered icon row, and deliberately not part of the tool rail. An outlined pill in `--accent-primary` that fills on hover, focus, and on the newsletter page itself (`.active`). Shows `Newsletter` above 1100px. At 1100px and below it collapses to an icon that expands to its name on hover or focus with the same mechanism, timing, and glow as the rail's pills (it reuses the `.nav-pill-label` markup, and stays expanded when it is the current page until 1000px). From 641px to 1100px the link, the rail, and the theme selector share one flow row so they cannot overlap: the "Theme:" label and the current page's expanded label are dropped up to 1000px, spacing tightens up to 800px, and below about 720px the rail wraps to a second row and the page gets the phone layout's extra top padding. At 640px and below, line one holds the newsletter icon (left) and the theme selector (right), the rail wraps below them across the full width, and pages reserve 172px at the top (the header is at most two rail rows tall); on phones 340px and narrower the current page's pill also stays icon-only.
 - Newsletter section navigation (`.nl-jump`, `newsletter/` only): a fixed rail in the free space right of the 800px column at 1320px and up, up to 264px wide, and a floating accent-primary "Sections" pill button that opens the same list in a panel below that width. Both are visible from the moment the issue renders, so navigation is available before any scrolling. Top-level `###` sub-headings nest under their section as smaller indented links. Flat like the rest of the page (hairline border, no shadow); the section in view is marked with a `--band` colored outline (`aria-current="true"`), deliberately not a side stripe.
 - Newsletter back-to-top (`.nl-to-top`, `newsletter/` only): a 40px circular (`999px` pill step) accent-primary icon button fixed bottom-left, mirroring the "Sections" pill at bottom-right. It fades in once the reader is about three quarters of a screen down and scrolls to the top using the page's existing smooth-scroll rule, which reduced-motion users opt out of.
@@ -271,6 +269,6 @@ The two steps beyond the original six were already in wide use and are now docum
 
 ### Don't:
 - **Don't** introduce a second typeface without treating it as a deliberate, site-wide system change (see The One-Voice Type Rule) — don't drop one in for a single new component.
-- **Don't** treat the landing-card's gradient-clipped headline or top-edge accent-stripe-on-hover as the system's default card/heading treatment; they're documented here as incumbent facts, not as patterns to repeat elsewhere.
+- **Don't** add gradient-clipped headlines or accent stripes on cards. Both were removed from the landing page on 2026-10-11; emphasis comes from weight and size.
 - **Don't** add a physical drop shadow (implying a light source/elevation) to a panel or button — the system's depth language is glow, not lift.
 - **Don't** copy Snippets' existing `rgba(116, 161, 46, 0.1-0.5)` usage (e.g. `.history-item.active`) into new code — it's the Default theme's green baked in as a literal triple, so it stays green under every other theme instead of adapting. This is pre-existing debt, not a pattern to repeat; new code should use `color-mix(in srgb, var(--accent-primary) X%, transparent)` instead.

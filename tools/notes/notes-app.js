@@ -60,7 +60,7 @@ class NotesApp {
         const layout  = document.querySelector('.notes-layout');
         if (toolbar && layout) {
             const toolbarH = toolbar.offsetHeight;
-            layout.style.height = `calc(97vh - ${headerH + toolbarH}px)`;
+            layout.style.height = `calc(97dvh - ${headerH + toolbarH}px)`;
         }
     }
 
@@ -356,16 +356,16 @@ class NotesApp {
                 .join('');
 
             const checkbox = this.selectMode
-                ? `<input type="checkbox" class="note-select-checkbox" ${this.selectedIds.has(note.id) ? 'checked' : ''} onclick="event.stopPropagation(); notesApp.toggleSelectNote('${note.id}')" />`
+                ? `<input type="checkbox" class="note-select-checkbox" ${this.selectedIds.has(note.id) ? 'checked' : ''} aria-label="Select ${this.escapeHtml(displayTitle)}" onclick="event.stopPropagation(); notesApp.toggleSelectNote('${note.id}')" />`
                 : '';
 
             const canQuickTrash = !this.selectMode && this.activeFilter !== 'archive' && this.activeFilter !== 'trash';
             const quickTrashBtn = canQuickTrash
-                ? `<button class="note-list-trash-btn" title="Move to Trash" onclick="event.stopPropagation(); notesApp.trashCurrentNote('${note.id}')"><i class="fa-solid fa-trash"></i></button>`
+                ? `<button class="note-list-trash-btn" title="Move to Trash" aria-label="Move ${this.escapeHtml(displayTitle)} to Trash" onclick="event.stopPropagation(); notesApp.trashCurrentNote('${note.id}')"><i class="fa-solid fa-trash"></i></button>`
                 : '';
 
             return `
-                <div class="note-list-item ${isActive ? 'active' : ''}" data-id="${note.id}" onclick="notesApp.handleNoteClick('${note.id}')">
+                <div class="note-list-item ${isActive ? 'active' : ''}" data-id="${note.id}" role="option" tabindex="0" aria-selected="${isActive}" onclick="notesApp.handleNoteClick('${note.id}')" onkeydown="notesApp.handleNoteKey(event, '${note.id}')">
                     ${quickTrashBtn}
                     <div class="note-list-item-header">
                         ${checkbox}
@@ -383,6 +383,13 @@ class NotesApp {
                 </div>
             `;
         }).join('');
+    }
+
+    handleNoteKey(event, id) {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        this.handleNoteClick(id);
     }
 
     handleNoteClick(id) {
@@ -445,6 +452,8 @@ class NotesApp {
             const previewBtn = document.getElementById('previewToggleBtn');
             previewBtn.querySelector('i').className = 'fa-solid fa-eye';
             previewBtn.title = 'Preview';
+            previewBtn.setAttribute('aria-label', 'Preview');
+            previewBtn.setAttribute('aria-pressed', 'false');
         }
 
         if (this.splitView) {
@@ -475,6 +484,8 @@ class NotesApp {
         if (pinBtn) {
             if (note.pinned) { pinBtn.classList.add('active'); pinBtn.title = 'Unpin note'; }
             else { pinBtn.classList.remove('active'); pinBtn.title = 'Pin note'; }
+            pinBtn.setAttribute('aria-label', pinBtn.title);
+            pinBtn.setAttribute('aria-pressed', String(!!note.pinned));
         }
 
         const banner = document.getElementById('noteStatusBanner');
@@ -651,7 +662,9 @@ class NotesApp {
         if (!modal || !list) return;
 
         list.innerHTML = '<div class="version-history-empty">Loading&hellip;</div>';
+        this.versionReturnFocus = document.activeElement;
         modal.style.display = 'flex';
+        modal.querySelector('.modal-close')?.focus();
 
         try {
             const snap = await this.db.collection('users').doc(this.user.uid)
@@ -823,12 +836,16 @@ class NotesApp {
         // Only permanent deletion (purge) is ever confirmed — it's the one
         // action here that can't be undone.
         this.pendingAction = 'purge';
+        this.deleteReturnFocus = document.activeElement;
         document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('cancelDeleteBtn')?.focus();
     }
 
     closeDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
         this.pendingAction = null;
+        this.deleteReturnFocus?.focus?.();
+        this.deleteReturnFocus = null;
     }
 
     async confirmDelete() {
@@ -896,12 +913,15 @@ class NotesApp {
         this.moreMenuOpen = !this.moreMenuOpen;
         dropdown.classList.toggle('show', this.moreMenuOpen);
         btn?.classList.toggle('active', this.moreMenuOpen);
+        btn?.setAttribute('aria-expanded', String(this.moreMenuOpen));
+        if (this.moreMenuOpen) dropdown.querySelector('[role="menuitem"]')?.focus();
     }
 
     closeMoreMenu() {
         this.moreMenuOpen = false;
         document.getElementById('moreMenuDropdown')?.classList.remove('show');
         document.getElementById('moreMenuBtn')?.classList.remove('active');
+        document.getElementById('moreMenuBtn')?.setAttribute('aria-expanded', 'false');
     }
 
     // ─── Bulk select ────────────────────────────────────────────
@@ -909,7 +929,9 @@ class NotesApp {
     toggleSelectMode() {
         this.selectMode = !this.selectMode;
         this.selectedIds.clear();
-        document.getElementById('selectModeBtn')?.classList.toggle('active', this.selectMode);
+        const selectBtn = document.getElementById('selectModeBtn');
+        selectBtn?.classList.toggle('active', this.selectMode);
+        selectBtn?.setAttribute('aria-pressed', String(this.selectMode));
         this.renderNotesList();
         this.updateBulkBar();
     }
@@ -1020,7 +1042,7 @@ class NotesApp {
             const preview = (n.content || '').replace(/\s+/g, ' ').trim().slice(0, 80);
             const badge = n.archived ? '<span class="palette-badge">Archived</span>' : '';
             return `
-                <div class="command-palette-item ${i === 0 ? 'active' : ''}" data-idx="${i}" onclick="notesApp.selectFromPalette(${i})">
+                <div class="command-palette-item ${i === 0 ? 'active' : ''}" id="paletteOption${i}" role="option" aria-selected="${i === 0}" data-idx="${i}" onclick="notesApp.selectFromPalette(${i})">
                     <i class="fa-solid fa-note-sticky"></i>
                     <div class="command-palette-item-text">
                         <div class="command-palette-item-title">${this.escapeHtml(title)}</div>
@@ -1037,7 +1059,9 @@ class NotesApp {
         this.paletteIndex = Math.max(0, Math.min(this.paletteResults.length - 1, this.paletteIndex + dir));
         document.querySelectorAll('.command-palette-item').forEach((el, i) => {
             el.classList.toggle('active', i === this.paletteIndex);
+            el.setAttribute('aria-selected', String(i === this.paletteIndex));
         });
+        document.getElementById('commandPaletteInput')?.setAttribute('aria-activedescendant', `paletteOption${this.paletteIndex}`);
         document.querySelector(`.command-palette-item[data-idx="${this.paletteIndex}"]`)?.scrollIntoView({ block: 'nearest' });
     }
 
@@ -1072,10 +1096,14 @@ class NotesApp {
             app.classList.add('zen-mode');
             btn.querySelector('i').className = 'fa-solid fa-compress';
             btn.title = 'Exit zen mode';
+            btn.setAttribute('aria-label', 'Exit zen mode');
+            btn.setAttribute('aria-pressed', 'true');
         } else {
             app.classList.remove('zen-mode');
             btn.querySelector('i').className = 'fa-solid fa-expand';
             btn.title = 'Zen mode';
+            btn.setAttribute('aria-label', 'Zen mode');
+            btn.setAttribute('aria-pressed', 'false');
         }
     }
 
@@ -1089,10 +1117,10 @@ class NotesApp {
 
         if (this.sidebarCollapsed) {
             panel.classList.add('collapsed');
-            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-right'; btn.title = 'Expand sidebar'; }
+            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-right'; btn.title = 'Expand sidebar'; btn.setAttribute('aria-label', 'Expand sidebar'); btn.setAttribute('aria-expanded', 'false'); }
         } else {
             panel.classList.remove('collapsed');
-            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-left'; btn.title = 'Collapse sidebar'; }
+            if (btn) { btn.querySelector('i').className = 'fa-solid fa-chevron-left'; btn.title = 'Collapse sidebar'; btn.setAttribute('aria-label', 'Collapse sidebar'); btn.setAttribute('aria-expanded', 'true'); }
         }
     }
 
@@ -1104,7 +1132,7 @@ class NotesApp {
         chipsEl.innerHTML = tags.map((tag, i) => `
             <span class="tag-chip">
                 ${this.escapeHtml(tag)}
-                <span class="tag-chip-remove" onclick="notesApp.removeTag(${i})">&times;</span>
+                <button type="button" class="tag-chip-remove" aria-label="Remove tag ${this.escapeHtml(tag)}" onclick="notesApp.removeTag(${i})">&times;</button>
             </span>
         `).join('');
     }
@@ -1214,6 +1242,8 @@ class NotesApp {
         const pinBtn = document.getElementById('pinBtn');
         if (pinned) { pinBtn.classList.add('active'); pinBtn.title = 'Unpin note'; }
         else { pinBtn.classList.remove('active'); pinBtn.title = 'Pin note'; }
+        pinBtn.setAttribute('aria-label', pinBtn.title);
+        pinBtn.setAttribute('aria-pressed', String(!!pinned));
 
         this.renderNotesList();
 
@@ -1402,19 +1432,27 @@ class NotesApp {
         await this.uploadAndInsertImage(file);
     }
 
+    showNotice(message) {
+        const el = document.getElementById('autoSaveStatus');
+        if (!el) return;
+        el.textContent = message;
+        clearTimeout(this.noticeTimer);
+        this.noticeTimer = setTimeout(() => { el.textContent = ''; }, 5000);
+    }
+
     async uploadAndInsertImage(file) {
         const ta = document.getElementById('noteContentInput');
         if (!ta || ta.disabled) return;
 
         if (!this.storage) {
-            alert('Image uploads are not available right now.');
+            this.showNotice('Image uploads are not available right now.');
             return;
         }
         if (!this.user || !this.currentNoteId) return;
 
         const MAX_BYTES = 8 * 1024 * 1024;
         if (file.size > MAX_BYTES) {
-            alert('Image is too large (max 8MB).');
+            this.showNotice('Image is too large (max 8MB).');
             return;
         }
 
@@ -1456,9 +1494,11 @@ class NotesApp {
         }
 
         const { text, rendered } = this.extractMath(content || '');
-        const withLinks = this.resolveWikiLinks(text);
+        const withLinks = this.normalizeAnchorLinks(this.resolveWikiLinks(text));
         preview.innerHTML = marked.parse(withLinks || '')
             .replace(/(\d+)/g, (match, i) => rendered[i] ?? match);
+
+        this.labelHeadings(preview);
 
         if (typeof hljs !== 'undefined') {
             preview.querySelectorAll('pre code:not(.language-mermaid)').forEach(block => {
@@ -1468,6 +1508,59 @@ class NotesApp {
 
         const token = ++this.previewRenderToken;
         this.renderMermaidBlocks(preview, token);
+    }
+
+    // GitHub-style heading slug: "Back-end Dependency" -> "back-end-dependency". Used for both
+    // the heading labels and the in-note links that point at them, so case and spaces in a
+    // hand-written "[Section](#Back-End Dependency)" still land on the right heading.
+    slugify(text) {
+        return (text || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s-]/gu, '')
+            .replace(/\s+/g, '-');
+    }
+
+    // marked stops parsing a link at a space, so "(#Back-End Dependency)" would render as plain
+    // text. Rewrite in-page link targets to their slug before marked sees them.
+    normalizeAnchorLinks(content) {
+        return content.replace(/\]\(#([^)\n]+)\)/g, (match, target) => {
+            let decoded = target;
+            try { decoded = decodeURIComponent(target); } catch (err) { /* keep raw text */ }
+            const slug = this.slugify(decoded);
+            return slug ? `](#${slug})` : match;
+        });
+    }
+
+    // marked 9 no longer adds heading ids; tag each rendered heading with a unique data-anchor.
+    labelHeadings(preview) {
+        const seen = new Map();
+        preview.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
+            const base = this.slugify(heading.textContent);
+            if (!base) return;
+            const count = seen.get(base) || 0;
+            seen.set(base, count + 1);
+            heading.dataset.anchor = count ? `${base}-${count}` : base;
+        });
+    }
+
+    // Scroll the preview to the heading an in-page link points at.
+    handlePreviewLinkClick(event) {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link || link.classList.contains('wiki-link')) return;
+        const raw = link.getAttribute('href').slice(1);
+        event.preventDefault();
+        if (!raw) return;
+        let decoded = raw;
+        try { decoded = decodeURIComponent(raw); } catch (err) { /* keep raw text */ }
+        const slug = this.slugify(decoded);
+        const target = [...document.getElementById('notePreview').querySelectorAll('[data-anchor]')]
+            .find(el => el.dataset.anchor === slug);
+        if (!target) return;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
     }
 
     // Pull $…$ and $$…$$ out before marked runs (it would read _ and * as emphasis and eat
@@ -1666,12 +1759,16 @@ class NotesApp {
             this.renderPreview(textarea.value);
             btn.querySelector('i').className = 'fa-solid fa-pen';
             btn.title = 'Edit';
+            btn.setAttribute('aria-label', 'Edit');
+            btn.setAttribute('aria-pressed', 'true');
             this.closeWikiAutocomplete();
         } else {
             textarea.style.display = 'block';
             preview.style.display = 'none';
             btn.querySelector('i').className = 'fa-solid fa-eye';
             btn.title = 'Preview';
+            btn.setAttribute('aria-label', 'Preview');
+            btn.setAttribute('aria-pressed', 'false');
             textarea.focus();
         }
         body?.classList.remove('split');
@@ -1696,7 +1793,7 @@ class NotesApp {
             body?.classList.add('split');
             this.renderPreview(textarea.value);
             btn?.querySelector('i') && (btn.querySelector('i').className = 'fa-solid fa-table-columns');
-            if (btn) btn.classList.add('active');
+            if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
         } else {
             textarea.style.display = 'block';
             preview.style.display = 'none';
@@ -1704,6 +1801,7 @@ class NotesApp {
             if (btn) {
                 btn.querySelector('i').className = 'fa-solid fa-table-columns';
                 btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
             }
         }
         this.syncFormatBarVisibility();
@@ -1924,14 +2022,33 @@ class NotesApp {
 
     // ─── Auth ─────────────────────────────────────────────────
 
+    showSignInError(message) {
+        const el = document.getElementById('signInError');
+        if (!el) return;
+        el.textContent = message;
+        el.hidden = !message;
+    }
+
     async signIn() {
-        if (!this.auth) return;
+        this.showSignInError('');
+        if (!this.auth) {
+            this.showSignInError('Sign-in is unavailable because Firebase did not load. Check your connection and reload.');
+            return;
+        }
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             await this.auth.signInWithPopup(provider);
         } catch (err) {
             if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-                try { await this.auth.signInWithRedirect(provider); } catch (e) { console.error('Notes: Sign-in failed:', e); }
+                try {
+                    await this.auth.signInWithRedirect(provider);
+                } catch (e) {
+                    console.error('Notes: Sign-in failed:', e);
+                    this.showSignInError('Sign-in failed. Allow pop-ups for this site and try again.');
+                }
+            } else {
+                console.error('Notes: Sign-in failed:', err);
+                this.showSignInError('Sign-in failed. Try again in a moment.');
             }
         }
     }
@@ -2123,6 +2240,8 @@ class NotesApp {
             }
         });
 
+        document.getElementById('notePreview')?.addEventListener('click', e => this.handlePreviewLinkClick(e));
+
         document.getElementById('deleteModal')?.addEventListener('click', e => {
             if (e.target === document.getElementById('deleteModal')) this.closeDeleteModal();
         });
@@ -2135,6 +2254,7 @@ class NotesApp {
             if (!tooltip) return;
             const wasShown = tooltip.classList.contains('show');
             tooltip.classList.remove('show');
+            e.currentTarget.setAttribute('aria-expanded', String(!wasShown));
             if (!wasShown) {
                 const btn  = e.currentTarget.getBoundingClientRect();
                 const tipW = 240;
