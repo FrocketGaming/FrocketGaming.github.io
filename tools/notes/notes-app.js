@@ -433,14 +433,23 @@ class NotesApp {
         document.querySelector(`[data-id="${sorted[newIdx].id}"]`)?.scrollIntoView({ block: 'nearest' });
     }
 
+    closeCurrentNote() {
+        this.flushPendingSave();
+        this.currentNoteId = null;
+        this.renderNotesList();
+        this.showEmptyState();
+    }
+
     showEmptyState() {
         document.getElementById('emptyState').style.display = 'flex';
         document.getElementById('noteEditor').style.display = 'none';
+        document.getElementById('notesApp')?.classList.remove('has-note');
     }
 
     showEditor(note) {
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('noteEditor').style.display = 'flex';
+        document.getElementById('notesApp')?.classList.add('has-note');
 
         document.getElementById('noteTitleInput').value = note.title || '';
         document.getElementById('noteContentInput').value = note.content || '';
@@ -729,7 +738,19 @@ class NotesApp {
         if (this.splitView || this.previewMode) this.renderPreview(version.content || '');
     }
 
+    // Save any edit still waiting on the debounce timer. Call before anything that
+    // clears or switches the open note, or the pending text is lost.
+    flushPendingSave() {
+        if (!this.saveTimer) return Promise.resolve();
+        return this.saveCurrentNote(true);
+    }
+
     async saveCurrentNote(silent = false) {
+        // The timer has fired (or is being forced), so nothing is pending any more.
+        clearTimeout(this.saveTimer);
+        const hadPending = !!this.saveTimer;
+        this.saveTimer = null;
+        if (hadPending) this.renderNotesList();
         if (!this.currentNoteId || !this.db || !this.user) return;
 
         const titleEl = document.getElementById('noteTitleInput');
@@ -826,6 +847,7 @@ class NotesApp {
     trashCurrentNote(id = this.currentNoteId) {
         if (!id) return;
         if (id === this.currentNoteId) {
+            this.flushPendingSave();
             this.currentNoteId = null;
             this.showEmptyState();
         }
@@ -1265,7 +1287,7 @@ class NotesApp {
             const target = this.notes.find(n => !n.trashed && this.getNoteTitle(n).toLowerCase() === title.toLowerCase());
             const label = this.escapeHtml(title);
             if (target) {
-                return `<a href="#" class="wiki-link" data-note-id="${target.id}" onclick="notesApp.selectNote('${target.id}'); return false;">${label}</a>`;
+                return `<a href="#" class="wiki-link" data-note-id="${target.id}">${label}</a>`;
             }
             return `<span class="wiki-link wiki-link-missing" title="No note titled &quot;${label}&quot;">${label}</span>`;
         });
@@ -1495,7 +1517,7 @@ class NotesApp {
 
         const { text, rendered } = this.extractMath(content || '');
         const withLinks = this.normalizeAnchorLinks(this.resolveWikiLinks(text));
-        preview.innerHTML = marked.parse(withLinks || '')
+        preview.innerHTML = this.sanitizeHtml(marked.parse(withLinks || ''))
             .replace(/(\d+)/g, (match, i) => rendered[i] ?? match);
 
         this.labelHeadings(preview);
@@ -1508,6 +1530,13 @@ class NotesApp {
 
         const token = ++this.previewRenderToken;
         this.renderMermaidBlocks(preview, token);
+    }
+
+    // Strip scripts, inline handlers and other active content from rendered Markdown before
+    // it reaches innerHTML. KaTeX output is swapped in afterwards from its own trusted renderer.
+    sanitizeHtml(html) {
+        if (typeof DOMPurify === 'undefined') return this.escapeHtml(html);
+        return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
     }
 
     // GitHub-style heading slug: "Back-end Dependency" -> "back-end-dependency". Used for both
@@ -1547,9 +1576,13 @@ class NotesApp {
     // Scroll the preview to the heading an in-page link points at.
     handlePreviewLinkClick(event) {
         const link = event.target.closest('a[href^="#"]');
-        if (!link || link.classList.contains('wiki-link')) return;
-        const raw = link.getAttribute('href').slice(1);
+        if (!link) return;
         event.preventDefault();
+        if (link.dataset.noteId) {
+            this.selectNote(link.dataset.noteId);
+            return;
+        }
+        const raw = link.getAttribute('href').slice(1);
         if (!raw) return;
         let decoded = raw;
         try { decoded = decodeURIComponent(raw); } catch (err) { /* keep raw text */ }
@@ -2241,6 +2274,7 @@ class NotesApp {
         });
 
         document.getElementById('notePreview')?.addEventListener('click', e => this.handlePreviewLinkClick(e));
+        document.getElementById('backToListBtn')?.addEventListener('click', () => this.closeCurrentNote());
 
         document.getElementById('deleteModal')?.addEventListener('click', e => {
             if (e.target === document.getElementById('deleteModal')) this.closeDeleteModal();
@@ -2289,8 +2323,12 @@ class NotesApp {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', e => {
-            const inInput = document.activeElement?.tagName === 'INPUT' ||
-                            document.activeElement?.tagName === 'TEXTAREA';
+            const active = document.activeElement;
+            const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(active?.tagName) ||
+                            !!active?.isContentEditable;
+            const overlayOpen = document.getElementById('commandPaletteOverlay')?.style.display === 'flex' ||
+                                document.getElementById('versionHistoryModal')?.style.display === 'flex' ||
+                                document.getElementById('deleteModal')?.style.display === 'flex';
 
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
@@ -2319,7 +2357,11 @@ class NotesApp {
                 document.getElementById('searchInput')?.focus();
             }
 
-            if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !inInput) {
+            // Arrows move between notes only when focus is on the page itself or the list;
+            // buttons, selects, dialogs and a preview you are scrolling keep their own arrows.
+            const onList = !active || active === document.body || !!active.closest?.('#notesList');
+            if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !inInput && !overlayOpen &&
+                onList && !this.previewMode) {
                 e.preventDefault();
                 this.navigateList(e.key === 'ArrowDown' ? 'down' : 'up');
             }
@@ -2329,6 +2371,8 @@ class NotesApp {
                 const tooltip = document.getElementById('shortcutsTooltip');
                 if (overlay && overlay.style.display === 'flex') {
                     this.closeCommandPalette();
+                } else if (document.getElementById('deleteModal').style.display === 'flex') {
+                    this.closeDeleteModal();
                 } else if (document.getElementById('versionHistoryModal')?.style.display === 'flex') {
                     this.closeVersionHistory();
                 } else if (tooltip?.classList.contains('show')) {
@@ -2339,12 +2383,8 @@ class NotesApp {
                     this.toggleSelectMode();
                 } else if (this.zenMode) {
                     this.toggleZen();
-                } else if (document.getElementById('deleteModal').style.display === 'flex') {
-                    this.closeDeleteModal();
                 } else if (this.currentNoteId && !inInput) {
-                    this.currentNoteId = null;
-                    this.renderNotesList();
-                    this.showEmptyState();
+                    this.closeCurrentNote();
                 }
             }
         });

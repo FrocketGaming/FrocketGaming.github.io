@@ -23,7 +23,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
         <link rel="stylesheet" href="../../src/stylesheet.css" />
         <link rel="stylesheet" href="../../src/firebase-sync.css" />
-        <link rel="stylesheet" href="notes-styles.css" />
+        <link rel="stylesheet" href="notes-styles.css?v=64fe92f0" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
@@ -200,6 +200,9 @@
 
                     <div class="note-editor" id="noteEditor" style="display:none">
                         <div class="editor-header">
+                            <button class="action-btn back-btn" id="backToListBtn" title="Back to notes" aria-label="Back to notes">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
                             <input type="text" id="noteTitleInput" class="note-title-input" placeholder="Untitled note" aria-label="Note title" />
                             <div class="editor-actions">
                                 <button class="action-btn" id="pinBtn" title="Pin note" aria-label="Pin note" aria-pressed="false">
@@ -334,8 +337,9 @@
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+        <script src="../../src/vendor/purify.min.js"></script>
         <script src="../../src/theme-manager.js"></script>
         <script src="../../src/firebase-config.js"></script>
-        <script src="notes-app.js"></script>
+        <script src="notes-app.js?v=64fe92f0"></script>
     </body>
 </html>

@@ -792,6 +792,12 @@
     cursor: not-allowed;
 }
 
+.back-btn {
+    display: none;
+    flex-shrink: 0;
+    padding: 8px 10px 8px 0;
+}
+
 .editor-actions {
     display: flex;
     align-items: center;
@@ -1291,9 +1297,30 @@
 
     /* Phone width: the nav turns into a horizontally scrolling row of chips above the
        list, so Archive, Trash and tags stay one tap away. */
+    /* One pane at a time: the list (with its nav chips) until a note is opened, then the
+       editor full height with a Back button. */
     .notes-sidebar {
         flex-direction: column;
-        height: 280px;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .notes-editor-panel {
+        display: none;
+    }
+
+    .notes-app.has-note .notes-sidebar {
+        display: none;
+    }
+
+    .notes-app.has-note .notes-editor-panel {
+        display: flex;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .notes-nav-panel {
