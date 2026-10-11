@@ -261,6 +261,15 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
 .flow-node.flow-shape-hexagon .flow-step-chip { left: 50%; transform: translateX(-50%); max-width: calc(100% - 62px); }
 .flow-node.flow-shape-cylinder .flow-step-chip { top: 25px; }
 
+/* Status badge (FlowStatic.statusSvg, placed by statusPoint): straddles the top edge near the right. */
+.flow-status {
+    position: absolute;
+    z-index: 4;
+    overflow: visible;
+    pointer-events: none;
+}
+.flow-node.has-status.is-locked::after { right: 30px; }
+
 /* Rendered markdown inside cards */
 .flow-md > :first-child { margin-top: 0; }
 .flow-md > :last-child { margin-bottom: 0; }
@@ -582,7 +591,37 @@ svg.flow-layer { width: 1px; height: 1px; overflow: visible; pointer-events: non
     padding: 4px;
     z-index: 3;
 }
+/* Pool title (FlowStatic.poolOf): a square frame round the lanes with the title in a band across
+   the top (FlowStatic.POOL_HEAD tall). The band is the handle that drags the whole pool. */
+.flow-group.is-pool .flow-group-fill { border-radius: 0; }
+.flow-group.is-pool .flow-group-toggle { display: none; }
+.flow-group.is-pool .flow-group-label {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    height: 40px;
+    max-width: none;
+    margin: 0;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border-radius: 0;
+    border: 1.5px solid var(--group-color);
+    background: color-mix(in srgb, var(--group-color) 22%, var(--bg-primary));
+    display: flex;
+    align-items: center;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: grab;
+}
+.flow-group.is-pool.has-color .flow-group-label { color: var(--node-color); }
+.flow-group.is-pool .flow-group-label.is-empty { opacity: 1; }
+.flow-group.is-pool.is-selected .flow-group-label { border-color: var(--accent-primary); }
+.flow-group.is-pool .flow-group-label-input { flex: 1; }
 .flow-pbtn-sub { font-size: 8px; margin-left: 1px; }
+.flow-status-doing { color: var(--hue-orange); }
+.flow-status-done { color: var(--hue-green); }
 
 .flow-group-label-input {
     font: inherit;

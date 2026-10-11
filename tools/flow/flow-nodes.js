@@ -105,10 +105,42 @@
         svg.innerHTML = `<path d="${S.shapePath(shape, 0, 0, w, h)}" stroke-linejoin="round"/>`;
     }
 
+    const STATUS_PAINT = { done: 'var(--hue-green)', doing: 'var(--hue-orange)', ring: 'var(--bg-primary)', fill: 'var(--flow-card-bg)' };
+
+    /**
+     * The status badge (FlowStatic.statusSvg, the same drawing as the export), placed by statusPoint.
+     * Runs on every update, not just signature changes, because its spot depends on the card's size.
+     */
+    function syncStatus(el, n) {
+        const status = S.statusOf(n);
+        let badge = el.querySelector(':scope > .flow-status');
+        el.classList.toggle('has-status', !!status);
+        if (!status) { if (badge) badge.remove(); el._statusKey = ''; return; }
+        const shape = S.imageCard(n) ? 'rect' : S.nodeShape(n);
+        const p = S.statusPoint(n, shape);
+        const R = S.STATUS_R + 2;
+        const key = status + '|' + Math.round(p.x - Number(n.x)) + '|' + Math.round(p.y - Number(n.y));
+        if (badge && el._statusKey === key) return;
+        el._statusKey = key;
+        if (!badge) {
+            badge = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            badge.setAttribute('class', 'flow-status');
+            badge.setAttribute('viewBox', `${-R} ${-R} ${R * 2} ${R * 2}`);
+            badge.setAttribute('width', R * 2);
+            badge.setAttribute('height', R * 2);
+            badge.setAttribute('aria-hidden', 'true');
+            el.appendChild(badge);
+        }
+        badge.innerHTML = S.statusSvg(status, 0, 0, STATUS_PAINT) + `<title>${status === 'done' ? 'Done' : 'In progress'}</title>`;
+        // Relative to the card's padding box (the 1.5px border sits outside it).
+        badge.style.left = (p.x - Number(n.x) - R - 1.5) + 'px';
+        badge.style.top = (p.y - Number(n.y) - R - 1.5) + 'px';
+    }
+
     function signature(n) {
         // Any field can hold any JSON value: never let Array.join call an object's toString.
         const v = (x) => (x == null || typeof x !== 'object' ? x : JSON.stringify(x));
-        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), S.laneOf(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
+        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), S.laneOf(n), S.poolOf(n), S.statusOf(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
     }
 
     function renderNodes(d) {
@@ -219,7 +251,7 @@
                 t.setAttribute('aria-label', t.title);
             }
         }
-        if (!el._isGroup) syncShape(el, n);
+        if (!el._isGroup) { syncShape(el, n); syncStatus(el, n); }
         const key = el.dataset.nodeKey || n.id;
         const sig = signature(n);
         if (sigs.get(key) === sig) return;
@@ -230,17 +262,20 @@
         el.style.setProperty('--node-color', colored ? nodes.cssColor(n.color) : '');
         if (el._isGroup) {
             const lane = !!S.laneOf(n);
+            const pool = !!S.poolOf(n);
             el.classList.toggle('is-lane', lane);   // name in a strip down the left (flow-lanes.js)
+            el.classList.toggle('is-pool', pool);   // title in a band across the top of the lanes
             const label = el.querySelector('.flow-group-label');
             label.textContent = S.str(n.label);
             label.classList.toggle('is-empty', !S.str(n.label));
-            if (!S.str(n.label)) label.textContent = lane ? 'Lane' : 'Group';
+            if (!S.str(n.label)) label.textContent = lane ? 'Lane' : pool ? 'Pool' : 'Group';
             el.classList.toggle('has-bg', !!n.background);
             return;
         }
         const shape = S.nodeShape(n);
         const step = S.stepType(n);
-        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (step ? ' has-step' : '') + (core.selection.nodes.has(n.id) ? ' is-selected' : '');
+        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (step ? ' has-step' : '') + (S.statusOf(n) ? ' has-status' : '')
+            + (el._locked ? ' is-locked' : '') + (el._hidden ? ' is-collapsed-hidden' : '') + (core.selection.nodes.has(n.id) ? ' is-selected' : '');
         // Step label chip (sibling of the content, so it stays visible while the card is edited).
         let chip = el.querySelector('.flow-step-chip');
         if (step) {
@@ -440,7 +475,7 @@
             input.type = 'text';
             input.className = 'flow-group-label-input';
             input.value = S.str(n.label);
-            input.placeholder = 'Group name';
+            input.placeholder = S.poolOf(n) ? 'Pool title' : 'Group name';
             label.textContent = '';
             label.classList.remove('is-empty');
             label.appendChild(input);

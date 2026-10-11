@@ -41,39 +41,148 @@
     };
 
     function allLanes() { return core.nodes().filter(n => S.laneOf(n)); }
+    function allTitles() { return core.nodes().filter(n => S.poolOf(n)); }
+    /** Lanes and pool titles are the pool's frame, never something placed inside a lane. */
+    const isFrame = (n) => !!(S.laneOf(n) || S.poolOf(n));
 
     function capture() {
         cap = null;
         const ls = allLanes();
         if (!ls.length) return;
-        cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set() };
+        cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set(), titles: new Map(), detached: new Map() };
         for (const l of ls) cap.lanes.set(l, geom(l));
+        cap.lanes0 = new Map(cap.lanes);   // never rewritten (resizePool rewrites cap.lanes)
+        for (const t of allTitles()) cap.titles.set(t, geom(t));
         for (const n of core.nodes()) {
-            if (S.laneOf(n)) continue;
+            if (isFrame(n)) continue;
             cap.pos.set(n, { x: N(n.x), y: N(n.y) });
             const c = centre(n);
             const home = ls.find(l => inside(cap.lanes.get(l), c));
             if (home) cap.member.set(n, home);
         }
+        cap.pos0 = new Map(cap.pos);   // never rewritten (resizePool re-bases cap.pos)
     }
 
     /** Call after changing a lane mid-gesture (resize drag) to see the pool follow live. */
     lanes.live = function (n) {
-        if (!cap || !S.laneOf(n)) return;
+        if (!cap || !isFrame(n)) return;
         normalizeAll();
         core.invalidate('all');
     };
 
     function normalizeAll() {
+        if (cap) dragOut();
         const ls = allLanes();
-        if (!ls.length) return false;
-        if (!cap) cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set() };
         const pools = new Map();
         for (const l of ls) { const p = S.laneOf(l); if (!pools.has(p)) pools.set(p, []); pools.get(p).push(l); }
+        // A title whose lanes are all gone goes with them; a pool keeps only one title.
+        const titles = new Map(), drop = [];
+        for (const t of allTitles()) {
+            const p = S.poolOf(t);
+            if (!pools.has(p) || titles.has(p)) drop.push(t.id); else titles.set(p, t);
+        }
+        if (drop.length) core.removeItems(drop, []);
+        if (!ls.length) return drop.length > 0;
+        if (!cap) cap = { lanes: new Map(), pos: new Map(), member: new Map(), auto: new Set(), detached: new Map() };
         const moved = new Set();
-        for (const list of pools.values()) normalizePool(list, moved);
+        for (const [p, list] of pools) {
+            if (titles.has(p)) resizePool(titles.get(p), list, moved);
+            normalizePool(list, moved);
+            const t = titles.get(p);
+            if (t) fitTitle(t, list, moved);
+        }
         if (moved.size) Flow.edges.refreshAutoSides([...moved]);
-        return moved.size > 0;
+        return moved.size > 0 || drop.length > 0;
+    }
+
+    /** Where a pool's lanes were when the gesture began (title band included), or null. */
+    function capturedBox(pool) {
+        let box = null;
+        const add = (g) => {
+            if (!box) { box = { x1: g.x, y1: g.y, x2: g.x + g.w, y2: g.y + g.h }; return; }
+            box.x1 = Math.min(box.x1, g.x); box.y1 = Math.min(box.y1, g.y);
+            box.x2 = Math.max(box.x2, g.x + g.w); box.y2 = Math.max(box.y2, g.y + g.h);
+        };
+        for (const [l, g] of cap.lanes) if (S.laneOf(l) === pool) add(g);
+        if (cap.titles) for (const [t, g] of cap.titles) if (S.poolOf(t) === pool) add(g);
+        return box;
+    }
+
+    /** Take a lane out of its pool (it stays a plain group where it is; call inside a transaction). */
+    function detach(l) {
+        const pool = S.laneOf(l);
+        if (!pool) return;
+        if (cap && cap.detached) cap.detached.set(l, pool);   // the pool's top stays where it was
+        delete l.styleAttributes.lane;
+        if (!Object.keys(l.styleAttributes).length) delete l.styleAttributes;
+    }
+
+    /**
+     * A lane dragged (by its name) to where it no longer touches its pool leaves the pool, with its
+     * cards. A pool's only lane never leaves (that would just dissolve the pool: use unpool).
+     */
+    function dragOut() {
+        const ls = allLanes();
+        for (const l of ls) {
+            const c = cap.lanes.get(l), g = geom(l);
+            if (!c || cap.auto.has(l) || g.w !== c.w || g.h !== c.h || (g.x === c.x && g.y === c.y)) continue;
+            const pool = S.laneOf(l);
+            const rest = ls.filter(o => o !== l && S.laneOf(o) === pool && S.laneOf(o));
+            if (!rest.length) continue;
+            // Every other lane still where it was: this one moved alone (not the whole pool).
+            if (rest.some(o => { const oc = cap.lanes.get(o); return !oc || N(o.x) !== oc.x || N(o.y) !== oc.y; })) continue;
+            const b = capturedBox(pool);
+            if (!b || g.x >= b.x2 || g.x + g.w <= b.x1 || g.y >= b.y2 || g.y + g.h <= b.y1) detach(l);
+        }
+    }
+
+    /**
+     * The title was resized: the lanes take its new x and width, and share its new height in
+     * proportion to the heights they had when the gesture began. Cards ride with their lane's top.
+     * The result is written as if the lanes had started there (cap.lanes + cap.auto), so
+     * normalizePool only tidies up (lanes still grow to fit their cards; fitTitle then snaps the
+     * title back to the lanes).
+     */
+    function resizePool(t, list, moved) {
+        const c = cap.titles && cap.titles.get(t), g = geom(t);
+        if (!c || (g.w === c.w && g.h === c.h)) return;
+        const orig = list.filter(l => cap.lanes0 && cap.lanes0.has(l)).sort((a, b) => cap.lanes0.get(a).y - cap.lanes0.get(b).y);
+        if (orig.length !== list.length) return;   // lanes added in this same gesture: leave it to the usual rules
+        const total0 = orig.reduce((s, l) => s + cap.lanes0.get(l).h, 0) || 1;
+        const total = Math.max(g.h - S.POOL_HEAD, orig.length * MIN_H);
+        let y = g.y + S.POOL_HEAD, used = 0;
+        const shift = new Map();
+        orig.forEach((l, i) => {
+            const l0 = cap.lanes0.get(l);
+            const h = i === orig.length - 1 ? total - used : Math.round(l0.h * total / total0);
+            used += h;
+            const next = { x: g.x, y, w: g.w, h };
+            cap.lanes.set(l, next);
+            cap.auto.add(l);
+            setNum(l, 'x', next.x); setNum(l, 'y', next.y); setNum(l, 'width', next.w); setNum(l, 'height', next.h);
+            shift.set(l, y - l0.y);
+            moved.add(l.id);
+            y += h;
+        });
+        for (const [n, lane] of cap.member) {
+            if (!shift.has(lane)) continue;
+            const p = cap.pos0.get(n), ny = p.y + shift.get(lane);
+            if (N(n.y) !== ny) { setNum(n, 'y', ny); moved.add(n.id); }
+            // Re-based too, so normalizePool sees these as staying put in their lane.
+            cap.pos.set(n, { x: N(n.x), y: ny });
+        }
+    }
+
+    /** A pool title wraps its lanes, with its band just above the top lane. */
+    function fitTitle(t, list, moved) {
+        const x = N(list[0].x), w = N(list[0].width);
+        const top = Math.min(...list.map(l => N(l.y)));
+        const bottom = Math.max(...list.map(l => N(l.y) + N(l.height)));
+        const g = geom(t);
+        if (g.x === x && g.y === top - S.POOL_HEAD && g.w === w && g.h === bottom - top + S.POOL_HEAD) return;
+        setNum(t, 'x', x); setNum(t, 'y', top - S.POOL_HEAD);
+        setNum(t, 'width', w); setNum(t, 'height', bottom - top + S.POOL_HEAD);
+        moved.add(t.id);
     }
 
     function normalizePool(list, moved) {
@@ -121,7 +230,7 @@
         const members = new Map(list.map(l => [l, []]));
         const placed = new Set();   // members the user just put somewhere
         for (const n of core.nodes()) {
-            if (S.laneOf(n)) continue;
+            if (isFrame(n)) continue;
             const p = cap.pos.get(n);
             const still = p && p.x === N(n.x) && p.y === N(n.y);
             if (!still) placed.add(n);
@@ -148,7 +257,7 @@
             // Where the pool started, counting lanes deleted in this gesture (deleting the top lane
             // pulls the rest up rather than leaving a gap).
             const pool = S.laneOf(list[0]);
-            top = Math.min(...[...cap.lanes].filter(([l]) => S.laneOf(l) === pool).map(([, c]) => c.y));
+            top = Math.min(...[...cap.lanes].filter(([l]) => S.laneOf(l) === pool || (cap.detached && cap.detached.get(l) === pool)).map(([, c]) => c.y));
         }
 
         // Cards ride along sideways only when their lane was dragged (it snaps back into the pool's
@@ -208,12 +317,14 @@
 
     // ── Commands ────────────────────────────────────────────────────────────
 
-    /** A new three-lane pool centred on world point `at`. */
+    /** A new titled three-lane pool centred on world point `at`. */
     lanes.insertPool = function (at) {
         at = at || core.viewCenter();
         const pool = core.newId(), W = 960, H = 180;
-        const x = core.snapToGrid(at.x - W / 2), y0 = core.snapToGrid(at.y - (H * 3) / 2);
+        const x = core.snapToGrid(at.x - W / 2), y0 = core.snapToGrid(at.y - (H * 3 - S.POOL_HEAD) / 2);
         core.change('Add swimlanes', () => {
+            const title = Flow.nodes.createGroup({ x, y: y0 - S.POOL_HEAD, width: W, height: H * 3 + S.POOL_HEAD }, 'Process');
+            title.styleAttributes = { pool };
             const ids = ['Lane 1', 'Lane 2', 'Lane 3'].map((label, i) => {
                 const g = Flow.nodes.createGroup({ x, y: y0 + i * H, width: W, height: H }, label);
                 g.styleAttributes = { lane: pool };
@@ -222,6 +333,22 @@
             core.reindex();
             core.select([ids[0]], []);
         });
+    };
+
+    /** Give `lane`'s pool a title band across the top, and start typing it. */
+    lanes.addTitle = function (lane) {
+        const pool = S.laneOf(lane);
+        if (!pool || allTitles().some(t => S.poolOf(t) === pool)) return;
+        const list = allLanes().filter(l => S.laneOf(l) === pool);
+        core.begin('Pool title');
+        // Under its lanes in the z-order (array order), so the lanes stay clickable.
+        const index = Math.min(...list.map(l => core.doc.nodes.indexOf(l)));
+        const t = { id: core.newId(), type: 'group', x: 0, y: 0, width: 0, height: 0, label: 'Pool', styleAttributes: { pool } };
+        core.addNode(t, { index });
+        fitTitle(t, list, new Set());
+        core.reindex();
+        core.invalidate('all');
+        Flow.nodes.startEdit(t.id, { ownTxn: true, select: 'all' });
     };
 
     /**
@@ -254,6 +381,21 @@
         });
     };
 
+    /** Take `lane` out of its pool: it moves (with its cards) to just right of the pool, and the rest close up. */
+    lanes.detachLane = function (lane) {
+        const pool = S.laneOf(lane);
+        if (!pool) return;
+        const list = allLanes().filter(l => S.laneOf(l) === pool);
+        if (list.length < 2) return;
+        const right = Math.max(...list.map(l => N(l.x) + N(l.width)));
+        core.change('Remove lane from pool', () => {
+            const dx = core.snapToGrid(right + 80 - N(lane.x));
+            for (const id of core.expandWithGroupContents([lane.id])) { const n = core.getNode(id); if (n) setNum(n, 'x', N(n.x) + dx); }
+            detach(lane);
+            Flow.edges.refreshAutoSides([...core.expandWithGroupContents([lane.id])]);
+        });
+    };
+
     /** Swap a lane with its neighbour above (-1) or below (+1), cards and all. */
     lanes.moveLane = function (lane, dir) {
         const pool = S.laneOf(lane);
@@ -270,15 +412,19 @@
         });
     };
 
-    /** Make every lane of the selected lanes' pools a plain group again (nothing moves). */
+    /**
+     * Make every lane of the selected pools a plain group again (nothing moves). A pool title
+     * becomes a plain group round them, so its name is kept.
+     */
     lanes.unpool = function () {
-        const pools = new Set(core.selectedNodes().map(S.laneOf).filter(Boolean));
+        const pools = new Set(core.selectedNodes().map(n => S.laneOf(n) || S.poolOf(n)).filter(Boolean));
         if (!pools.size) return;
         core.change('Remove swimlanes', () => {
-            for (const l of allLanes()) {
-                if (!pools.has(S.laneOf(l))) continue;
-                delete l.styleAttributes.lane;
-                if (!Object.keys(l.styleAttributes).length) delete l.styleAttributes;
+            for (const l of [...allLanes(), ...allTitles()]) {
+                const sa = l.styleAttributes;
+                if (!pools.has(S.laneOf(l) || S.poolOf(l))) continue;
+                delete sa.lane; delete sa.pool;
+                if (!Object.keys(sa).length) delete l.styleAttributes;
             }
         });
     };
