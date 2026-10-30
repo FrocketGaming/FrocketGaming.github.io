@@ -130,11 +130,20 @@
     const HEAD_SIZE = [0, 1.5, 1.3, 1.15, 1, 1, 1];
 
     /** Markdown -> [{ runs:[{t,st}|{br}], st, lh, mb, indent, marker, quote, pre, hr }] mirroring .flow-md CSS. */
-    function mdBlocks(text) {
+    function mdBlocks(text, titled) {
         const tpl = document.createElement('template');
         tpl.innerHTML = S.renderMarkdown(text);
         const out = [];
         walkBlocks(tpl.content, { indent: 0, quote: 0, color: 'text' }, out);
+        // Titled card: the paragraph right under a heading is its subtitle (.is-titled in the CSS).
+        if (titled) out.forEach((b, i) => {
+            if (!i || !out[i - 1].head || !b.para) return;
+            b.runs = b.runs.map(r => (r.st && !r.tag ? { ...r, st: { ...r.st, color: 'muted', size: 14 } } : r));
+            b.lh = 19.6;
+            b.mb = 10;
+        });
+        // A line holding pills is as tall as a pill with its margins (22 + 2 + 2).
+        for (const b of out) if (b.runs && b.runs.some(r => r.tag)) b.lh = Math.max(b.lh, 26);
         return out;
     }
 
@@ -158,12 +167,12 @@
                 const size = 16 * HEAD_SIZE[+tag[1]];
                 const runs = [];
                 inline(nd, baseStyle(ctx, { w: 700, fam: 'head', size }), runs);
-                out.push({ runs, lh: size * 1.25, mb: 6, indent: ctx.indent, quote: ctx.quote });
+                out.push({ runs, lh: size * 1.25, mb: 6, indent: ctx.indent, quote: ctx.quote, head: true });
             } else if (tag === 'P') {
                 flushLoose();
                 const runs = [];
                 inline(nd, baseStyle(ctx), runs);
-                out.push({ runs, lh: 22.4, mb: 6, indent: ctx.indent, quote: ctx.quote });
+                out.push({ runs, lh: 22.4, mb: 6, indent: ctx.indent, quote: ctx.quote, para: true });
             } else if (tag === 'UL' || tag === 'OL') {
                 flushLoose();
                 let num = parseInt(nd.getAttribute('start'), 10) || 1;
@@ -176,7 +185,8 @@
                         else if (c.nodeType === 1 && c.tagName === 'P') { if (runs.length) runs.push({ br: true }); inline(c, baseStyle(ctx), runs); }
                         else inline(c, baseStyle(ctx), runs);
                     }
-                    const marker = tag === 'OL' ? { t: (num++) + '.', num: true } : { t: '•' };
+                    const dot = /\bmd-dot-(\d)\b/.exec(li.className);
+                    const marker = dot ? { dot: dot[1] } : tag === 'OL' ? { t: (num++) + '.', num: true } : { t: '•' };
                     out.push({ runs, lh: 22.4, mb: 2, indent: ctx.indent + 22, quote: ctx.quote, marker });
                     for (const sub of nested) walkBlocks({ childNodes: [sub] }, { ...ctx, indent: ctx.indent + 22 }, out);
                     if (idx === items.length - 1) out[out.length - 1].mb = 6;
@@ -222,6 +232,11 @@
         }
         if (nd.nodeType !== 1) return;
         const tag = nd.tagName;
+        if (nd.classList && nd.classList.contains('md-tag')) {
+            const key = /\bmd-tag-(\d)\b/.exec(nd.className);
+            runs.push({ t: nd.textContent.trim(), st: { ...st, w: 400, i: false, fam: 'body', size: 13, color: 'text' }, tag: key ? key[1] : 'plain' });
+            return;
+        }
         if (tag === 'BR') { runs.push({ br: true }); return; }
         if (tag === 'INPUT') { if (nd.type === 'checkbox') runs.push({ t: (nd.checked || nd.hasAttribute('checked') ? '☑' : '☐') + ' ', st }); return; }
         if (tag === 'IMG') { const a = nd.getAttribute('alt'); if (a) runs.push({ t: a, st: { ...st, i: true, color: 'muted' } }); return; }
@@ -237,6 +252,8 @@
 
     const sameStyle = (a, b) => a.w === b.w && a.i === b.i && a.fam === b.fam && a.size === b.size && a.color === b.color && !!a.strike === !!b.strike && !!a.u === !!b.u;
 
+    const PILL_EXTRA = 24;
+
     /** Greedy word wrap of runs into lines of segments [{t, st, w}]. Breaks long words by character. */
     function wrapRuns(runs, width) {
         const lines = [];
@@ -249,11 +266,25 @@
         const add = (t, st) => {
             const w = measure(st, t);
             const last = line[line.length - 1];
-            if (last && sameStyle(last.st, st)) { last.t += t; last.w += w; } else line.push({ t, st, w });
+            if (last && !last.tag && sameStyle(last.st, st)) { last.t += t; last.w += w; } else line.push({ t, st, w });
             lw += w;
         };
         for (const r of runs) {
             if (r.br) { push(); continue; }
+            if (r.tag) {
+                // One unbroken box: text + padding 8 + border 1 + margin 3 on each side, ellipsised to the line.
+                let label = r.t;
+                if (measure(r.st, label) > width - PILL_EXTRA) {
+                    const cps = Array.from(label);
+                    while (cps.length > 1 && measure(r.st, cps.join('') + '…') > width - PILL_EXTRA) cps.pop();
+                    label = cps.join('') + '…';
+                }
+                const w = measure(r.st, label) + PILL_EXTRA;
+                if (lw + w > width + 0.5 && line.some(s => s.t.trim())) push();
+                line.push({ t: label, st: r.st, w, tag: r.tag });
+                lw += w;
+                continue;
+            }
             for (const tok of r.t.split(/( +)/)) {
                 if (!tok) continue;
                 if (tok[0] === ' ') { if (line.length) add(' ', r.st); continue; }
@@ -287,9 +318,27 @@
         return a.length ? `<tspan ${a.join(' ')}>${esc(seg.t)}</tspan>` : esc(seg.t);
     }
 
+    /** A line with tag pills: each piece placed on its own, since a pill's box needs its measured x. */
+    function pillLine(line, x, top, lh, anchor, pal) {
+        let cx = anchor === 'middle' ? x - line.w / 2 : x;
+        let svg = '';
+        for (const seg of line.segs) {
+            if (!seg.tag) svg += textLine({ segs: [seg] }, cx, top, lh, 'start', pal);
+            else {
+                const col = seg.tag === 'plain' ? null : pal.bullet(seg.tag);
+                svg += `<rect x="${r2(cx + 3.5)}" y="${r2(top + lh / 2 - 10.5)}" width="${r2(seg.w - 7)}" height="21" rx="10.5" fill="${col || 'none'}"${col ? ' fill-opacity=".16"' : ''}/>`
+                    + `<rect x="${r2(cx + 3.5)}" y="${r2(top + lh / 2 - 10.5)}" width="${r2(seg.w - 7)}" height="21" rx="10.5" fill="none" stroke="${col || pal.muted}"/>`;
+                svg += `<text x="${r2(cx + seg.w / 2)}" y="${r2(top + lh / 2 + 13 * 0.36)}" font-size="13" fill="${pal.text}" text-anchor="middle" xml:space="preserve">${esc(seg.t)}</text>`;
+            }
+            cx += seg.w;
+        }
+        return svg;
+    }
+
     /** One line of text as a <text> element. anchor: 'start' | 'middle'. */
     function textLine(line, x, top, lh, anchor, pal) {
         if (!line.segs.length) return '';
+        if (line.segs.some(s => s.tag)) return pillLine(line, x, top, lh, anchor, pal);
         const base = line.segs[0].st;
         const size = Math.max(...line.segs.map(s => s.st.size));
         const y = top + lh / 2 + size * 0.36;
@@ -317,9 +366,11 @@
             if (n.type === 'text') {
                 const text = S.str(n.text);
                 if (!text.trim()) return '';
-                note(text); '•☐☑.|0123456789 '.split('').forEach(c => chars.add(c));
-                const simple = S.isSimpleText(text) || S.centredShape(shape);
-                const blocks = mdBlocks(text);
+                note(text); '•☐☑….|0123456789 '.split('').forEach(c => chars.add(c));
+                const simple = S.centredText(n, shape);
+                const titled = S.isTitled(n, shape);
+                const centre = simple || titled;
+                const blocks = mdBlocks(text, titled);
                 // Lay out every block first so the whole stack can be centred for simple cards.
                 const laid = blocks.map(b => {
                     if (b.hr) return { b, lines: [], h: b.lh };
@@ -341,14 +392,16 @@
                         // List items in a centred card are centred as a block (like the flex column on screen).
                         const blockW = Math.max(0, ...lines.map(l => l.w));
                         const listX = simple ? x0 + Math.max(0, (w - blockW - b.indent) / 2) : x0;
-                        const lx = b.marker || !simple ? listX + b.indent : x0 + w / 2;
-                        if (b.marker) {
+                        const lx = b.marker || !centre ? listX + b.indent : x0 + w / 2;
+                        if (b.marker && b.marker.dot) {
+                            parts.push(`<circle cx="${r2(lx - 11.5)}" cy="${r2(y + b.lh / 2)}" r="4.5" fill="${pal.bullet(b.marker.dot)}"/>`);
+                        } else if (b.marker) {
                             const m = b.marker;
                             const mst = { w: 400, i: false, fam: 'body', size: 16, color: b.quote ? 'muted' : 'text' };
                             const mx = m.num ? lx - 6 : lx - 15;
                             parts.push(`<text x="${r2(mx)}" y="${r2(y + b.lh / 2 + 16 * 0.36)}" font-size="${m.num ? 16 : 20}" fill="${colorOf(mst.color, pal)}"${m.num ? ' text-anchor="end"' : ''}>${esc(m.t)}</text>`);
                         }
-                        lines.forEach((ln, i) => parts.push(textLine(ln, lx, y + i * b.lh, b.lh, b.marker || !simple ? 'start' : 'middle', pal)));
+                        lines.forEach((ln, i) => parts.push(textLine(ln, lx, y + i * b.lh, b.lh, b.marker || !centre ? 'start' : 'middle', pal)));
                     }
                     y += bh;
                     if (b.quoteEnd && quoteTop) {
@@ -525,7 +578,7 @@
         const paint = S.resolvedPaint(null, EXPORT_THEMES[opts.theme] || null);
         const pal = {
             text: paint.v('--text-primary'), muted: paint.v('--text-secondary'), accent: paint.v('--accent-primary'),
-            border: paint.v('--border-color'), pre: paint.v('--bg-primary'),
+            border: paint.v('--border-color'), pre: paint.v('--bg-primary'), bullet: (key) => paint.color(key, '--text-primary'),
         };
         const chars = new Set();
         usedFaces.clear();

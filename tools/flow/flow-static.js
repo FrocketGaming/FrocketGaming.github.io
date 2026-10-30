@@ -1078,6 +1078,176 @@
         return s === 'doing' || s === 'done' ? s : '';
     }
 
+    // Coloured bullets: a list item starting with one of these emoji draws a dot in that preset's
+    // colour. The emoji is the data, so the text stays plain markdown that reads fine in other apps.
+    const BULLETS = [['1', '\u{1F534}'], ['2', '\u{1F7E0}'], ['3', '\u{1F7E1}'], ['4', '\u{1F7E2}'], ['5', '\u{1F535}'], ['6', '\u{1F7E3}']];
+    const BULLET_EMOJI = BULLETS.map(b => b[1]).join('|');
+    const BULLET_ITEM = new RegExp(`<li>(\\s*<p>)?\\s*(${BULLET_EMOJI})\\uFE0F?\\s*`, 'gu');
+    const BULLET_PREFIX = new RegExp(`^\\s*[-*+]\\s+(?:${BULLET_EMOJI})\\uFE0F?\\s*`, 'u');
+    const BULLET_START = new RegExp(`^(?:${BULLET_EMOJI})\\uFE0F?\\s*`, 'u');
+    const LIST_LINE = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/;
+
+    function colorBullets(html) {
+        return html.replace(BULLET_ITEM, (m, p, emoji) => `<li class="md-dot md-dot-${BULLETS.find(b => b[1] === emoji)[0]}">${p || ''}`);
+    }
+
+    function bulletLine(line, key) {
+        const dot = key ? BULLETS.find(b => b[0] === key)[1] + ' ' : '';
+        const m = LIST_LINE.exec(line);
+        if (!m) return `${/^\s*/.exec(line)[0]}- ${dot}${line.trim()}`;
+        if (/^\[[ xX]\]\s/.test(m[2])) return line;   // a task keeps its checkbox
+        return `${m[1]}- ${dot}${m[2].replace(BULLET_START, '')}`;
+    }
+
+    /**
+     * Give lines the bullet colour `key` ('' = a plain bullet). With opts.from/to (textarea offsets)
+     * only those lines change, and a blank line counts for a bare caret; without them, the card's list
+     * items change, or all its text lines when it has no list yet. Headings and code never change,
+     * and opts.keepSub also leaves the line under a heading (a titled card's subtitle) alone.
+     * Returns { text, from, to }: the offsets span the changed lines (from = to at a caret's line end).
+     */
+    function setBullets(text, key, opts) {
+        const o = opts || {};
+        const whole = o.from == null;
+        const lines = str(text).split(/\r?\n/);
+        const anyList = lines.some(l => LIST_LINE.test(l));
+        const out = [];
+        let pos = 0, newPos = 0, fence = false, from = -1, to = -1, afterHead = false;
+        for (const line of lines) {
+            const start = pos, end = pos + line.length;
+            pos = end + 1;
+            const head = /^\s{0,3}#{1,6}\s/.test(line);
+            const isFence = /^\s*```/.test(line);
+            if (isFence) fence = !fence;
+            let want = false;
+            if (!isFence && !fence && !head) {
+                if (whole) want = !!line.trim() && (anyList ? LIST_LINE.test(line) : !(o.keepSub && afterHead) && !isTagOnly(line));
+                else want = start <= o.to && end >= o.from && !(o.to === start && o.from < o.to) && (!!line.trim() || o.from === o.to);
+            }
+            afterHead = head;
+            const next = want ? bulletLine(line, key) : line;
+            if (want) { if (from < 0) from = newPos; to = newPos + next.length; }
+            out.push(next);
+            newPos += next.length + 1;
+        }
+        return { text: out.join('\n'), from: to >= 0 && !whole && o.from === o.to ? to : from, to };
+    }
+
+    // Tag pills: ((text)) or ((<bullet emoji> text)) in card text; the text may hold one level of
+    // parentheses, "((OTA link (new)))". Not after a word or ")", so f((x)) stays text.
+    const TAG = new RegExp(`(?<![\\w)])\\(\\(\\s*(?:(${BULLET_EMOJI})\\uFE0F?\\s*)?((?:[^()\\n]|\\([^()\\n]*\\))+?)\\s*\\)\\)(?!\\))`, 'gu');
+    const tagKey = (emoji) => (emoji ? BULLETS.find(b => b[1] === emoji)[0] : '');
+    const isTagOnly = (line) => !!line.trim() && line.search(TAG) >= 0 && !line.replace(TAG, '').trim();
+
+    /** Rendered HTML (before sanitizing, in an inert template): pills as span.md-tag, never inside code or links. */
+    function tagPills(html) {
+        if (!html.includes('((')) return html;
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html;
+        const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT);
+        const texts = [];
+        while (walker.nextNode()) texts.push(walker.currentNode);
+        for (const node of texts) {
+            if (node.parentElement && node.parentElement.closest('code, pre, a, .md-wikilink')) continue;
+            const parts = document.createDocumentFragment();
+            let at = 0;
+            for (const m of node.nodeValue.matchAll(TAG)) {
+                if (!m[2].trim()) continue;
+                parts.append(node.nodeValue.slice(at, m.index));
+                const pill = document.createElement('span');
+                pill.className = 'md-tag' + (m[1] ? ' md-tag-' + tagKey(m[1]) : '');
+                pill.textContent = m[2];
+                parts.append(pill);
+                at = m.index + m[0].length;
+            }
+            if (!at) continue;
+            parts.append(node.nodeValue.slice(at));
+            node.replaceWith(parts);
+        }
+        return tpl.innerHTML;
+    }
+
+    /** Card text with the pill syntax taken out, for plain labels (Mermaid). */
+    const plainTags = (text) => str(text).replace(TAG, (m, e, t) => t);
+
+    const tagMarkup = (t, key) => `((${key ? BULLETS.find(b => b[0] === key)[1] + ' ' : ''}${t}))`;
+
+    /** Whole-text rule of setTags: pills change; plain text lines become pills, side by side when next to each other. */
+    function tagLines(text, key, keepSub) {
+        const out = [];
+        let fence = false, afterHead = false;
+        for (const line of text.split('\n')) {
+            const head = /^\s{0,3}#{1,6}\s/.test(line), isFence = /^\s*```/.test(line);
+            if (isFence) fence = !fence;
+            const sub = keepSub && afterHead;
+            afterHead = head;
+            if (isFence || fence || head || !line.trim()) { out.push(line); continue; }
+            if (key == null) {
+                if (isTagOnly(line)) out.push(...[...line.matchAll(TAG)].map(m => m[2]));
+                else out.push(line.replace(TAG, (m, e, t) => t));
+                continue;
+            }
+            let next = line;
+            if (line.search(TAG) >= 0) next = line.replace(TAG, (m, e, t) => tagMarkup(t, key));
+            else if (!LIST_LINE.test(line) && !sub) next = tagMarkup(line.trim(), key);
+            if (isTagOnly(next) && out.length && isTagOnly(out[out.length - 1])) out[out.length - 1] += ' ' + next;
+            else out.push(next);
+        }
+        return out.join('\n');
+    }
+
+    /**
+     * Make pills in colour `key` ('' = neutral; null removes them). Without opts.from/to, the whole
+     * card (opts.keepSub leaves a titled card's subtitle alone). With them: pills under the caret or
+     * selection change; else selected text on one line is wrapped, several selected lines follow the
+     * whole-card rule, and a bare caret gets an empty pill to type in. Returns { text, from, to }
+     * (from < 0: nothing changed).
+     */
+    function setTags(text, key, opts) {
+        const o = opts || {};
+        const src = str(text).replace(/\r\n/g, '\n');
+        if (o.from == null) return { text: tagLines(src, key, o.keepSub), from: 0, to: 0 };
+        let out = '', at = 0, end = -1;
+        for (const m of src.matchAll(TAG)) {
+            if (m.index > o.to || m.index + m[0].length < o.from || !m[2].trim()) continue;
+            out += src.slice(at, m.index) + (key == null ? m[2] : tagMarkup(m[2], key));
+            at = m.index + m[0].length;
+            end = out.length;
+        }
+        if (end >= 0) return { text: out + src.slice(at), from: end, to: end };
+        if (key == null) return { text: src, from: -1, to: -1 };
+        const before = src.slice(0, o.from), picked = src.slice(o.from, o.to), after = src.slice(o.to);
+        if (!picked.trim()) {
+            const open = before + tagMarkup('', key).slice(0, -2);
+            return { text: open + '))' + after, from: open.length, to: open.length };
+        }
+        if (picked.includes('\n')) {
+            const start = before.lastIndexOf('\n') + 1;
+            const stop = after.indexOf('\n') < 0 ? src.length : o.to + after.indexOf('\n');
+            const changed = tagLines(src.slice(start, stop), key);
+            return { text: src.slice(0, start) + changed + src.slice(stop), from: start, to: start + changed.length };
+        }
+        const pill = tagMarkup(picked.trim(), key);
+        return { text: before + pill + after, from: before.length + pill.length, to: before.length + pill.length };
+    }
+
+    /** A card whose headings and text are centred, with its bullets left (not on shapes that centre anyway). */
+    function isTitled(n, shape) {
+        return !!(n && n.type === 'text' && n.styleAttributes && n.styleAttributes.titled === true && !centredShape(shape || nodeShape(n)));
+    }
+
+    /** Text centred both ways: short labels, centring shapes, and titled cards with no list under the title. */
+    function centredText(n, shape) {
+        return isSimpleText(n.text) || centredShape(shape) || (isTitled(n, shape) && !/^\s*(?:[-*+]|\d+[.)])\s/m.test(str(n.text)));
+    }
+
+    const CARD_DASH = { dashed: '6 4', dotted: '1.5 3.5' };
+    /** A card or plain group's border line, 'dashed' or 'dotted' ('' = solid; lanes and pools are always solid). */
+    function borderOf(n) {
+        const b = n && n.styleAttributes && typeof n.styleAttributes === 'object' ? n.styleAttributes.border : '';
+        return (b === 'dashed' || b === 'dotted') && !laneOf(n) && !poolOf(n) ? b : '';
+    }
+
     /**
      * Centre of the status badge in world px: on the top edge near the right, clear of the
      * corner resize handle (circles and diamonds: on the outline, up and to the right).
@@ -1733,7 +1903,7 @@
         } catch (e) {
             html = miniMarkdown(key);
         }
-        html = sanitize(taskBoxes(String(html)));
+        html = sanitize(tagPills(colorBullets(taskBoxes(String(html)))));
         if (mdCache.size > 500) mdCache.clear();
         mdCache.set(key, html);
         return html;
@@ -1840,6 +2010,12 @@
         if (!opts.cardContent) out.push(`<style>
 .fc{box-sizing:border-box;width:100%;height:100%;overflow:hidden;padding:10px 14px;color:${textCol};font-family:${font};font-size:16px;line-height:1.4;word-wrap:break-word;display:flex;flex-direction:column;text-align:left}
 .fc.simple{align-items:center;justify-content:center;text-align:center}
+.fc.titled{text-align:center}.fc.titled ul,.fc.titled ol,.fc.titled pre{text-align:left}
+.fc.titled h1 + p,.fc.titled h2 + p,.fc.titled h3 + p,.fc.titled h4 + p,.fc.titled h5 + p,.fc.titled h6 + p{color:${mutedCol};font-size:14px}.fc.titled :is(h1,h2,h3,h4,h5,h6) + p:not(:last-child){margin-bottom:10px}
+.fc li.md-dot{list-style:none;position:relative}.fc li.md-dot::before{content:'';position:absolute;left:-16px;top:calc(.7em - 4.5px);width:9px;height:9px;border-radius:50%}
+${BULLETS.map(([k]) => `.fc li.md-dot-${k}::before{background:${paint.color(k, '--text-primary')}}.fc .md-tag-${k}{--tag:${paint.color(k, '--text-primary')}}`).join('')}
+.fc.simple > *{max-width:100%}
+.fc .md-tag{display:inline-block;box-sizing:border-box;max-width:calc(100% - 6px);margin:2px 3px;padding:1px 8px;font-size:13px;line-height:18px;color:${textCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;border-radius:999px;border:1px solid var(--tag,${mutedCol});background:color-mix(in srgb,var(--tag,transparent) 16%,transparent)}
 .fc > :first-child{margin-top:0}.fc > :last-child{margin-bottom:0}
 .fc p{margin:0 0 6px;text-align:inherit;font-size:inherit;color:inherit}.fc ul,.fc ol{margin:0 0 6px;padding-left:20px}.fc li{margin:1px 0}
 .fc h1,.fc h2,.fc h3,.fc h4,.fc h5,.fc h6{font-family:${headFont};margin:0 0 6px;line-height:1.25}
@@ -1881,7 +2057,8 @@
                 out.push(`<text x="${f(n.x + 12)}" y="${f(n.y + POOL_HEAD / 2 + 6)}" xml:space="preserve" style="fill:${colored ? col : textCol};font-size:17px;font-weight:700">${escapeHtml(label)}</text>`);
                 continue;
             }
-            out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" rx="10" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${colored ? col : border};stroke-width:1.5"/>`);
+            const groupLine = borderOf(n);
+            out.push(`<rect x="${f(n.x)}" y="${f(n.y)}" width="${f(n.width)}" height="${f(n.height)}" rx="10" style="fill:${paint.mix(col, colored ? 10 : 5, '--bg-primary')};stroke:${colored ? col : border};stroke-width:1.5${groupLine ? ';stroke-dasharray:' + CARD_DASH[groupLine] : ''}"/>`);
             if (n.label) {
                 // Same as the editor: one line, ellipsised to the group's width.
                 const label = fitLabel(n.label, `600 16px ${font}`, n.width - 8);
@@ -1918,7 +2095,8 @@
             const img = imageCard(n);
             const shape = img ? 'rect' : nodeShape(n);
             const fill = col ? paint.mix(col, 16, '--bg-secondary') : cardBg;
-            out.push(shapeSvg(n, shape, fill, col || border, 1.5));
+            const line = borderOf(n);
+            out.push(shapeSvg(n, shape, fill, col || border, 1.5, line ? ';stroke-dasharray:' + CARD_DASH[line] : ''));
             const status = statusOf(n);
             const badge = () => {
                 if (!status) return;
@@ -1935,7 +2113,7 @@
             if (n.type === 'text') {
                 const html = opts.markdown === false ? escapeHtml(n.text || '') : renderMarkdown(n.text || '');
                 const cp = cardPadding(n, shape).map(v => v + 'px').join(' ');
-                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${isSimpleText(n.text) || centredShape(shape) ? ' simple' : ''}" style="padding:${cp}">${toXhtml(html)}</div>`;
+                inner = `<div xmlns="http://www.w3.org/1999/xhtml" class="fc${centredText(n, shape) ? ' simple' : ''}${isTitled(n, shape) ? ' titled' : ''}" style="padding:${cp}">${toXhtml(html)}</div>`;
             } else if (n.type === 'link') {
                 let host = n.url || '';
                 try { host = new URL(n.url).hostname; } catch (e) { /* keep raw */ }
@@ -2019,6 +2197,7 @@
         SHAPES, shapeDims, shapeInner, shapePath, centredShape,
         STEP_TYPES, stepType, stepColor, cardPadding, stepChip,
         STATUSES, STATUS_R, statusOf, statusPoint, statusSvg,
+        BULLETS, BULLET_PREFIX, setBullets, setTags, plainTags, isTitled, centredText, borderOf,
         varPaint, resolvedPaint, safeColor, hasColor, fitLabel,
         renderMarkdown, isSimpleText, imageCard, escapeHtml, sanitize, safeHref, str,
         toSVG, isCollapsed, isLocked, collapsedScene, COLLAPSED_H, laneOf, LANE_HEAD, poolOf, POOL_HEAD,

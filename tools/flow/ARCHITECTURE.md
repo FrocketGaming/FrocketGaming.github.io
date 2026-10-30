@@ -18,7 +18,7 @@ module exposes `init()`; `flow-app.js` calls them in that order and then loads a
 | `flow-find.js` | P8 | Find on canvas (Ctrl+F): bar, match list over card text / link / file / group titles / step labels / connector labels, ring overlay layer. Never writes to the document. |
 | `flow-minimap.js` | P9 | Minimap canvas (M or footer button, pref `minimap`): whole-chart overview, click or drag to move the view. |
 | `flow-mermaid.js` | P10 | Mermaid export: `build()` turns the chart into a `flowchart` (shapes, subgraphs from group containment, arrow/dash/label/colour, TD or LR from how connectors run); copy or `.mmd` download from the menu. Export only. |
-| `flow-panel.js` | P2/P3 UI | Left properties panel: colour (6 presets + custom), card shape, arrowheads, route, line style, arrange, actions. Stateless: reads the selection, writes through `core.change`. |
+| `flow-panel.js` | P2/P3 UI | Left properties panel: colour (6 presets + custom), card shape, bullets, title layout, border, arrowheads, route, line style, arrange, actions. Stateless: reads the selection, writes through `core.change`. |
 | `flow-io.js` | P5 | `parse` / `serialize`, import (file picker, drag-drop, paste of files), export `.canvas`; the Export image dialog (PNG/SVG, scale 1x/2x/3x, whole chart by default or "Only selected", background on/off), copy PNG; the portable SVG text layout. |
 | `flow-images.js` | P11 | Image cards: add from the file picker (toolbar, I / 7), drop or paste; downscale + re-encode (WebP, longest side 1200px, data URL under ~400k chars); replace the picture (Enter / double-click / panel). |
 | `flow-view.js` | P12 | View only (menu, eye pill, Alt+V, `?view=1`): `core.viewOnly`, body class `flow-view-only` hides the editing chrome; pointer handler 3000 turns every press into a pan; `core.change` refuses (emits `blocked`, toasted); interact keys, paste/cut, drop, double-click and hover dots check the flag. |
@@ -76,6 +76,17 @@ export untouched. Rules for every module:
   `FlowStatic.STATUSES`, `statusOf`). Drawn as a badge straddling the top edge near the right
   (`statusPoint`, shape-aware) with the same markup in the editor and exports (`statusSvg`). Set from
   the panel's Status section or `Flow.arrange.setStatus` / `cycleStatus` (Alt+S). Mermaid prefixes ✓ / ◐.
+- Coloured bullets: a list item starting with 🔴 🟠 🟡 🟢 🔵 🟣 (`FlowStatic.BULLETS`, presets 1-6) draws a dot in
+  that colour instead of the marker (`li.md-dot-<key>`, added before sanitizing; a `<circle>` in the export). The
+  emoji is the data, so the card stays plain markdown. Set from the panel (`FlowStatic.setBullets`: the caret's
+  lines while typing, else the whole card) or Alt+1-6 / Alt+0 in the editor; Enter continues the colour.
+- Tag pills: `((text))` or `((🟢 text))` in card text (same emoji as bullets, one level of parentheses allowed, not
+  after a word or `)`, never in code or links) draw as `span.md-tag[.md-tag-<key>]`, made in an inert template before
+  sanitizing. Export: `pillLine` in `flow-io.js`, one unbroken box per pill. Set from the panel (`FlowStatic.setTags`:
+  the selection or caret while typing, else the whole card; side-by-side lines merge). Mermaid shows the bare text.
+- `styleAttributes.titled = true` (text cards, not centring shapes): headings and text centred, the paragraph
+  right under a heading a muted subtitle, lists left (`isTitled`). With no list the stack also centres vertically (`centredText`).
+- `styleAttributes.border` = `dashed|dotted` (cards and plain groups, `borderOf`; export the same).
 - `core.exportDoc()` is what gets written: it omits a top-level `nodes`/`edges` array
   that was absent in the source and is still empty. It copies keys with `Object.defineProperty`
   so a literal `"__proto__"` key survives the round-trip.

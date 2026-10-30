@@ -22,7 +22,7 @@
 
     /** Card markdown as plain label lines: markers stripped, blank lines dropped. */
     function plainLines(md) {
-        return S.str(md).split(/\r?\n/)
+        return S.plainTags(md).split(/\r?\n/)
             .map(l => l
                 .replace(/^\s{0,3}#{1,6}\s+/, '')
                 .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/, '')

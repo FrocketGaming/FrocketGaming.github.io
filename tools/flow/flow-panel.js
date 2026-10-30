@@ -22,6 +22,8 @@
         el.addEventListener('input', onInput);
         el.addEventListener('change', onChange);
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
+        // Bullets and pills apply to the text being typed, so the card's editor keeps focus.
+        el.addEventListener('mousedown', (e) => { if (e.target.closest('[data-action="bullet"], [data-action="tag"]') && Flow.nodes.isEditing()) e.preventDefault(); });
         // Custom step label: Enter applies it (via change), Escape leaves the field unchanged.
         el.addEventListener('keydown', (e) => {
             if (e.target.dataset.action !== 'step-custom') return;
@@ -104,6 +106,25 @@
             html += `<input type="text" class="flow-step-input" data-action="step-custom" maxlength="32" placeholder="Custom…" aria-label="Custom step label" value="${step && !preset ? S.escapeHtml(step) : ''}">`;
             if (step) html += btn('step', '', '<i class="fa-solid fa-xmark"></i>', 'Remove the step label', false);
             html += '</div></div>';
+
+            // Bullets: the caret's line(s) while typing, otherwise the whole card.
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Bullets</div><div class="flow-swatches">';
+            html += '<button type="button" class="flow-bullet" data-action="bullet" data-value="" title="Plain bullet (Alt+0 while typing)" aria-label="Plain bullet"><span></span></button>';
+            for (const [k] of S.BULLETS) {
+                html += `<button type="button" class="flow-bullet" style="--dot:var(${S.PRESETS[k]})" data-action="bullet" data-value="${k}" title="${S.PRESET_NAMES[k]} bullet (Alt+${k} while typing)" aria-label="${S.PRESET_NAMES[k]} bullet"><span></span></button>`;
+            }
+            html += '</div><div class="flow-panel-label flow-panel-label-next">Tag pills</div><div class="flow-swatches">';
+            html += '<button type="button" class="flow-tag-btn" data-action="tag" data-value="" title="Neutral pill: the selected text while typing, otherwise each line of the card" aria-label="Neutral pill"></button>';
+            for (const [k] of S.BULLETS) {
+                html += `<button type="button" class="flow-tag-btn" style="--dot:var(${S.PRESETS[k]})" data-action="tag" data-value="${k}" title="${S.PRESET_NAMES[k]} pill: the selected text while typing, otherwise each line of the card" aria-label="${S.PRESET_NAMES[k]} pill"></button>`;
+            }
+            html += '<button type="button" class="flow-bullet" data-action="tag" data-value="x" title="Remove pills, keeping the text" aria-label="Remove pills"><i class="fa-solid fa-xmark"></i></button>';
+            html += '</div>';
+            if (textCards.every(n => !S.centredShape(S.nodeShape(n)))) {
+                const titled = textCards.every(n => S.isTitled(n));
+                html += `<div class="flow-panel-section-row"><button type="button" class="flow-pwide${titled ? ' is-active' : ''}" data-action="titled" aria-pressed="${titled}" title="First line is a centred title, the line under it a muted subtitle, bullets stay left"><i class="fa-solid fa-heading"></i> Title and subtitle</button></div>`;
+            }
+            html += '</div>';
         }
 
         // Status: where the step is in the process (no flag = not started).
@@ -114,6 +135,17 @@
             html += btn('status', '', '<i class="fa-regular fa-circle"></i>', 'No status (Alt+S cycles)', status === '');
             html += btn('status', 'doing', '<i class="fa-solid fa-circle-half-stroke flow-status-doing"></i>', 'In progress (Alt+S cycles)', status === 'doing');
             html += btn('status', 'done', '<i class="fa-solid fa-circle-check flow-status-done"></i>', 'Done (Alt+S cycles)', status === 'done');
+            html += '</div></div>';
+        }
+
+        // Border line (cards and plain groups)
+        const lined = nodes.filter(n => !S.laneOf(n) && !S.poolOf(n));
+        if (lined.length) {
+            const line = common(lined, S.borderOf);
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Border</div><div class="flow-pbtns">';
+            html += btn('border', '', '<span class="flow-ico-line"></span>', 'Solid border', line === '');
+            html += btn('border', 'dashed', '<span class="flow-ico-line is-dashed"></span>', 'Dashed border', line === 'dashed');
+            html += btn('border', 'dotted', '<span class="flow-ico-line is-dotted"></span>', 'Dotted border', line === 'dotted');
             html += '</div></div>';
         }
 
@@ -253,6 +285,48 @@
         obj.styleAttributes[key] = value;
     }
 
+    /** After a text change: a card whose text no longer fits grows to the next grid line (inside the transaction). */
+    function growToFit(n) {
+        core.invalidate('nodes', [n.id]);
+        core.renderNow();
+        const el = Flow.nodes.elementFor(n.id);
+        const c = el && el.querySelector('.flow-node-content');
+        if (!c) return;
+        c.style.justifyContent = 'flex-start';   // centred overflow would hide above the top
+        const need = c.scrollHeight;
+        c.style.justifyContent = '';
+        if (need > (Number(n.height) || 0) + 1) n.height = Math.ceil(need / 20) * 20;
+    }
+
+    const plainTextCards = () => core.selectedNodes().filter(n => n.type === 'text' && !S.imageCard(n));
+
+    function applyBullets(key) {
+        if (Flow.nodes.setEditorBullets(key)) return;
+        core.change('Bullets', () => plainTextCards().forEach(n => {
+            n.text = S.setBullets(n.text, key, { keepSub: S.isTitled(n) }).text;
+            growToFit(n);
+        }));
+    }
+
+    function applyTags(key) {
+        if (Flow.nodes.setEditorTags(key)) return;
+        core.change(key == null ? 'Remove pills' : 'Tag pills', () => plainTextCards().forEach(n => {
+            n.text = S.setTags(n.text, key, { keepSub: S.isTitled(n) }).text;
+            growToFit(n);
+        }));
+    }
+
+    /** Turn the title layout on or off. Turning it on makes a plain first line the title heading. */
+    function toggleTitled() {
+        const cards = plainTextCards();
+        const on = !cards.every(n => S.isTitled(n));
+        core.change(on ? 'Title and subtitle' : 'Remove title layout', () => cards.forEach(n => {
+            setStyleAttr(n, 'titled', on || null);
+            if (on && S.str(n.text).trim() && !/^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|>|```|\|)/.test(S.str(n.text))) n.text = '### ' + S.str(n.text).replace(/^\s+/, '');
+            growToFit(n);
+        }));
+    }
+
     /**
      * Set (or with '' remove) the step label on the selected text cards, in one undo step.
      * A card whose text would no longer fit under the chip grows to the next grid line.
@@ -298,6 +372,12 @@
                 applyStep(v && v === cur ? '' : v);   // clicking the active preset removes it
                 break;
             }
+            case 'bullet': applyBullets(v); break;
+            case 'tag': applyTags(v === 'x' ? null : v); break;
+            case 'titled': toggleTitled(); break;
+            case 'border':
+                core.change('Border', () => nodes.filter(n => !S.laneOf(n) && !S.poolOf(n)).forEach(n => setStyleAttr(n, 'border', v || null)));
+                break;
             case 'shape':
                 core.change('Shape', () => nodes.forEach(n => {
                     const was = S.nodeShape(n);
