@@ -269,3 +269,9 @@
 .pb .note-form { display: grid; gap: 8px; padding: 4px 0 6px 26px; }
 .pb .note-form textarea.field { min-height: 72px; }
 .pb .note-btns { display: flex; gap: 8px; }
+
+/* artifact rows with a remove button */
+.pb .art .x, .pb .art .btn.small { flex: none; }
+.pb .art { align-items: center; flex-wrap: nowrap; gap: 8px; }
+.pb .art > span, .pb .art > label { flex: none; max-width: 40%; overflow-wrap: anywhere; }
+.pb .art > code, .pb .art > a { margin-left: auto; text-align: right; min-width: 0; }

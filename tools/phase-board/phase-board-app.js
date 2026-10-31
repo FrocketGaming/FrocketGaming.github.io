@@ -28,6 +28,7 @@ class PhaseBoardApp {
         this.editingGate = null;
         this.confirmCrit = null;
         this.editingNote = null;
+        this.confirmArt = null;
     }
 
     init() {
@@ -230,7 +231,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote, confirmArt: this.confirmArt });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -346,6 +347,23 @@ class PhaseBoardApp {
             console.error('Phase Board:', err);
             this.saveFailed('exit criteria change');
             return false;
+        });
+    }
+
+    // Artifacts are optional and per project: the names live in the project's own copy of its flow.
+    async addArtifact(pid, name) {
+        await this.patchFlow(flow => {
+            const phase = flow.phases.find(x => x.id === pid);
+            if (phase && phase.artifacts.indexOf(name) < 0) phase.artifacts.push(name);
+        });
+    }
+
+    async removeArtifact(pid, name) {
+        this.confirmArt = null;
+        this.render();
+        await this.patchFlow(flow => {
+            const phase = flow.phases.find(x => x.id === pid);
+            if (phase) phase.artifacts = phase.artifacts.filter(a => a !== name);
         });
     }
 
@@ -629,6 +647,7 @@ class PhaseBoardApp {
     }
 
     openProject(id) {
+        this.confirmArt = null;
         this.editingNote = null;
         this.editingGate = null;
         this.confirmCrit = null;
@@ -697,6 +716,13 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const artDel = e.target.closest('[data-art-del]');
+            if (artDel) {
+                const pid = artDel.getAttribute('data-phase'), name = artDel.getAttribute('data-art-del');
+                if (this.confirmArt === pid + ':' + name) return this.removeArtifact(pid, name);
+                this.confirmArt = pid + ':' + name;
+                return this.render();
+            }
             const noteEdit = e.target.closest('[data-note-edit]');
             if (noteEdit) return this.startNoteEdit(noteEdit.getAttribute('data-phase'), noteEdit.getAttribute('data-note-edit'));
             if (e.target.closest('[data-note-cancel]')) return this.cancelNoteEdit();
@@ -730,7 +756,7 @@ class PhaseBoardApp {
             const act = e.target.closest('[data-act]');
             if (act) {
                 const k = act.getAttribute('data-act');
-                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.editingGate = null; this.confirmCrit = null; this.editingNote = null; this.render(); window.scrollTo(0, 0); }
+                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.editingGate = null; this.confirmCrit = null; this.editingNote = null; this.confirmArt = null; this.render(); window.scrollTo(0, 0); }
                 else if (k === 'new') { this.showNew = true; this.render(); document.getElementById('npName')?.focus(); }
                 else if (k === 'del') { this.confirmDelete = true; this.render(); }
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
@@ -784,6 +810,9 @@ class PhaseBoardApp {
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
                 if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim());
+            } else if (f.hasAttribute('data-art-add')) {
+                const input = f.querySelector('input'), name = input.value.trim();
+                if (name) { this.addArtifact(f.getAttribute('data-art-add'), name); input.value = ''; }
             } else if (f.hasAttribute('data-note-form')) {
                 this.saveNote(f.getAttribute('data-phase'), f.getAttribute('data-note-form'), f.querySelector('textarea').value);
             } else if (f.hasAttribute('data-crit-form')) {

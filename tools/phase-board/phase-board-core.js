@@ -177,9 +177,13 @@ function phaseHTML(def, st, idx, o) {
     const ref = (st.artifacts && st.artifacts[a]) || '';
     if (edit) {
       const rid = idp + 'ref-' + def.id + '-' + ai;
-      return '<li class="art"><label for="' + rid + '">' + esc(a) + '</label><input class="field mini-ref" id="' + rid + '" data-art-ref="' + esc(a) + '" data-phase="' + def.id + '" value="' + esc(ref) + '" placeholder="Link or file path" autocomplete="off"></li>';
+      const confirm = o.confirmArt === def.id + ':' + a;
+      return '<li class="art"><label for="' + rid + '">' + esc(a) + '</label><input class="field mini-ref" id="' + rid + '" data-art-ref="' + esc(a) + '" data-phase="' + def.id + '" value="' + esc(ref) + '" placeholder="Link or file path (optional)" autocomplete="off">' +
+        (confirm
+          ? '<button type="button" class="btn small danger" data-art-del="' + esc(a) + '" data-phase="' + def.id + '">Remove artifact</button>'
+          : '<button type="button" class="x" data-art-del="' + esc(a) + '" data-phase="' + def.id + '" aria-label="Remove artifact: ' + esc(a) + '">&times;</button>') + '</li>';
     }
-    if (!ref) return '<li class="art missing"><span>' + esc(a) + '</span><em>not attached</em></li>';
+    if (!ref) return '';
     const shown = /^https?:\/\//i.test(ref) ? '<a href="' + esc(ref) + '" target="_blank" rel="noopener noreferrer">' + esc(ref) + '</a>' : '<code>' + esc(ref) + '</code>';
     return '<li class="art"><span>' + esc(a) + '</span>' + shown + '</li>';
   }).join('');
@@ -209,7 +213,8 @@ function phaseHTML(def, st, idx, o) {
     '<span class="ph-count">' + n + '/' + def.gates.length + ' criteria</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul>' + critAdd + '</div>' + actBlock + '</div>' +
-    '<div class="stack"><div><p class="sub">Artifacts</p>' + (edit && def.artifacts.length ? '<p class="msg" style="margin-bottom:8px">What this phase should produce. Add a link or file path once it exists.</p>' : '') + '<ul class="arts">' + arts + '</ul></div>' +
+    '<div class="stack"><div><p class="sub">Artifacts</p>' + (edit ? '<p class="msg" style="margin-bottom:8px">Optional. Documents or outputs this phase produced, linked from here. Add or remove them to suit the project.</p>' : '') + (arts ? '<ul class="arts">' + arts + '</ul>' : '<p class="note">' + (edit ? 'No artifacts for this phase.' : 'None attached.') + '</p>') +
+      (edit ? '<form class="dec-add" data-art-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newart-' + def.id + '" autocomplete="off" placeholder="Add an artifact, e.g. Test report" aria-label="New artifact for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '') + '</div>' +
     '<div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
@@ -346,6 +351,7 @@ function reconcileProject(proj, flow) {
     if (raw && Array.isArray(raw.gates) && oldDef) oldDef.gates.forEach((g, i) => { carried[g.id] = !!raw.gates[i]; });
     else if (raw && raw.gates && !Array.isArray(raw.gates)) carried = raw.gates;
     st.gates = gatesMap(def, carried);
+    st.artifacts = Object.fromEntries(Object.keys(st.artifacts || {}).filter(k => def.artifacts.indexOf(k) >= 0).map(k => [k, st.artifacts[k]]));
     // Keep notes only for criteria that still exist.
     st.evidence = Object.fromEntries(def.gates.filter(g => st.evidence && st.evidence[g.id]).map(g => [g.id, st.evidence[g.id]]));
     if (st.status === 'done' && !def.gates.every(g => st.gates[g.id])) {
