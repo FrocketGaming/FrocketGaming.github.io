@@ -894,9 +894,9 @@ class PhaseBoardApp {
             if (t.matches('[data-review-year]')) { this.reviewYear = t.value; this.render(); }
             else if (t.matches('input[data-gate]')) this.toggleGate(t.getAttribute('data-phase'), +t.getAttribute('data-gate'), t.checked);
             else if (t.matches('[data-ov]')) this.saveOverview(t.getAttribute('data-ov'), t.value);
-            else if (t.matches('input[data-risk]')) {
-                const k = t.getAttribute('data-risk'), v = t.checked;
-                this.patchProject(p => ({ risks: (p.risks || []).map(r => r.id === k ? Object.assign({}, r, { resolved: v }) : r) }), 'risk');
+            else if (t.matches('[data-risk-status]')) {
+                const k = t.getAttribute('data-risk-status'), s = t.value;
+                this.patchProject(p => ({ risks: (p.risks || []).map(r => r.id === k ? Object.assign({}, r, { status: s, resolved: s === 'mitigated' }) : r) }), 'risk status');
             } else if (t.matches('[data-outvalue]')) {
                 const v = t.value.trim();
                 this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { value: v }) }), 'value added text');
@@ -940,7 +940,7 @@ class PhaseBoardApp {
                 if (text) { this.addCriterion(f.getAttribute('data-crit-add'), text); input.value = ''; }
             } else if (f.hasAttribute('data-addrisk')) {
                 const text = document.getElementById('risk-text').value.trim(), kind = document.getElementById('risk-kind').value;
-                if (text) this.patchProject(p => ({ risks: (p.risks || []).concat([{ id: this.newId(), kind: kind, text: text, resolved: false }]) }), 'risk');
+                if (text) this.patchProject(p => ({ risks: (p.risks || []).concat([Object.assign({ id: this.newId(), kind: kind, text: text, resolved: false }, kind === 'risk' ? { status: 'open' } : {})]) }), 'risk');
             } else if (f.hasAttribute('data-addamount')) {
                 const name = document.getElementById('am-name').value.trim();
                 const amount = parseAmount(document.getElementById('am-amount').value);

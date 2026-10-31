@@ -257,27 +257,41 @@ function summaryHTML(p, edit) {
   if (edit) return '<div class="ov wide"><label class="sub" for="ov-summary">Goal in one line</label><input class="field" id="ov-summary" data-ov="summary" maxlength="160" autocomplete="off" placeholder="What does this project deliver, and for whom?" value="' + esc(p.summary || '') + '"></div>';
   return p.summary ? '<p class="lead">' + esc(p.summary) + '</p>' : '';
 }
+/* A risk moves through four states. Entries saved before statuses existed read as open, or mitigated when ticked. */
+const RISK_STATUS = { open: 'Open', monitoring: 'Monitoring', mitigated: 'Mitigated', occurred: 'Occurred' };
+function riskStatus(r) { return RISK_STATUS[r.status] ? r.status : (r.resolved ? 'mitigated' : 'open'); }
 function risksHTML(p, edit) {
   const rs = Array.isArray(p.risks) ? p.risks : [];
-  const open = rs.filter(r => !r.resolved).length;
+  const n = { open: 0, monitoring: 0, occurred: 0, constraints: 0 };
+  rs.forEach(r => {
+    if (r.kind === 'constraint') { if (!r.resolved) n.constraints++; return; }
+    const s = riskStatus(r);
+    if (n[s] !== undefined) n[s]++;
+  });
+  const parts = [n.open + ' open'];
+  if (n.monitoring) parts.push(n.monitoring + ' monitoring');
+  if (n.occurred) parts.push(n.occurred + ' occurred');
+  if (n.constraints) parts.push(n.constraints + (n.constraints === 1 ? ' constraint' : ' constraints'));
   const rows = rs.map(r => {
-    const id = 'rk-' + r.id;
     const del = edit ? '<button type="button" class="x" data-del-risk="' + esc(r.id) + '" aria-label="Remove: ' + esc(r.text) + '">&times;</button>' : '';
     if (r.kind === 'constraint') {
-      // A constraint is a standing limit, not a task, so it has no checkbox; it can be lifted if it stops applying.
+      // A constraint is a standing limit, not a task, so it has no status; it can be lifted if it stops applying.
       const lifted = !!r.resolved;
       return '<li class="risk' + (lifted ? ' is-lifted' : '') + '"><span class="kind k-constraint">Constraint</span><span class="rtext">' + esc(r.text) + '</span>' +
         (lifted ? '<span class="lifted-tag">Lifted</span>' : '') +
         (edit ? '<button type="button" class="btn small" data-lift-risk="' + esc(r.id) + '" aria-label="' + (lifted ? 'Restore' : 'Lift') + ' constraint: ' + esc(r.text) + '">' + (lifted ? 'Restore' : 'Lift') + '</button>' : '') + del + '</li>';
     }
-    return '<li class="risk' + (r.resolved ? ' is-done' : '') + '"><span class="kind k-' + esc(r.kind) + '">' + (r.kind === 'constraint' ? 'Constraint' : 'Risk') + '</span>' +
-      '<label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-risk="' + esc(r.id) + '"' + (r.resolved ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(r.text) + '</span></label>' +
-      del + '</li>';
+    const s = riskStatus(r);
+    const control = edit
+      ? '<select class="field mini-sel rs-sel rs-' + s + '" data-risk-status="' + esc(r.id) + '" aria-label="Status of risk: ' + esc(r.text) + '">' + Object.keys(RISK_STATUS).map(k => '<option value="' + k + '"' + (k === s ? ' selected' : '') + '>' + RISK_STATUS[k] + '</option>').join('') + '</select>'
+      : '<span class="rstatus rs-' + s + '">' + RISK_STATUS[s] + '</span>';
+    return '<li class="risk' + (s === 'mitigated' ? ' is-lifted' : '') + '"><span class="kind k-risk">Risk</span><span class="rtext">' + esc(r.text) + '</span>' + control + del + '</li>';
   }).join('');
-  return '<section class="panel-block" aria-label="Risks and constraints"><p class="sub">Risks and constraints' + (rs.length ? ' <span class="cnt">' + open + ' open</span>' : '') + '</p>' +
+  return '<section class="panel-block" aria-label="Risks and constraints"><p class="sub">Risks and constraints' + (rs.length ? ' <span class="cnt">' + parts.join(' / ') + '</span>' : '') + '</p>' +
     (rows ? '<ul class="gates">' + rows + '</ul>' : '<p class="note">None recorded.</p>') +
-    (edit ? '<p class="msg">Tick a risk once it is mitigated. Lift a constraint if it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
+    (edit ? '<p class="msg">Set a risk\'s status as things change. Monitoring is for a risk you cannot solve or cannot predict. Lift a constraint if it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
 }
+
 /* people who can own an action item: owner, lead, stakeholders, SMEs */
 function peopleOf(p) {
   const all = [p.owner, p.lead].concat(listOf(p.stakeholders), listOf(p.smes)).filter(Boolean);

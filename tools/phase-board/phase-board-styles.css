@@ -330,3 +330,8 @@
 .pb .dg-pick b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .pb .dg-pick span { font-size: 12px; color: var(--fg-2); }
 @media (prefers-reduced-motion: reduce) { .pb .dg > summary::before { transition: none; } }
+
+/* risk status: open, monitoring, mitigated, occurred */
+.pb .rs-open { --s: var(--warn); } .pb .rs-monitoring { --s: var(--prog); } .pb .rs-mitigated { --s: var(--good); } .pb .rs-occurred { --s: var(--crit); }
+.pb .rstatus { flex: none; display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--s); background: color-mix(in srgb, var(--s) 14%, var(--surface)); white-space: nowrap; }
+.pb select.rs-sel { flex: none; color: var(--s); border-color: color-mix(in srgb, var(--s) 55%, var(--line)); font-weight: 600; }
