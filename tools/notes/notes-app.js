@@ -80,15 +80,11 @@ class NotesApp {
         this.auth = firebase.auth();
         this.db = firebase.firestore();
 
-        try {
-            this.db.settings({
-                cache: firebase.firestore.persistentLocalCache({
-                    tabManager: firebase.firestore.persistentMultipleTabManager(),
-                }),
-            });
-        } catch (err) {
-            console.warn('Notes: Persistence error:', err);
-        }
+        // The compat SDK (10.12.2) has no persistentMultipleTabManager, so use the compat call.
+        // It must run before any read or write; if it fails Notes simply works online-only.
+        this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+            console.warn('Notes: Offline cache unavailable:', err.code || err);
+        });
 
         try {
             this.storage = firebase.storage();

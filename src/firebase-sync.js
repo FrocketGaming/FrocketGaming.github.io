@@ -54,16 +54,12 @@ class FirebaseSync {
             this.auth = firebase.auth();
             this.db = firebase.firestore();
 
-            // Enable offline persistence (multi-tab aware)
-            try {
-                this.db.settings({
-                    cache: firebase.firestore.persistentLocalCache({
-                        tabManager: firebase.firestore.persistentMultipleTabManager(),
-                    }),
-                });
-            } catch (err) {
-                console.warn('FirebaseSync: Browser does not support persistence', err);
-            }
+            // Enable offline persistence (multi-tab aware). The compat SDK (10.12.2) has no
+            // persistentMultipleTabManager, so use the compat call. It must run before any read
+            // or write; if it fails the app simply works online-only.
+            this.db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+                console.warn('FirebaseSync: Offline cache unavailable', err.code || err);
+            });
 
             this.onAuthChange = callbacks.onAuthChange || null;
             this.onSyncStatus = callbacks.onSyncStatus || null;
