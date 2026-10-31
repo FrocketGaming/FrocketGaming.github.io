@@ -653,8 +653,10 @@ class PhaseBoardApp {
         const cs = getComputedStyle(document.documentElement);
         const vars = tokens.map(t => t + ':' + cs.getPropertyValue(t).trim()).join(';');
         try {
+            const tag = document.querySelector('script[src*="phase-board-core.js"]');
+            const ver = tag ? (tag.getAttribute('src').split('?')[1] || '') : '';
             const [css, core, viewer] = await Promise.all(['phase-board-styles.css', 'phase-board-core.js', 'phase-board-export.js'].map(f =>
-                fetch(f).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.text(); })));
+                fetch(f + (ver ? '?' + ver : ''), { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.text(); })));
             const data = JSON.stringify({ projects: this.projects, takenAt: today(), mode: opts.mode || 'board', year: opts.year || '' }).replace(/</g, '\\u003c');
             const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<title>' + (opts.mode === 'review' ? 'Phase Board year in review ' + opts.year : 'Phase Board snapshot ' + today()) + '</title>' +

@@ -1,6 +1,8 @@
 /* Viewer for an exported Phase Board snapshot. Read-only: it only renders, it never writes.
    Runs after phase-board-core.js has been inlined into the same file. */
 (function () {
+    const rootEl = document.getElementById('root');
+    try {
     const DATA = JSON.parse(document.getElementById('board-data').textContent);
     const root = document.getElementById('root');
     const ids = Object.keys(DATA.projects).sort((a, b) => (DATA.projects[b].updatedAt || 0) - (DATA.projects[a].updatedAt || 0));
@@ -35,7 +37,13 @@
             outcomesHTML(p, false);
     }
 
+    function showError(err) {
+        root.innerHTML = '<div class="empty" style="margin-top:40px"><h2>This snapshot could not be displayed</h2><p>' + String(err && err.message || err).replace(/[<>&]/g, '') + '</p><p>Export it again from the Phase Board.</p></div>';
+    }
     function render() {
+        try { draw(); } catch (err) { showError(err); }
+    }
+    function draw() {
         if (DATA.mode === 'review') {
             root.innerHTML = '<div class="pb-bar"><span class="eyebrow">Phase Board</span><span class="spacer"></span><span class="role">Read-only snapshot / ' + esc(DATA.takenAt) + '</span></div><div class="page">' + reviewHTML(reviewData(DATA.projects, DATA.year)) + '</div>';
             return;
@@ -55,4 +63,7 @@
         if (e.target.closest('[data-act="back"]')) { view = 'portfolio'; render(); window.scrollTo(0, 0); }
     });
     render();
+    } catch (err) {
+        if (rootEl) rootEl.innerHTML = '<p style="padding:24px">This snapshot could not be displayed: ' + String(err && err.message || err).replace(/[<>&]/g, '') + '</p>';
+    }
 })();
