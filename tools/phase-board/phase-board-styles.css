@@ -8,7 +8,9 @@
     --fg-2: var(--text-secondary);
     --fg-3: var(--text-secondary);
     --accent: var(--accent-primary);
-    --good: var(--accent-primary);
+    /* Done reads the same on every palette (see DESIGN.md, Known Exceptions), so this one role is not a theme token. */
+    --good: #4cc38a;
+    --good-ink: #8cdcb4; /* the same green, lighter, for small text on a green tint */
     --prog: var(--info-color);
     --warn: var(--warning-color);
     --crit: var(--error-color);
@@ -86,8 +88,8 @@
 .pb .chip[aria-pressed="true"] { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--bg-primary); }
 
 /* status */
-.pb .st-good { --s: var(--good); } .pb .st-prog { --s: var(--prog); } .pb .st-crit { --s: var(--crit); } .pb .st-warn { --s: var(--warn); } .pb .st-idle { --s: var(--idle); }
-.pb .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 6px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--s); background: color-mix(in srgb, var(--s) 14%, var(--surface)); white-space: nowrap; }
+.pb .st-good { --s: var(--good); --ink: var(--good-ink); } .pb .st-prog { --s: var(--prog); } .pb .st-crit { --s: var(--crit); } .pb .st-warn { --s: var(--warn); } .pb .st-idle { --s: var(--idle); }
+.pb .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 6px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ink, var(--s)); background: color-mix(in srgb, var(--s) 14%, var(--surface)); white-space: nowrap; }
 .pb .ico { display: block; flex: none; color: var(--s); }
 
 /* portfolio */
@@ -285,7 +287,8 @@
 .pb .amount-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto auto; gap: 8px; margin-top: 10px; }
 .pb .amount-add select.field { width: auto; }
 @media (max-width: 640px) { .pb .amount-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pb .amount-add input:first-child { grid-column: 1 / -1; } }
-.pb .card.is-done { border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--line)); }
+.pb .card.is-done { border-color: color-mix(in srgb, var(--good) 60%, var(--line)); background: color-mix(in srgb, var(--good) 7%, var(--surface)); }
+.pb .card.is-done:hover { border-color: var(--good); box-shadow: 0 0 10px color-mix(in srgb, var(--good) 70%, transparent); }
 .pb .wins { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .pb .win { background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
 .pb .win b { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
@@ -332,9 +335,9 @@
 @media (prefers-reduced-motion: reduce) { .pb .dg > summary::before { transition: none; } }
 
 /* risk status: open, monitoring, mitigated, occurred */
-.pb .rs-open { --s: var(--warn); } .pb .rs-monitoring { --s: var(--prog); } .pb .rs-mitigated { --s: var(--good); } .pb .rs-occurred { --s: var(--crit); }
-.pb .rstatus { flex: none; display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--s); background: color-mix(in srgb, var(--s) 14%, var(--surface)); white-space: nowrap; }
-.pb select.rs-sel { flex: none; color: var(--s); border-color: color-mix(in srgb, var(--s) 55%, var(--line)); font-weight: 600; }
+.pb .rs-open { --s: var(--warn); } .pb .rs-monitoring { --s: var(--prog); } .pb .rs-mitigated { --s: var(--good); --ink: var(--good-ink); } .pb .rs-occurred { --s: var(--crit); }
+.pb .rstatus { flex: none; display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ink, var(--s)); background: color-mix(in srgb, var(--s) 14%, var(--surface)); white-space: nowrap; }
+.pb select.rs-sel { flex: none; color: var(--ink, var(--s)); border-color: color-mix(in srgb, var(--s) 55%, var(--line)); font-weight: 600; }
 
 /* bulleted text in Value added and Lessons learned */
 .pb .rt { display: grid; gap: 6px; color: var(--fg-2); }
