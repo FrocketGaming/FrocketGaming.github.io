@@ -41,6 +41,9 @@ Compare two blocks of text and see exactly what changed — additions, deletions
 ### Notes
 A Markdown note-taking tool with Firebase sync. Linked from the main nav and the landing page (`/tools/notes/`). Supports tags, pinning, archiving, split editor/preview, zen mode, a command palette, wiki-links, bulk actions, version history, image paste, Mermaid diagrams, and keyboard shortcuts. Requires Google sign-in.
 
+### Phase Board
+Track projects from discovery to deploy. Each project moves through Discovery, Research, Build, Test and Deploy, with exit criteria per phase, action items with an assignee and due date, decisions, risks and constraints, and a closing outcomes section for metrics and value added. A portfolio view shows every project at a glance. "Export HTML" saves a read-only snapshot you can send to stakeholders. Requires Google sign-in.
+
 ---
 
 ## Newsletter
@@ -123,6 +126,7 @@ Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.
     ├── csv-viewer/
     ├── image-editor/
     ├── notes/
+    ├── phase-board/
     ├── regex-tester/
     ├── snippets/
     ├── text-diff/

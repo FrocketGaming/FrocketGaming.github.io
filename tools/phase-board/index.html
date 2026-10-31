@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Phase Board - QoL Tools</title>
+        <script>
+            // Pre-paint: apply the visitor's theme before first render so there is no flash of the
+            // wrong palette. Mirrors ThemeManager.getSavedTheme() in src/theme-manager.js.
+            (function() {
+                var theme = document.documentElement.getAttribute('data-default-theme') || 'canary';
+                try {
+                    theme = localStorage.getItem('qol-tools-theme') || theme;
+                } catch (e) {}
+                if (theme === 'dunder') { theme = 'canary'; }
+                if (theme && theme !== 'default') {
+                    document.documentElement.setAttribute('data-theme', theme);
+                }
+            })();
+        </script>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+        <link rel="stylesheet" href="../../src/stylesheet.css" />
+        <link rel="stylesheet" href="../../src/firebase-sync.css" />
+        <link rel="stylesheet" href="phase-board-styles.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    </head>
+
+    <body class="raleway-fnt">
+        <div class="header">
+            <div class="header-icon-row">
+                <a class="newsletter-link" href="../../newsletter/index.html" title="Snake Charmer Newsletter"><i class="fa-solid fa-newspaper"></i><span class="nav-pill-label newsletter-link-label"><span class="nav-pill-label-text">Newsletter</span></span></a>
+                <nav class="nav-pill-rail">
+                    <a class="nav-pill-item" href="../txt-formatter/index.html"><i class="fa-solid fa-font"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Txt Formatter</span></span></a>
+                    <a class="nav-pill-item" href="../snippets/index.html"><i class="fa-solid fa-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Snippets</span></span></a>
+                    <a class="nav-pill-item" href="../todo/index.html"><i class="fa-solid fa-list-check"></i><span class="nav-pill-label"><span class="nav-pill-label-text">To-Do List</span></span></a>
+                    <a class="nav-pill-item" href="../notes/index.html"><i class="fa-solid fa-note-sticky"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Notes</span></span></a>
+                    <a class="nav-pill-item" href="../flow/index.html"><i class="fa-solid fa-diagram-project"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Flow</span></span></a>
+                    <a class="nav-pill-item" href="../csv-viewer/index.html"><i class="fa-solid fa-table"></i><span class="nav-pill-label"><span class="nav-pill-label-text">CSV Viewer</span></span></a>
+                    <a class="nav-pill-item" href="../regex-tester/index.html"><i class="fa-solid fa-asterisk"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Regex Tester</span></span></a>
+                    <a class="nav-pill-item" href="../image-editor/index.html"><i class="fa-solid fa-image"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Image Editor</span></span></a>
+                    <a class="nav-pill-item" href="../cron-builder/index.html"><i class="fa-solid fa-calendar-days"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Cron Builder</span></span></a>
+                    <a class="nav-pill-item" href="../timezone/index.html"><i class="fa-solid fa-globe"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Timezone</span></span></a>
+                    <a class="nav-pill-item" href="../text-diff/index.html"><i class="fa-solid fa-code-compare"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Text Diff</span></span></a>
+                    <a class="nav-pill-item" href="../json-viewer/index.html"><i class="fa-solid fa-file-code"></i><span class="nav-pill-label"><span class="nav-pill-label-text">JSON Viewer</span></span></a><a class="nav-pill-item" href="../palette-extractor/index.html"><i class="fa-solid fa-palette"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Palette Extractor</span></span></a><a class="nav-pill-item active" href="../phase-board/index.html"><i class="fa-solid fa-bars-progress"></i><span class="nav-pill-label"><span class="nav-pill-label-text">Phase Board</span></span></a>
+                </nav>
+                <div class="theme-selector">
+                    <label for="themeSelect">Theme:</label>
+                    <select id="themeSelect" class="theme-select"></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sign-in screen (unauthenticated) -->
+        <div id="pbSignIn" class="pb-signin" style="display:none">
+            <div class="pb-signin-card">
+                <i class="fa-solid fa-bars-progress pb-signin-icon"></i>
+                <h1>Phase Board</h1>
+                <p>Sign in with Google to track your projects from discovery to deploy, on every device.</p>
+                <p id="pbSignInError" class="pb-signin-error" role="alert" hidden></p>
+                <button id="pbSignInBtn" class="sign-in-btn">
+                    <i class="fa-brands fa-google"></i>
+                    <span>Sign in with Google</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main app (authenticated) -->
+        <main id="pbApp" class="pb" style="display:none">
+            <div class="pb-bar">
+                <button id="pbNewBtn" class="format-btn" style="margin-top:0"><i class="fa-solid fa-plus"></i> New project</button>
+                <button id="pbExportBtn" class="clear-bnt export-btn" style="margin-top:0" hidden title="Save a read-only HTML copy of every project"><i class="fa-solid fa-file-export"></i> Export HTML</button>
+                <span class="spacer"></span>
+                <div class="pb-user">
+                    <img id="pbAvatar" alt="" hidden />
+                    <span id="pbUserName"></span>
+                    <button id="pbSignOutBtn" title="Sign out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+            <div id="pbPage" class="page"></div>
+        </main>
+
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+        <script src="../../src/theme-manager.js"></script>
+        <script src="../../src/firebase-config.js"></script>
+        <script src="phase-board-core.js"></script>
+        <script src="phase-board-app.js"></script>
+    </body>
+</html>
