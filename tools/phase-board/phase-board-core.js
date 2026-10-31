@@ -223,7 +223,7 @@ function cardHTML(id, p, when) {
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
-    '<div><h2>' + esc(p.name) + '</h2>' + ([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).length ? '<p class="meta">' + esc([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ')) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div><h2>' + esc(p.name) + '</h2>' + cardMeta(p) + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
     '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
@@ -295,7 +295,7 @@ function risksHTML(p, edit) {
 /* people who can own an action item: owner, lead, stakeholders, SMEs */
 function peopleOf(p) {
   const all = [p.owner, p.lead].concat(listOf(p.stakeholders), listOf(p.smes)).filter(Boolean);
-  return all.filter((x, i) => all.indexOf(x) === i);
+  return all.filter((x, i) => all.findIndex(y => sameName(x, y)) === i);
 }
 function overdueActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done && a.due && a.due < today()).length, 0);
@@ -558,13 +558,12 @@ function outcomesHTML(p, edit) {
 /* A finished project's card leads with the value it delivered instead of progress it no longer needs to show. */
 function doneCardHTML(id, p, when) {
   const on = projectCompletedOn(p), n = projectCounts(p), tiles = headlineMetrics(p, 3), o = p.outcomes || {};
-  const meta = [p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ');
   const wins = tiles.length
     ? '<div class="wins">' + tiles.map(m => '<div class="win"><b>' + esc(metricTileText(m)) + '</b><span>' + esc(m.name) + '</span></div>').join('') + '</div>'
     : (richItems(o.value).length ? '' : '<p class="msg">No value added recorded yet.</p>');
   const text = (label, t) => richItems(t).length ? '<div class="card-text"><p class="sub">' + label + '</p><div class="rt">' + bulletsHTML(t, 4) + '</div></div>' : '';
   return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div><h2>' + esc(p.name) + '</h2>' +
-    (meta ? '<p class="meta">' + esc(meta) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    cardMeta(p) + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
     '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
@@ -734,4 +733,23 @@ function portfolioBodyHTML(shown, filter, o) {
   const section = '<details class="sec" id="pbDoneSec"' + (open ? ' open' : '') + '><summary><h2 class="sec-h">Completed</h2><span class="sec-count">' + done.length + '</span></summary>' + grid(done) + '</details>';
   if (!doing.length) return section;
   return '<div class="sec-head"><h2 class="sec-h">In progress</h2><span class="sec-count">' + doing.length + '</span></div>' + grid(doing) + section;
+}
+
+/* Who is accountable and who does the work, on the project card. The hover text explains each role. */
+function cardMeta(p) {
+  const o = String(p.owner || '').trim(), l = String(p.lead || '').trim(), parts = [];
+  const role = (label, name, tip) => '<span title="' + esc(tip) + '"><b>' + esc(label) + '</b>' + esc(name) + '</span>';
+  if (o && l && sameName(o, l)) parts.push(role('Owner and lead', o, 'Accountable for the outcome and runs the work day to day'));
+  else {
+    if (o) parts.push(role('Owner', o, 'Accountable for the outcome'));
+    if (l) parts.push(role('Lead', l, 'Runs the work day to day'));
+  }
+  if (isArchived(p)) parts.push('<span>Archived</span>');
+  return parts.length ? '<p class="meta people">' + parts.join('') + '</p>' : '';
+}
+
+/* Two names are the same person if they differ only by capitals or extra spaces. */
+function sameName(a, b) {
+  const norm = s => String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toLowerCase();
+  return norm(a) !== '' && norm(a) === norm(b);
 }
