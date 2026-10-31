@@ -81,7 +81,7 @@ function gatesMap(def, raw) {
 
 /* ---- per-project state ---- */
 function blankPhase(def) {
-  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [], evidence: {} };
+  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [], evidence: {}, completedAt: '' };
 }
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
@@ -117,8 +117,8 @@ function applyGate(def, st, i, checked) {
   st.gates = gates;
   const vals = def.gates.map(g => gates[g.id]);
   const all = vals.every(Boolean), any = vals.some(Boolean);
-  if (st.status === 'done' && !all) { st.status = 'reopened'; st.reopened = (st.reopened || 0) + 1; return 'Reopened: a criterion was unchecked'; }
-  if (all && st.status !== 'done') { st.status = 'done'; return 'All exit criteria met'; }
+  if (st.status === 'done' && !all) { st.status = 'reopened'; st.completedAt = ''; st.reopened = (st.reopened || 0) + 1; return 'Reopened: a criterion was unchecked'; }
+  if (all && st.status !== 'done') { st.status = 'done'; st.completedAt = today(); return 'All exit criteria met'; }
   if (st.status === 'not_started' && any) { st.status = 'in_progress'; return 'Started'; }
   return null;
 }
@@ -201,7 +201,7 @@ function phaseHTML(def, st, idx, o) {
       ? '<input class="field mini-date" type="date" data-act-due="' + esc(a.id) + '" data-phase="' + def.id + '" value="' + esc(a.due || '') + '" aria-label="Due date for ' + esc(a.text) + '">'
       : (a.due ? '<span class="due mono' + (late ? ' late' : '') + '">Due ' + esc(a.due) + '</span>' : '');
     return '<li class="act' + (a.done ? ' is-done' : '') + '"><div class="act-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-action="' + esc(a.id) + '" data-phase="' + def.id + '"' + (a.done ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(a.text) + '</span></label>' +
-      '<div class="act-meta">' + who + due + (late && edit ? '<span class="late">Overdue</span>' : '') + '</div></div>' +
+      '<div class="act-meta">' + who + due + (a.done && a.doneAt ? '<span class="due mono">Done ' + esc(a.doneAt) + '</span>' : '') + (late && edit ? '<span class="late">Overdue</span>' : '') + '</div></div>' +
       (edit ? '<button type="button" class="x" data-del-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Remove action: ' + esc(a.text) + '">&times;</button>' : '') + '</li>';
   }).join('');
   const actBlock = '<div><p class="sub">Action items' + (acts.length ? ' <span class="cnt">' + openN + ' open</span>' : '') + '</p>' +
@@ -209,7 +209,7 @@ function phaseHTML(def, st, idx, o) {
     (edit ? '<form class="act-add" data-addaction="' + def.id + '"><input class="field" id="' + idp + 'newact-' + def.id + '" autocomplete="off" placeholder="Add an action item" aria-label="New action item for ' + esc(def.name) + '"><select class="field" id="' + idp + 'newwho-' + def.id + '" aria-label="Assignee"><option value="">Unassigned</option>' + people.map(x => '<option>' + esc(x) + '</option>').join('') + '</select><input class="field" type="date" id="' + idp + 'newdue-' + def.id + '" aria-label="Due date"><button class="btn" type="submit">Add</button></form>' : '') + '</div>';
   const loop = st.reopened > 0 ? '<p class="loop">' + icon('reopened', 16) + 'Reopened ' + st.reopened + (st.reopened === 1 ? ' time' : ' times') + '</p>' : '';
   return '<article class="phase ' + meta.cls + '" id="' + idp + 'ph-' + def.id + '">' +
-    '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) +
+    '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) + (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
     '<span class="ph-count">' + n + '/' + def.gates.length + ' criteria</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul>' + critAdd + '</div>' + actBlock + '</div>' +
@@ -236,10 +236,10 @@ function cardHTML(id, p, when) {
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
-    '<div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + '</p>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (isArchived(p) ? ' / archived' : '') + '</p>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? 'Now in <b>' + esc(cur.short) + '</b> ' + pill(curSt.status) : pill('done') + ' All phases complete') + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    '<div class="foot"><span>' + s.g + ' of ' + s.gt + ' criteria' + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(when || '') + '</span></div></button>';
+    '<div class="foot"><span>' + s.g + ' of ' + s.gt + ' criteria' + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -254,7 +254,8 @@ function overviewHTML(p, edit) {
       '<div class="ov"><label class="sub" for="ov-lead">Lead</label><input class="field" id="ov-lead" data-ov="lead" autocomplete="off" placeholder="One name" value="' + esc(p.lead || '') + '"><p class="msg">Runs the work day to day</p></div>' +
       '<div class="ov"><label class="sub" for="ov-stakeholders">Stakeholders</label><input class="field" id="ov-stakeholders" data-ov="stakeholders" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.stakeholders).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-smes">SMEs</label><input class="field" id="ov-smes" data-ov="smes" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.smes).join(', ')) + '"></div>' +
-      '<div class="ov"><label class="sub" for="ov-target">Target date</label><input class="field" type="date" id="ov-target" data-ov="target" value="' + esc(p.target || '') + '">' + (late ? '<p class="late">Past the target date</p>' : '') + '</div></div></section>';
+      '<div class="ov"><label class="sub" for="ov-target">Target date</label><input class="field" type="date" id="ov-target" data-ov="target" value="' + esc(p.target || '') + '">' + (late ? '<p class="late">Past the target date</p>' : '') + '</div>' +
+      (needsCompletedOn(p) ? '<div class="ov"><label class="sub" for="ov-completedOn">Completed on</label><input class="field" type="date" id="ov-completedOn" data-ov="completedOn" value="' + esc(p.completedOn || '') + '"><p class="msg">Not recorded for this project. Set it so it appears in your year in review.</p></div>' : '') + '</div></section>';
   }
   return '<section class="overview" aria-label="Project overview">' + summaryHTML(p, false) + '<div class="ov-grid">' +
     '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p><p class="msg">Accountable for the outcome</p></div>' +
@@ -356,10 +357,12 @@ function reconcileProject(proj, flow) {
     st.evidence = Object.fromEntries(def.gates.filter(g => st.evidence && st.evidence[g.id]).map(g => [g.id, st.evidence[g.id]]));
     if (st.status === 'done' && !def.gates.every(g => st.gates[g.id])) {
       st.status = 'reopened';
+      st.completedAt = '';
       st.reopened = (st.reopened || 0) + 1;
       st.log = (st.log || []).concat([{ at: today(), text: 'Reopened: exit criteria changed' }]).slice(-12);
     } else if (st.status !== 'done' && def.gates.length && def.gates.every(g => st.gates[g.id])) {
       st.status = 'done';
+      st.completedAt = today();
       st.log = (st.log || []).concat([{ at: today(), text: 'All exit criteria met' }]).slice(-12);
     }
     phases[def.id] = st;
@@ -395,4 +398,101 @@ function flowEditorHTML(ed) {
     '<div class="fe-top"><label for="fe-name">Flow name<input class="field" id="fe-name" data-fe="name" value="' + esc(d.name) + '" autocomplete="off"></label></div>' +
     phases +
     '<div class="ph-row"><button type="button" class="btn" data-fe-act="p-add">Add phase</button><span style="margin-left:auto;display:flex;gap:8px"><button type="button" class="btn" data-fe-act="cancel">Cancel</button><button type="button" class="btn primary" data-fe-act="save">' + (ed.projectMode ? 'Save phases' : 'Save flow') + '</button></span></div>';
+}
+
+/* ---- completion dates, archive, year in review ---- */
+function isComplete(p) { return !summarize(tplOf(p), p).current; }
+function isArchived(p) { return !!p.archived; }
+/* A project finished when its last phase did. Phases stamp their own date; older projects have none, so
+   fall back to a date the user entered by hand. */
+function projectCompletedOn(p) {
+  if (!isComplete(p)) return '';
+  const dates = tplOf(p).phases.map(d => phaseState(p, d).completedAt || '');
+  return dates.every(Boolean) ? dates.slice().sort().pop() : (p.completedOn || '');
+}
+function needsCompletedOn(p) {
+  return isComplete(p) && tplOf(p).phases.some(d => !phaseState(p, d).completedAt);
+}
+/* list: [{id, p}]. Archived projects only appear under the 'archived' filter. */
+function filterProjects(list, filter) {
+  return list.filter(i => {
+    if (filter === 'archived') return isArchived(i.p);
+    if (isArchived(i.p)) return false;
+    const s = summarize(tplOf(i.p), i.p);
+    return filter === 'all' || (filter === 'attention' && s.attention) || (filter === 'done' && !s.current);
+  });
+}
+function filterCounts(list) {
+  return { all: filterProjects(list, 'all').length, attention: filterProjects(list, 'attention').length, done: filterProjects(list, 'done').length, archived: filterProjects(list, 'archived').length };
+}
+function filterChipsHTML(list, filter) {
+  const c = filterCounts(list);
+  const chips = [['all', 'All', c.all], ['attention', 'Needs attention', c.attention], ['done', 'Complete', c.done]];
+  if (c.archived || filter === 'archived') chips.push(['archived', 'Archived', c.archived]);
+  return chips.map(x => '<button class="chip" type="button" data-filter="' + x[0] + '" aria-pressed="' + (filter === x[0]) + '">' + x[1] + ' ' + x[2] + '</button>').join('');
+}
+
+/* Everything a year in review needs, from {id: project}. */
+function reviewData(projects, year) {
+  const y = String(year), inYear = d => !!d && String(d).slice(0, 4) === y;
+  const out = { year: y, completed: [], undated: [], wins: [], actions: [], decisions: [] };
+  Object.keys(projects).forEach(id => {
+    const p = projects[id], tpl = tplOf(p), complete = isComplete(p), on = projectCompletedOn(p);
+    const doneThisYear = complete && inYear(on);
+    if (doneThisYear) out.completed.push({ id: id, p: p, on: on });
+    else if (complete && !on) out.undated.push({ id: id, p: p });
+    tpl.phases.forEach(d => {
+      const st = phaseState(p, d);
+      if (st.status === 'done' && inYear(st.completedAt) && !doneThisYear) out.wins.push({ project: p.name, phase: d.name, on: st.completedAt });
+      (st.actions || []).forEach(a => { if (a.done && inYear(a.doneAt)) out.actions.push({ project: p.name, phase: d.short || d.name, text: a.text, who: a.assignee || '', on: a.doneAt }); });
+      (st.decisions || []).forEach(x => { if (inYear(x.at)) out.decisions.push({ project: p.name, phase: d.short || d.name, at: x.at, text: x.text }); });
+    });
+  });
+  const newest = (a, b) => (a < b ? 1 : a > b ? -1 : 0);
+  out.completed.sort((a, b) => newest(a.on, b.on));
+  out.wins.sort((a, b) => newest(a.on, b.on));
+  out.actions.sort((a, b) => newest(a.on, b.on));
+  out.decisions.sort((a, b) => newest(a.at, b.at));
+  return out;
+}
+/* Years with something to look back on, newest first; the current year is always offered. */
+function reviewYears(projects) {
+  const set = {};
+  const add = d => { if (d && /^\d{4}/.test(String(d))) set[String(d).slice(0, 4)] = true; };
+  set[String(new Date().getFullYear())] = true;
+  Object.keys(projects).forEach(id => {
+    const p = projects[id];
+    add(p.started); add(projectCompletedOn(p));
+    tplOf(p).phases.forEach(d => {
+      const st = phaseState(p, d);
+      add(st.completedAt);
+      (st.actions || []).forEach(a => add(a.doneAt));
+      (st.decisions || []).forEach(x => add(x.at));
+    });
+  });
+  return Object.keys(set).sort().reverse();
+}
+function reviewHTML(d) {
+  const metricRows = p => ((p.outcomes || {}).metrics || []).map(m => '<li class="metric"><span class="m-name">' + esc(m.name) + '</span><span class="m-val"><small>Before</small>' + esc(m.before || '-') + '</span><span class="m-val strong"><small>After</small>' + esc(m.after || '-') + '</span></li>').join('');
+  const metricsN = d.completed.reduce((n, c) => n + ((c.p.outcomes || {}).metrics || []).length, 0);
+  const stat = (n, label) => '<div class="rv-stat"><b>' + n + '</b><span>' + label + '</span></div>';
+  const mine = (list, name) => list.filter(x => x.project === name);
+  const proj = c => {
+    const p = c.p, o = p.outcomes || {}, rows = metricRows(p);
+    const decs = d.decisions.filter(x => x.project === p.name), acts = mine(d.actions, p.name);
+    return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc(tplOf(p).name) +
+      (p.owner ? ' / owner ' + esc(p.owner) : '') + (p.lead ? ' / lead ' + esc(p.lead) : '') + ' / ' + esc(p.started || '?') + ' to ' + esc(c.on) + '</p></div>' +
+      (p.summary ? '<p class="lead" style="margin:0">' + esc(p.summary) + '</p>' : '') +
+      '<div><p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded.</p>') + '</div>' +
+      (rows ? '<div><p class="sub">Metrics</p><ul class="metrics">' + rows + '</ul></div>' : '') +
+      (decs.length ? '<details><summary>' + decs.length + (decs.length === 1 ? ' decision' : ' decisions') + '</summary><ul class="decs">' + decs.map(x => '<li><time>' + esc(x.at) + '</time><span><b>' + esc(x.phase) + ':</b> ' + esc(x.text) + '</span></li>').join('') + '</ul></details>' : '') +
+      (acts.length ? '<details><summary>' + acts.length + (acts.length === 1 ? ' action item completed' : ' action items completed') + '</summary><ul class="decs">' + acts.map(x => '<li><time>' + esc(x.on) + '</time><span>' + esc(x.text) + (x.who ? ' <span class="who">(' + esc(x.who) + ')</span>' : '') + '</span></li>').join('') + '</ul></details>' : '') + '</article>';
+  };
+  const wins = d.wins.length ? '<section class="panel-block"><p class="sub">Other progress this year</p><ul class="decs">' + d.wins.map(w => '<li><time>' + esc(w.on) + '</time><span>' + esc(w.project) + ': ' + esc(w.phase) + ' completed</span></li>').join('') + '</ul></section>' : '';
+  const undated = d.undated.length ? '<section class="panel-block"><p class="sub">Completed, date not recorded</p><p class="msg">Open each project and set its Completed on date so it appears in the right year.</p><ul class="chips">' + d.undated.map(u => '<li>' + esc(u.p.name) + '</li>').join('') + '</ul></section>' : '';
+  const allActs = d.actions.length ? '<details class="panel-block"><summary>All ' + d.actions.length + ' action items completed this year</summary><ul class="decs">' + d.actions.map(x => '<li><time>' + esc(x.on) + '</time><span>' + esc(x.project) + ' / ' + esc(x.phase) + ': ' + esc(x.text) + (x.who ? ' <span class="who">(' + esc(x.who) + ')</span>' : '') + '</span></li>').join('') + '</ul></details>' : '';
+  return '<div><p class="eyebrow">Year in review</p><h1>' + esc(d.year) + '</h1></div>' +
+    '<div class="rv-stats">' + stat(d.completed.length, d.completed.length === 1 ? 'project completed' : 'projects completed') + stat(d.actions.length, 'action items completed') + stat(d.decisions.length, 'decisions recorded') + stat(metricsN, 'metrics from completed projects') + '</div>' +
+    (d.completed.length ? '<div class="rv-list">' + d.completed.map(proj).join('') + '</div>' : '<div class="empty"><h2>No projects completed in ' + esc(d.year) + ' yet</h2><p>A project is completed when its last phase is done. Its completion date comes from that moment.</p></div>') +
+    wins + undated + allActs;
 }

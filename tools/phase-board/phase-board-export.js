@@ -12,27 +12,20 @@
 
     function portfolio() {
         const list = ids.map(id => ({ id: id, p: DATA.projects[id] }));
-        const att = list.filter(i => summarize(tplOf(i.p), i.p).attention).length;
-        const done = list.filter(i => !summarize(tplOf(i.p), i.p).current).length;
-        const shown = list.filter(i => {
-            const s = summarize(tplOf(i.p), i.p);
-            return filter === 'all' || (filter === 'attention' && s.attention) || (filter === 'done' && !s.current);
-        });
-        const chips = [['all', 'All', list.length], ['attention', 'Needs attention', att], ['done', 'Complete', done]].map(c =>
-            '<button class="chip" type="button" data-filter="' + c[0] + '" aria-pressed="' + (filter === c[0]) + '">' + c[1] + ' ' + c[2] + '</button>').join('');
-        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + chips + '</div></div>' +
+        const shown = filterProjects(list, filter);
+        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, filter) + '</div></div>' +
             (shown.length
                 ? '<div class="grid">' + shown.map(i => cardHTML(i.id, i.p, updated(i.p))).join('') + '</div>'
                 : '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>');
     }
 
-    function detail() {
+        function detail() {
         const p = DATA.projects[view], tpl = tplOf(p), s = summarize(tpl, p);
         if (!sel || !tpl.phases.some(d => d.id === sel)) sel = (s.current || tpl.phases[tpl.phases.length - 1]).id;
         const idx = tpl.phases.findIndex(d => d.id === sel), def = tpl.phases[idx];
         const prev = tpl.phases[idx - 1], next = tpl.phases[idx + 1];
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
+            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + (projectCompletedOn(p) ? ' / completed ' + esc(projectCompletedOn(p)) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
             overviewHTML(p, false) + risksHTML(p, false) +
             '<div class="railbox">' + railHTML(tpl, p, { button: true, sel: sel }) + barHTML(tpl, p) +
             '<p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met. Select a phase to read its details.</p></div>' +
@@ -43,6 +36,10 @@
     }
 
     function render() {
+        if (DATA.mode === 'review') {
+            root.innerHTML = '<div class="pb-bar"><span class="eyebrow">Phase Board</span><span class="spacer"></span><span class="role">Read-only snapshot / ' + esc(DATA.takenAt) + '</span></div><div class="page">' + reviewHTML(reviewData(DATA.projects, DATA.year)) + '</div>';
+            return;
+        }
         root.innerHTML = '<div class="pb-bar"><span class="eyebrow">Phase Board</span><span class="spacer"></span>' +
             '<span class="role">Read-only snapshot / ' + esc(DATA.takenAt) + '</span></div><div class="page">' +
             (view === 'portfolio' ? portfolio() : detail()) + '</div>';

@@ -29,6 +29,7 @@ class PhaseBoardApp {
         this.confirmCrit = null;
         this.editingNote = null;
         this.confirmArt = null;
+        this.reviewYear = null;
     }
 
     init() {
@@ -195,21 +196,23 @@ class PhaseBoardApp {
 
     portfolioHTML() {
         const list = this.sortedProjects();
-        const nAtt = list.filter(i => summarize(tplOf(i.p), i.p).attention).length;
-        const nDone = list.filter(i => !summarize(tplOf(i.p), i.p).current).length;
-        const shown = list.filter(i => {
-            const s = summarize(tplOf(i.p), i.p);
-            return this.filter === 'all' || (this.filter === 'attention' && s.attention) || (this.filter === 'done' && !s.current);
-        });
+        const shown = filterProjects(list, this.filter);
         let body;
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
         else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p><button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
         else body = '<div class="grid">' + shown.map(i => cardHTML(i.id, i.p, i.p.updatedAt ? ago(i.p.updatedAt) : '')).join('') + '</div>';
-        const chips = [['all', 'All', list.length], ['attention', 'Needs attention', nAtt], ['done', 'Complete', nDone]].map(c =>
-            '<button class="chip" type="button" data-filter="' + c[0] + '" aria-pressed="' + (this.filter === c[0]) + '">' + c[1] + ' ' + c[2] + '</button>').join('');
-        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + chips + '</div></div>' +
+        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
             this.statusLine() + (this.showNew ? this.newFormHTML() : '') + body;
+    }
+
+    reviewPageHTML() {
+        const years = reviewYears(this.projects), now = String(new Date().getFullYear());
+        if (!this.reviewYear || years.indexOf(this.reviewYear) < 0) this.reviewYear = years.indexOf(now) >= 0 ? now : years[0];
+        return '<button class="back" type="button" data-act="back">Back to projects</button>' +
+            '<div class="ph-row"><label for="pbYear" class="sub" style="margin:0">Year<select class="field" id="pbYear" data-review-year="1" style="margin-left:8px">' + years.map(y => '<option' + (y === this.reviewYear ? ' selected' : '') + '>' + esc(y) + '</option>').join('') + '</select></label>' +
+            '<button class="btn" type="button" data-act="export-review" style="margin-left:auto">Export this review</button></div>' +
+            this.statusLine() + reviewHTML(reviewData(this.projects, this.reviewYear));
     }
 
     openActionsHTML(p) {
@@ -236,12 +239,15 @@ class PhaseBoardApp {
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
             : '<button class="btn" type="button" data-act="del">Delete project</button>';
+        const archiveBtn = isArchived(p)
+            ? '<button class="btn" type="button" data-act="unarchive">Restore from archive</button>'
+            : '<button class="btn" type="button" data-act="archive">Archive project</button>';
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
+            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + (projectCompletedOn(p) ? ' / completed ' + esc(projectCompletedOn(p)) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
             this.statusLine() + overviewHTML(p, true) + risksHTML(p, true) +
             '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
             '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + this.openActionsHTML(p) + '</aside></div>' +
-            outcomesHTML(p, true) + '<div class="danger-zone">' + del + '</div>';
+            outcomesHTML(p, true) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
     }
 
     // Re-rendering replaces the DOM, so put focus (and the caret) back where the user was typing.
@@ -265,6 +271,7 @@ class PhaseBoardApp {
             page.innerHTML = this.view === 'portfolio' ? this.portfolioHTML()
                 : this.view === '__flows' ? this.flowsHTML()
                 : this.view === '__editor' ? this.editorHTML()
+                : this.view === '__review' ? this.reviewPageHTML()
                 : this.detailHTML();
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
         });
@@ -449,7 +456,7 @@ class PhaseBoardApp {
     }
 
     saveOverview(field, raw) {
-        const value = (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead') ? raw.trim() : parseList(raw);
+        const value = (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead' || field === 'completedOn') ? raw.trim() : parseList(raw);
         this.patchProject(() => ({ [field]: value }), 'project detail');
     }
 
@@ -646,6 +653,15 @@ class PhaseBoardApp {
         }
     }
 
+    // Archiving only hides a project from the main list; it stays in the year in review and can be restored.
+    setArchived(flag) {
+        this.patchProject(() => ({ archived: flag, archivedAt: flag ? today() : '' }), 'archive change');
+        this.view = 'portfolio';
+        this.filter = 'all';
+        this.render();
+        this.setNote(flag ? 'Project archived. Find it under the Archived filter.' : 'Project restored.', false);
+    }
+
     openProject(id) {
         this.confirmArt = null;
         this.editingNote = null;
@@ -662,7 +678,7 @@ class PhaseBoardApp {
 
     // Builds one self-contained, read-only HTML file: the data, the theme's current colors, and
     // the same renderers the live board uses.
-    async exportSnapshot() {
+    async exportSnapshot(opts = {}) {
         const tokens = ['--bg-primary', '--bg-secondary', '--bg-tertiary', '--bg-hover', '--accent-primary', '--accent-secondary',
             '--text-primary', '--text-secondary', '--border-color', '--shadow-color', '--error-color', '--warning-color', '--info-color'];
         const cs = getComputedStyle(document.documentElement);
@@ -670,9 +686,9 @@ class PhaseBoardApp {
         try {
             const [css, core, viewer] = await Promise.all(['phase-board-styles.css', 'phase-board-core.js', 'phase-board-export.js'].map(f =>
                 fetch(f).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.text(); })));
-            const data = JSON.stringify({ projects: this.projects, takenAt: today() }).replace(/</g, '\\u003c');
+            const data = JSON.stringify({ projects: this.projects, takenAt: today(), mode: opts.mode || 'board', year: opts.year || '' }).replace(/</g, '\\u003c');
             const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-                '<title>Phase Board snapshot ' + today() + '</title>' +
+                '<title>' + (opts.mode === 'review' ? 'Phase Board year in review ' + opts.year : 'Phase Board snapshot ' + today()) + '</title>' +
                 '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:wght@100..900&display=swap">' +
                 '<style>:root{color-scheme:dark;' + vars + '}' +
                 'body{margin:0;background:var(--bg-primary);color:var(--text-primary);font-family:"Raleway",sans-serif;display:flex;justify-content:center}' +
@@ -682,7 +698,7 @@ class PhaseBoardApp {
             const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'phase-board-' + today() + '.html';
+            a.download = opts.mode === 'review' ? 'phase-board-review-' + opts.year + '.html' : 'phase-board-' + today() + '.html';
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -700,6 +716,7 @@ class PhaseBoardApp {
         document.getElementById('pbSignInBtn')?.addEventListener('click', () => this.signIn());
         document.getElementById('pbSignOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('pbExportBtn')?.addEventListener('click', () => this.exportSnapshot());
+        document.getElementById('pbReviewBtn')?.addEventListener('click', () => { this.view = '__review'; this.editor = null; this.render(); window.scrollTo(0, 0); });
         document.getElementById('pbFlowsBtn')?.addEventListener('click', () => { this.view = '__flows'; this.editor = null; this.confirmFlowDelete = null; this.render(); window.scrollTo(0, 0); });
         document.getElementById('pbNewBtn')?.addEventListener('click', () => {
             this.view = 'portfolio';
@@ -762,6 +779,9 @@ class PhaseBoardApp {
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
                 else if (k === 'del-confirm') { this.deleteProject(); }
                 else if (k === 'edit-flow') { this.editProjectFlow(); }
+                else if (k === 'archive') { this.setArchived(true); }
+                else if (k === 'unarchive') { this.setArchived(false); }
+                else if (k === 'export-review') { this.exportSnapshot({ mode: 'review', year: this.reviewYear }); }
                 else if (k === 'flow-new') { this.newFlow(); }
                 else if (k === 'flow-edit') { this.editFlow(act.getAttribute('data-key')); }
                 else if (k === 'flow-dup') { this.duplicateFlow(act.getAttribute('data-key')); }
@@ -776,7 +796,8 @@ class PhaseBoardApp {
         page.addEventListener('change', e => {
             const t = e.target;
             if (!t.matches) return;
-            if (t.matches('input[data-gate]')) this.toggleGate(t.getAttribute('data-phase'), +t.getAttribute('data-gate'), t.checked);
+            if (t.matches('[data-review-year]')) { this.reviewYear = t.value; this.render(); }
+            else if (t.matches('input[data-gate]')) this.toggleGate(t.getAttribute('data-phase'), +t.getAttribute('data-gate'), t.checked);
             else if (t.matches('[data-ov]')) this.saveOverview(t.getAttribute('data-ov'), t.value);
             else if (t.matches('input[data-risk]')) {
                 const k = t.getAttribute('data-risk'), v = t.checked;
@@ -790,7 +811,7 @@ class PhaseBoardApp {
             else if (t.matches('[data-act-due]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-due'), { due: t.value });
             else if (t.matches('input[data-action]')) {
                 const aid = t.getAttribute('data-action'), done = t.checked;
-                this.editAction(t.getAttribute('data-phase'), aid, { done: done });
+                this.editAction(t.getAttribute('data-phase'), aid, { done: done, doneAt: done ? today() : '' });
             }
         });
 
