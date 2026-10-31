@@ -193,8 +193,12 @@
 .pb .risk .gate { flex: 1; min-width: 0; }
 .pb .x { border: 0; background: none; color: var(--fg-2); font-size: 16px; line-height: 1; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
 .pb .x:hover { color: var(--crit); background: var(--surface-2); }
-.pb .act-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto; gap: 8px; margin-top: 8px; }
-@media (max-width: 640px) { .pb .act-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pb .act-add input:first-child { grid-column: 1 / -1; } }
+/* The add row sits in a half-width column, so the text box gets its own line and the rest wrap beneath it. */
+.pb .act-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pb .act-add input:first-child { flex: 1 1 100%; }
+.pb .act-add select.field { flex: 1 1 140px; min-width: 0; width: auto; }
+.pb .act-add input[type="date"] { flex: 1 1 160px; min-width: 0; width: auto; }
+.pb .act-add .btn { flex: none; }
 .pb .kind { flex: none; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 1px 8px; border-radius: 4px; min-width: 88px; text-align: center; }
 .pb .k-risk { color: var(--crit); background: color-mix(in srgb, var(--crit) 14%, var(--surface)); }
 .pb .k-constraint { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
@@ -242,3 +246,17 @@
 .pb .risk.is-lifted .kind { opacity: 0.6; }
 .pb .lifted-tag { flex: none; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; }
 .pb .btn.small { padding: 3px 10px; font-size: 12px; flex: none; }
+
+/* artifact link boxes */
+.pb .art label { align-self: center; }
+.pb .mini-ref { flex: 1 1 180px; min-width: 0; width: auto; padding: 3px 8px; font-size: 12px; }
+.pb .art a { color: var(--accent-secondary); overflow-wrap: anywhere; }
+
+/* inline exit-criteria editing */
+.pb .crit-row { display: flex; align-items: flex-start; gap: 6px; }
+.pb .crit-row .gate { flex: 1; min-width: 0; }
+.pb .crit-btns { display: flex; align-items: center; gap: 2px; flex: none; padding-top: 2px; }
+.pb .link-btn { border: 0; background: none; color: var(--accent-secondary); font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 3px; }
+.pb .link-btn:hover { text-decoration: underline; }
+.pb .crit-form { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+.pb .crit-form .field { flex: 1 1 200px; min-width: 0; width: auto; }

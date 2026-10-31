@@ -25,6 +25,8 @@ class PhaseBoardApp {
         this.editor = null;
         this.confirmFlowDelete = null;
         this.unsubFlows = null;
+        this.editingGate = null;
+        this.confirmCrit = null;
     }
 
     init() {
@@ -227,7 +229,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -323,6 +325,80 @@ class PhaseBoardApp {
         this.mutatePhase(pid, st => {
             st.actions = (st.actions || []).map(a => a.id === aid ? Object.assign({}, a, patch) : a);
         }, 'action item');
+    }
+
+    // ─── Inline exit-criteria editing ─────────────────────────
+
+    // Applies a change to this project's own copy of its flow, then rebuilds the phase state to match.
+    // Returns true when the write went through.
+    patchFlow(fn) {
+        const id = this.view;
+        return this.queue(id, async () => {
+            const p = this.projects[id];
+            if (!p) return false;
+            const tpl = tplOf(p), flow = clone({ name: tpl.name, phases: tpl.phases });
+            fn(flow);
+            const phases = clone(reconcileProject(p, flow));
+            await this.projectsRef().doc(id).update({ flow: flow, phases: phases, updatedAt: Date.now() });
+            return true;
+        }).catch(err => {
+            console.error('Phase Board:', err);
+            this.saveFailed('exit criteria change');
+            return false;
+        });
+    }
+
+    startCritEdit(pid, gid) {
+        this.editingGate = pid + ':' + gid;
+        this.confirmCrit = null;
+        this.render();
+        document.getElementById('crit-' + pid + '-' + gid)?.focus();
+    }
+
+    cancelCritEdit() {
+        this.editingGate = null;
+        this.confirmCrit = null;
+        this.render();
+    }
+
+    async saveCriterion(pid, gid, text) {
+        const next = String(text || '').trim();
+        this.editingGate = null;
+        this.render();
+        if (!next) return;
+        await this.patchFlow(flow => {
+            const g = flow.phases.find(p => p.id === pid)?.gates.find(x => x.id === gid);
+            if (g) g.text = next;
+        });
+    }
+
+    async addCriterion(pid, text) {
+        const p = this.projects[this.view];
+        const def = p && tplOf(p).phases.find(d => d.id === pid);
+        const wasDone = !!def && phaseState(p, def).status === 'done';
+        const ok = await this.patchFlow(flow => {
+            flow.phases.find(x => x.id === pid)?.gates.push({ id: 'g' + this.newId(), text: text });
+        });
+        if (ok && wasDone) this.setNote(def.name + ' was reopened because it gained an exit criterion.', false);
+    }
+
+    // The last criterion of a phase cannot be removed; the UI hides the button, and this guards it too.
+    async removeCriterion(pid, gid) {
+        this.confirmCrit = null;
+        this.render();
+        await this.patchFlow(flow => {
+            const phase = flow.phases.find(x => x.id === pid);
+            if (phase && phase.gates.length > 1) phase.gates = phase.gates.filter(g => g.id !== gid);
+        });
+    }
+
+    attachArtifact(pid, name, value) {
+        const ref = value.trim();
+        this.mutatePhase(pid, st => {
+            const next = Object.assign({}, st.artifacts || {});
+            if (ref) next[name] = ref; else delete next[name];
+            st.artifacts = next;
+        }, 'artifact link');
     }
 
     removeAction(pid, aid) {
@@ -528,6 +604,8 @@ class PhaseBoardApp {
     }
 
     openProject(id) {
+        this.editingGate = null;
+        this.confirmCrit = null;
         this.view = id;
         this.showNew = false;
         this.confirmDelete = false;
@@ -593,6 +671,16 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const critEdit = e.target.closest('[data-crit-edit]');
+            if (critEdit) return this.startCritEdit(critEdit.getAttribute('data-phase'), critEdit.getAttribute('data-crit-edit'));
+            if (e.target.closest('[data-crit-cancel]')) return this.cancelCritEdit();
+            const critDel = e.target.closest('[data-crit-del]');
+            if (critDel) {
+                const pid = critDel.getAttribute('data-phase'), gid = critDel.getAttribute('data-crit-del');
+                if (this.confirmCrit === pid + ':' + gid) return this.removeCriterion(pid, gid);
+                this.confirmCrit = pid + ':' + gid;
+                return this.render();
+            }
             const lift = e.target.closest('[data-lift-risk]');
             if (lift) {
                 const k = lift.getAttribute('data-lift-risk');
@@ -613,7 +701,7 @@ class PhaseBoardApp {
             const act = e.target.closest('[data-act]');
             if (act) {
                 const k = act.getAttribute('data-act');
-                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.render(); window.scrollTo(0, 0); }
+                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.editingGate = null; this.confirmCrit = null; this.render(); window.scrollTo(0, 0); }
                 else if (k === 'new') { this.showNew = true; this.render(); document.getElementById('npName')?.focus(); }
                 else if (k === 'del') { this.confirmDelete = true; this.render(); }
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
@@ -641,12 +729,18 @@ class PhaseBoardApp {
             } else if (t.matches('[data-outvalue]')) {
                 const v = t.value.trim();
                 this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { value: v }) }), 'value added text');
+            } else if (t.matches('[data-art-ref]')) {
+                this.attachArtifact(t.getAttribute('data-phase'), t.getAttribute('data-art-ref'), t.value);
             } else if (t.matches('[data-act-assignee]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-assignee'), { assignee: t.value });
             else if (t.matches('[data-act-due]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-due'), { due: t.value });
             else if (t.matches('input[data-action]')) {
                 const aid = t.getAttribute('data-action'), done = t.checked;
                 this.editAction(t.getAttribute('data-phase'), aid, { done: done });
             }
+        });
+
+        page.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && e.target.matches && e.target.matches('[data-crit-input]')) this.cancelCritEdit();
         });
 
         page.addEventListener('input', e => {
@@ -659,6 +753,11 @@ class PhaseBoardApp {
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
                 if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim());
+            } else if (f.hasAttribute('data-crit-form')) {
+                this.saveCriterion(f.getAttribute('data-phase'), f.getAttribute('data-crit-form'), f.querySelector('input').value);
+            } else if (f.hasAttribute('data-crit-add')) {
+                const input = f.querySelector('input'), text = input.value.trim();
+                if (text) { this.addCriterion(f.getAttribute('data-crit-add'), text); input.value = ''; }
             } else if (f.hasAttribute('data-addrisk')) {
                 const text = document.getElementById('risk-text').value.trim(), kind = document.getElementById('risk-kind').value;
                 if (text) this.patchProject(p => ({ risks: (p.risks || []).concat([{ id: this.newId(), kind: kind, text: text, resolved: false }]) }), 'risk');

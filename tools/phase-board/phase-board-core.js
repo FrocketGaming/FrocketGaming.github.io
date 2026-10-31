@@ -150,13 +150,27 @@ function phaseHTML(def, st, idx, o) {
   const meta = STATUS[st.status] || STATUS.not_started, n = gateCount(def, st), edit = o.mode === 'edit';
   const idp = o.idp || '';
   const gates = def.gates.map((g, i) => {
-    const id = idp + 'g-' + def.id + '-' + i;
-    return '<li><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label></li>';
+    const id = idp + 'g-' + def.id + '-' + i, key = def.id + ':' + g.id;
+    if (edit && o.editingGate === key) {
+      return '<li><form class="crit-form" data-crit-form="' + esc(g.id) + '" data-phase="' + def.id + '"><input class="field" id="crit-' + def.id + '-' + esc(g.id) + '" data-crit-input="1" value="' + esc(g.text) + '" autocomplete="off" aria-label="Edit exit criterion">' +
+        '<button class="btn small primary" type="submit">Save</button><button class="btn small" type="button" data-crit-cancel="1">Cancel</button></form></li>';
+    }
+    const tools = !edit ? '' : '<span class="crit-btns"><button type="button" class="link-btn" data-crit-edit="' + esc(g.id) + '" data-phase="' + def.id + '" aria-label="Edit criterion: ' + esc(g.text) + '">Edit</button>' +
+      (def.gates.length < 2 ? '' : (o.confirmCrit === key
+        ? '<button type="button" class="btn small danger" data-crit-del="' + esc(g.id) + '" data-phase="' + def.id + '">Remove criterion</button>'
+        : '<button type="button" class="x" data-crit-del="' + esc(g.id) + '" data-phase="' + def.id + '" aria-label="Remove criterion: ' + esc(g.text) + '">&times;</button>')) + '</span>';
+    return '<li class="crit-row"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label>' + tools + '</li>';
   }).join('');
-  const arts = def.artifacts.map(a => {
-    const ref = st.artifacts && st.artifacts[a];
-    return ref ? '<li class="art"><span>' + esc(a) + '</span><code>' + esc(ref) + '</code></li>'
-               : '<li class="art missing"><span>' + esc(a) + '</span><em>not attached</em></li>';
+  const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '';
+  const arts = def.artifacts.map((a, ai) => {
+    const ref = (st.artifacts && st.artifacts[a]) || '';
+    if (edit) {
+      const rid = idp + 'ref-' + def.id + '-' + ai;
+      return '<li class="art"><label for="' + rid + '">' + esc(a) + '</label><input class="field mini-ref" id="' + rid + '" data-art-ref="' + esc(a) + '" data-phase="' + def.id + '" value="' + esc(ref) + '" placeholder="Link or file path" autocomplete="off"></li>';
+    }
+    if (!ref) return '<li class="art missing"><span>' + esc(a) + '</span><em>not attached</em></li>';
+    const shown = /^https?:\/\//i.test(ref) ? '<a href="' + esc(ref) + '" target="_blank" rel="noopener noreferrer">' + esc(ref) + '</a>' : '<code>' + esc(ref) + '</code>';
+    return '<li class="art"><span>' + esc(a) + '</span>' + shown + '</li>';
   }).join('');
   const decs = (st.decisions || []).map(d => '<li><time>' + esc(d.at) + '</time><span>' + esc(d.text) + '</span></li>').join('');
   const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
@@ -183,8 +197,8 @@ function phaseHTML(def, st, idx, o) {
     '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) +
     '<span class="ph-count">' + n + '/' + def.gates.length + ' criteria</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
-    '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul></div>' + actBlock + '</div>' +
-    '<div class="stack"><div><p class="sub">Artifacts</p><ul class="arts">' + arts + '</ul></div>' +
+    '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul>' + critAdd + '</div>' + actBlock + '</div>' +
+    '<div class="stack"><div><p class="sub">Artifacts</p>' + (edit && def.artifacts.length ? '<p class="msg" style="margin-bottom:8px">What this phase should produce. Add a link or file path once it exists.</p>' : '') + '<ul class="arts">' + arts + '</ul></div>' +
     '<div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
@@ -325,6 +339,9 @@ function reconcileProject(proj, flow) {
       st.status = 'reopened';
       st.reopened = (st.reopened || 0) + 1;
       st.log = (st.log || []).concat([{ at: today(), text: 'Reopened: exit criteria changed' }]).slice(-12);
+    } else if (st.status !== 'done' && def.gates.length && def.gates.every(g => st.gates[g.id])) {
+      st.status = 'done';
+      st.log = (st.log || []).concat([{ at: today(), text: 'All exit criteria met' }]).slice(-12);
     }
     phases[def.id] = st;
   });
