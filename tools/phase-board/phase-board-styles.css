@@ -176,6 +176,15 @@
 .pb .decs li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
 .pb .decs time { font-family: Consolas, Monaco, monospace; font-size: 12px; color: var(--fg-2); padding-top: 2px; }
 .pb .loop { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); padding: 7px 10px; border-radius: 4px; }
+.pb .sugg { margin-top: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); min-width: 0; }
+.pb .sugg > summary { padding: 8px 12px; cursor: pointer; color: var(--fg-2); font-size: 13px; }
+.pb .sugg[open] > summary { color: var(--fg); }
+.pb .sugg > .msg { margin: 0; padding: 0 12px 8px; }
+.pb .sugg-list { list-style: none; margin: 0; padding: 0 8px 8px; display: grid; gap: 4px; }
+.pb .sugg > .sugg-list { padding-top: 0; }
+.pb .sugg-btn { display: block; width: 100%; text-align: left; background: transparent; color: var(--fg); border: 1px solid transparent; border-radius: 4px; padding: 6px 8px; font: inherit; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.pb .sugg-btn span { color: var(--accent-secondary); font-weight: 700; margin-right: 4px; }
+.pb .sugg-btn:hover { background: var(--surface); border-color: var(--line); }
 .pb .dec-add { display: flex; gap: 8px; flex-wrap: wrap; }
 .pb .dec-add .field { flex: 1 1 220px; width: auto; }
 

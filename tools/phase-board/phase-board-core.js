@@ -97,6 +97,11 @@ const STARTER_CRITERIA = {
     'First real run checked and users told',
     'Value measured after launch and recorded in Outcomes']
 };
+/* Starter criteria for a phase that is not yet in its list, matched by the phase id (so duplicated and edited flows keep them). */
+function critSuggestions(def) {
+  const have = (def.gates || []).map(g => String(g.text || '').trim().toLowerCase());
+  return (STARTER_CRITERIA[def.id] || []).filter(t => have.indexOf(t.toLowerCase()) < 0);
+}
 TEMPLATES.starter = { key: 'starter', name: 'Standard flow with starter criteria',
   phases: LEGACY_TEMPLATES.standard.phases.map(p => Object.assign({}, p, { gates: G(STARTER_CRITERIA[p.id]) })) };
 /* A project carries its own copy of its flow. Projects saved before that fall back to the original built-in flow,
@@ -205,7 +210,7 @@ function phaseHTML(def, st, idx, o) {
       : (note ? '<p class="crit-note">' + noteHTML(note) + '</p>' : '');
     return '<li class="crit-row"><div class="crit-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label>' + noteBlock + '</div>' + tools + '</li>';
   }).join('');
-  const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '';
+  const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' + suggestHTML(def, o) : '';
   const decs = (st.decisions || []).map(d => '<li><time>' + esc(d.at) + '</time><span>' + esc(d.text) + '</span></li>').join('');
   const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
   const people = o.people || [];
@@ -393,6 +398,14 @@ function editorRowButtons(kind, pi, i, n, label) {
     '<button type="button" class="x" data-fe-act="' + kind + '-del" data-p="' + pi + '" data-i="' + i + '" aria-label="Remove ' + label + '">&times;</button></span>';
 }
 /* ed: {title, intro, draft, errors, confirmDel, projectMode} */
+/* A collapsed list of ideas under the add box; one click adds one as a real criterion. */
+function suggestHTML(def, o) {
+  const list = critSuggestions(def);
+  if (!list.length) return '';
+  return '<details class="sugg" data-sugg="' + def.id + '"' + ((o.suggOpen || []).indexOf(def.id) >= 0 ? ' open' : '') + '><summary>Suggested exit criteria (' + list.length + ')</summary>' +
+    '<p class="msg">Ideas to start from. Each is a check you can answer yes or no, with a name, link or number behind it. Click one to add it, then reword it to fit.</p>' +
+    '<ul class="sugg-list">' + list.map(t => '<li><button type="button" class="sugg-btn" data-crit-suggest="' + def.id + '" data-text="' + esc(t) + '"><span aria-hidden="true">+</span> ' + esc(t) + '</button></li>').join('') + '</ul></details>';
+}
 function flowEditorHTML(ed) {
   const d = ed.draft, last = d.phases.length - 1;
   const errs = ed.errors && ed.errors.length ? '<ul class="fe-errors" role="alert">' + ed.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '';
@@ -406,7 +419,8 @@ function flowEditorHTML(ed) {
       '<div class="fe-grid"><label for="fe-pname-' + pi + '">Name<input class="field" id="fe-pname-' + pi + '" data-fe="pname" data-p="' + pi + '" value="' + esc(p.name) + '" autocomplete="off"></label>' +
       '<label for="fe-pshort-' + pi + '">Short label<input class="field" id="fe-pshort-' + pi + '" data-fe="pshort" data-p="' + pi + '" maxlength="16" value="' + esc(p.short) + '" placeholder="Shown on the progress rail" autocomplete="off"></label></div>' +
       '<label for="fe-pgoal-' + pi + '">Goal<textarea class="field" id="fe-pgoal-' + pi + '" data-fe="pgoal" data-p="' + pi + '" placeholder="One sentence on what this phase achieves">' + esc(p.goal) + '</textarea></label>' +
-      '<div><p class="sub">Exit criteria</p>' + (p.gates.length ? '' : '<p class="note">None in this flow. A project using it must add its own before the phase can be completed.</p>') + '<ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button></div>' +
+      '<div><p class="sub">Exit criteria</p>' + (p.gates.length ? '' : '<p class="note">None in this flow. A project using it must add its own before the phase can be completed.</p>') + '<ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button>' +
+        (critSuggestions(p).length ? '<p class="sub" style="margin-top:12px">Suggestions</p><ul class="sugg-list">' + critSuggestions(p).map((t, si) => '<li><button type="button" class="sugg-btn" data-fe-act="gate-suggest" data-p="' + pi + '" data-i="' + si + '"><span aria-hidden="true">+</span> ' + esc(t) + '</button></li>').join('') + '</ul>' : '') + '</div>' +
       '</section>';
   }).join('');
   return '<div><p class="eyebrow">' + esc(ed.title) + '</p><h1>' + esc(d.name || 'Untitled flow') + '</h1></div>' +

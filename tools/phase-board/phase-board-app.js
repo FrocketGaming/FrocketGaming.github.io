@@ -32,6 +32,7 @@ class PhaseBoardApp {
         this.picker = null;
         this.svgs = {};
         this.openDiagrams = [];
+        this.openSuggestions = [];
         this.confirmDiagram = null;
         this.flowStaticPromise = null;
         this.diagramBusy = false;
@@ -244,7 +245,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -786,6 +787,7 @@ class PhaseBoardApp {
             else d.phases.splice(pi, 1);
         }
         else if (k === 'gate-add') { p.gates.push({ id: 'g' + this.newId(), text: '' }); focusId = 'fe-gate-' + pi + '-' + (p.gates.length - 1); }
+        else if (k === 'gate-suggest') { const t = critSuggestions(p)[i]; if (t) p.gates.push({ id: 'g' + this.newId(), text: t }); }
         else if (k === 'gate-up') swap(p.gates, i, i - 1);
         else if (k === 'gate-down') swap(p.gates, i, i + 1);
         else if (k === 'gate-del') p.gates.splice(i, 1);
@@ -919,6 +921,8 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const sg = e.target.closest('[data-crit-suggest]');
+            if (sg) return this.addCriterion(sg.getAttribute('data-crit-suggest'), sg.getAttribute('data-text'));
             const dgAttach = e.target.closest('[data-dg-attach]');
             if (dgAttach) return this.openPicker(dgAttach.getAttribute('data-dg-attach'));
             if (e.target.closest('[data-dg-cancel]')) return this.closePicker();
@@ -1019,6 +1023,11 @@ class PhaseBoardApp {
                 if (this.filter !== 'all') return;
                 this.completedOpen = !!el.open;
                 try { localStorage.setItem('pb-completed-open', el.open ? '1' : '0'); } catch (err) { /* the choice lasts for this visit */ }
+                return;
+            }
+            if (el.matches && el.matches('details[data-sugg]')) {
+                const sid = el.getAttribute('data-sugg');
+                this.openSuggestions = el.open ? this.openSuggestions.filter(x => x !== sid).concat([sid]) : this.openSuggestions.filter(x => x !== sid);
                 return;
             }
             if (!el.matches || !el.matches('details[data-dg]')) return;
