@@ -803,6 +803,13 @@ class PhaseBoardApp {
             } else if (f.hasAttribute('data-addrisk')) {
                 const text = document.getElementById('risk-text').value.trim(), kind = document.getElementById('risk-kind').value;
                 if (text) this.patchProject(p => ({ risks: (p.risks || []).concat([{ id: this.newId(), kind: kind, text: text, resolved: false }]) }), 'risk');
+            } else if (f.hasAttribute('data-addamount')) {
+                const name = document.getElementById('am-name').value.trim();
+                const amount = parseAmount(document.getElementById('am-amount').value);
+                if (!name) return;
+                if (amount === null) { this.setNote('Enter the amount as a number, for example 6 or 12,000.', true); return; }
+                const unit = document.getElementById('am-unit').value, period = document.getElementById('am-period').value;
+                this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { metrics: ((p.outcomes || {}).metrics || []).concat([{ id: this.newId(), kind: 'amount', name: name, amount: amount, unit: unit, period: period }]) }) }), 'metric');
             } else if (f.hasAttribute('data-addmetric')) {
                 const name = document.getElementById('m-name').value.trim();
                 const before = document.getElementById('m-before').value.trim(), after = document.getElementById('m-after').value.trim();

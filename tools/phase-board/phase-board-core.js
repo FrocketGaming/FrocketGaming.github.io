@@ -215,6 +215,7 @@ function ago(ts) {
   return Math.round(s / 86400) + ' d ago';
 }
 function cardHTML(id, p, when) {
+  if (isComplete(p)) return doneCardHTML(id, p, when);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
   const cur = s.current, curSt = cur ? phaseState(p, cur) : null;
   const icons = tpl.phases.map((d, i) => {
@@ -277,21 +278,6 @@ function risksHTML(p, edit) {
     (rows ? '<ul class="gates">' + rows + '</ul>' : '<p class="note">None recorded.</p>') +
     (edit ? '<p class="msg">Tick a risk once it is mitigated. Lift a constraint if it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
 }
-function outcomesHTML(p, edit) {
-  const o = p.outcomes || {}, ms = Array.isArray(o.metrics) ? o.metrics : [];
-  const done = !summarize(tplOf(p), p).current;
-  const rows = ms.map(m => '<li class="metric"><span class="m-name">' + esc(m.name) + '</span><span class="m-val"><small>Before</small>' + esc(m.before || '-') + '</span><span class="m-val strong"><small>After</small>' + esc(m.after || '-') + '</span>' +
-    (edit ? '<button type="button" class="x" data-del-metric="' + esc(m.id) + '" aria-label="Remove metric ' + esc(m.name) + '">&times;</button>' : '') + '</li>').join('');
-  const value = edit
-    ? '<label class="sub" for="out-value">Value added</label><textarea class="field" id="out-value" data-outvalue="1" placeholder="What changed for the business or users because of this project?">' + esc(o.value || '') + '</textarea>'
-    : '<p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded yet.</p>');
-  return '<section class="panel-block outcomes" aria-label="Outcomes"><div class="ph-row"><div><p class="eyebrow">Outcomes</p><h2 class="out-h">Metrics collected and value added</h2></div>' +
-    (done ? '' : '<span class="msg" style="margin-left:auto">Fill this in as results come in; it is complete at project end.</span>') + '</div>' +
-    '<div><p class="sub">Metrics</p>' + (rows ? '<ul class="metrics">' + rows + '</ul>' : '<p class="note">No metrics recorded yet.</p>') +
-    (edit ? '<form class="metric-add" data-addmetric="1"><input class="field" id="m-name" autocomplete="off" placeholder="Metric, e.g. Invoices matched per hour" aria-label="Metric name"><input class="field" id="m-before" autocomplete="off" placeholder="Before" aria-label="Value before"><input class="field" id="m-after" autocomplete="off" placeholder="After" aria-label="Value after"><button class="btn" type="submit">Add metric</button></form>' : '') + '</div>' +
-    '<div>' + value + '</div></section>';
-}
-
 /* people who can own an action item: owner, lead, stakeholders, SMEs */
 function peopleOf(p) {
   const all = [p.owner, p.lead].concat(listOf(p.stakeholders), listOf(p.smes)).filter(Boolean);
@@ -455,7 +441,7 @@ function reviewYears(projects) {
   return Object.keys(set).sort().reverse();
 }
 function reviewHTML(d) {
-  const metricRows = p => ((p.outcomes || {}).metrics || []).map(m => '<li class="metric"><span class="m-name">' + esc(m.name) + '</span><span class="m-val"><small>Before</small>' + esc(m.before || '-') + '</span><span class="m-val strong"><small>After</small>' + esc(m.after || '-') + '</span></li>').join('');
+  const metricRows = p => metricRowsHTML(p, false);
   const metricsN = d.completed.reduce((n, c) => n + ((c.p.outcomes || {}).metrics || []).length, 0);
   const stat = (n, label) => '<div class="rv-stat"><b>' + n + '</b><span>' + label + '</span></div>';
   const mine = (list, name) => list.filter(x => x.project === name);
@@ -473,7 +459,7 @@ function reviewHTML(d) {
   const undated = d.undated.length ? '<section class="panel-block"><p class="sub">Completed, date not recorded</p><p class="msg">Open each project and set its Completed on date so it appears in the right year.</p><ul class="chips">' + d.undated.map(u => '<li>' + esc(u.p.name) + '</li>').join('') + '</ul></section>' : '';
   const allActs = d.actions.length ? '<details class="panel-block"><summary>All ' + d.actions.length + ' action items completed this year</summary><ul class="decs">' + d.actions.map(x => '<li><time>' + esc(x.on) + '</time><span>' + esc(x.project) + ' / ' + esc(x.phase) + ': ' + esc(x.text) + (x.who ? ' <span class="who">(' + esc(x.who) + ')</span>' : '') + '</span></li>').join('') + '</ul></details>' : '';
   return '<div><p class="eyebrow">Year in review</p><h1>' + esc(d.year) + '</h1></div>' +
-    '<div class="rv-stats">' + stat(d.completed.length, d.completed.length === 1 ? 'project completed' : 'projects completed') + stat(d.actions.length, 'action items completed') + stat(d.decisions.length, 'decisions recorded') + stat(metricsN, 'metrics from completed projects') + '</div>' +
+    '<div class="rv-stats">' + stat(d.completed.length, d.completed.length === 1 ? 'project completed' : 'projects completed') + stat(d.actions.length, 'action items completed') + stat(d.decisions.length, 'decisions recorded') + stat(metricsN, 'metrics from completed projects') + valueStatsHTML(valueTotals(d.completed)) + '</div>' +
     (d.completed.length ? '<div class="rv-list">' + d.completed.map(proj).join('') + '</div>' : '<div class="empty"><h2>No projects completed in ' + esc(d.year) + ' yet</h2><p>A project is completed when its last phase is done. Its completion date comes from that moment.</p></div>') +
     wins + undated + allActs;
 }
@@ -482,4 +468,98 @@ function reviewHTML(d) {
 function projectMeta(p) {
   const done = projectCompletedOn(p);
   return esc([p.owner, p.started ? 'started ' + p.started : '', done ? 'completed ' + done : ''].filter(Boolean).join(' / '));
+}
+
+/* ---- value metrics: before/after changes and amounts saved or gained ---- */
+const METRIC_UNITS = { hours: 'Hours', cost: 'Cost ($)', count: 'Count', percent: 'Percent (%)' };
+const METRIC_PERIODS = { once: 'One-time', week: 'Per week', month: 'Per month', year: 'Per year' };
+const PERIOD_SUFFIX = { once: '', week: '/week', month: '/month', year: '/year' };
+/* How many times a recurring amount repeats in a year, for the estimated annual totals. */
+const PERIOD_PER_YEAR = { week: 52, month: 12, year: 1 };
+function isAmount(m) { return m && m.kind === 'amount'; }
+function fmtNum(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function parseAmount(text) {
+  const t = String(text == null ? '' : text).replace(/[,$\s]/g, '');
+  if (!t) return null;
+  const n = Number(t);
+  return isFinite(n) ? n : null;
+}
+/* "6 hrs", "$12,000", "15%", "1,200", with "/week" style suffix when asked for. */
+function amountText(m, withPeriod) {
+  const n = Number(m.amount) || 0;
+  let base;
+  if (m.unit === 'cost') base = (n < 0 ? '-$' : '$') + fmtNum(Math.abs(n));
+  else if (m.unit === 'hours') base = fmtNum(n) + (n === 1 ? ' hr' : ' hrs');
+  else if (m.unit === 'percent') base = fmtNum(n) + '%';
+  else base = fmtNum(n);
+  return base + (withPeriod ? (PERIOD_SUFFIX[m.period] || '') : '');
+}
+function metricTileText(m) { return isAmount(m) ? amountText(m, true) : (m.before || '-') + ' to ' + (m.after || '-'); }
+/* The metrics shown on a finished project's card: amounts first (they are the headline), then before/after. */
+function headlineMetrics(p, max) {
+  const ms = Array.isArray((p.outcomes || {}).metrics) ? p.outcomes.metrics : [];
+  return ms.filter(isAmount).concat(ms.filter(m => !isAmount(m))).slice(0, max);
+}
+function projectCounts(p) {
+  let decisions = 0, actions = 0;
+  tplOf(p).phases.forEach(d => { const st = phaseState(p, d); decisions += (st.decisions || []).length; actions += (st.actions || []).filter(a => a.done).length; });
+  return { decisions: decisions, actions: actions };
+}
+function metricRowsHTML(p, edit) {
+  const ms = Array.isArray((p.outcomes || {}).metrics) ? p.outcomes.metrics : [];
+  return ms.map(m => {
+    const del = edit ? '<button type="button" class="x" data-del-metric="' + esc(m.id) + '" aria-label="Remove metric ' + esc(m.name) + '">&times;</button>' : '';
+    return isAmount(m)
+      ? '<li class="metric is-amount"><span class="m-name">' + esc(m.name) + '</span><span class="m-val strong span2"><small>' + esc(METRIC_PERIODS[m.period] || 'One-time') + '</small>' + esc(amountText(m, false)) + '</span>' + del + '</li>'
+      : '<li class="metric"><span class="m-name">' + esc(m.name) + '</span><span class="m-val"><small>Before</small>' + esc(m.before || '-') + '</span><span class="m-val strong"><small>After</small>' + esc(m.after || '-') + '</span>' + del + '</li>';
+  }).join('');
+}
+function outcomesHTML(p, edit) {
+  const o = p.outcomes || {};
+  const done = !summarize(tplOf(p), p).current;
+  const rows = metricRowsHTML(p, edit);
+  const value = edit
+    ? '<label class="sub" for="out-value">Value added</label><textarea class="field" id="out-value" data-outvalue="1" placeholder="What changed for the business or users because of this project?">' + esc(o.value || '') + '</textarea>'
+    : '<p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded yet.</p>');
+  const opts = (map, sel) => Object.keys(map).map(k => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(map[k]) + '</option>').join('');
+  const forms = !edit ? '' : '<div class="metric-forms">' +
+    '<form class="amount-add" data-addamount="1" aria-label="Add an amount saved or gained"><input class="field" id="am-name" autocomplete="off" placeholder="Amount saved or gained, e.g. Hours saved" aria-label="Metric name"><input class="field" id="am-amount" inputmode="decimal" autocomplete="off" placeholder="Amount" aria-label="Amount"><select class="field" id="am-unit" aria-label="Unit">' + opts(METRIC_UNITS, 'hours') + '</select><select class="field" id="am-period" aria-label="How often">' + opts(METRIC_PERIODS, 'year') + '</select><button class="btn" type="submit">Add amount</button></form>' +
+    '<form class="metric-add" data-addmetric="1" aria-label="Add a before and after metric"><input class="field" id="m-name" autocomplete="off" placeholder="Before and after, e.g. Invoices matched per hour" aria-label="Metric name"><input class="field" id="m-before" autocomplete="off" placeholder="Before" aria-label="Value before"><input class="field" id="m-after" autocomplete="off" placeholder="After" aria-label="Value after"><button class="btn" type="submit">Add metric</button></form></div>';
+  return '<section class="panel-block outcomes" aria-label="Outcomes"><div class="ph-row"><div><p class="eyebrow">Outcomes</p><h2 class="out-h">Metrics collected and value added</h2></div>' +
+    (done ? '' : '<span class="msg" style="margin-left:auto">Fill this in as results come in; it is complete at project end.</span>') + '</div>' +
+    '<div><p class="sub">Metrics</p>' + (rows ? '<ul class="metrics">' + rows + '</ul>' : '<p class="note">No metrics recorded yet.</p>') + forms + '</div>' +
+    '<div>' + value + '</div></section>';
+}
+
+/* A finished project's card leads with the value it delivered instead of progress it no longer needs to show. */
+function doneCardHTML(id, p, when) {
+  const on = projectCompletedOn(p), n = projectCounts(p), tiles = headlineMetrics(p, 3);
+  const meta = [p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ');
+  const wins = tiles.length
+    ? '<div class="wins">' + tiles.map(m => '<div class="win"><b>' + esc(metricTileText(m)) + '</b><span>' + esc(m.name) + '</span></div>').join('') + '</div>'
+    : '<p class="msg">No value added recorded yet.</p>';
+  return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div><h2>' + esc(p.name) + '</h2>' +
+    (meta ? '<p class="meta">' + esc(meta) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + '</div>' + wins +
+    '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
+}
+
+/* Totals of amounts saved across completed projects. Recurring amounts become an estimated annual figure. */
+function valueTotals(completed) {
+  const t = { hours: { once: 0, annual: 0 }, cost: { once: 0, annual: 0 } };
+  completed.forEach(c => ((c.p.outcomes || {}).metrics || []).filter(isAmount).forEach(m => {
+    const bucket = t[m.unit], n = Number(m.amount) || 0;
+    if (!bucket) return;
+    if (m.period === 'once' || !PERIOD_PER_YEAR[m.period]) bucket.once += n; else bucket.annual += n * PERIOD_PER_YEAR[m.period];
+  }));
+  return t;
+}
+function valueStatsHTML(t) {
+  const stat = (n, label) => '<div class="rv-stat"><b>' + esc(n) + '</b><span>' + esc(label) + '</span></div>';
+  let out = '';
+  if (t.hours.annual) out += stat(fmtNum(t.hours.annual) + ' hrs', 'estimated annual hours saved (recurring)');
+  if (t.hours.once) out += stat(fmtNum(t.hours.once) + ' hrs', 'one-time hours saved');
+  if (t.cost.annual) out += stat('$' + fmtNum(t.cost.annual), 'estimated annual cost savings (recurring)');
+  if (t.cost.once) out += stat('$' + fmtNum(t.cost.once), 'one-time cost savings');
+  return out;
 }
