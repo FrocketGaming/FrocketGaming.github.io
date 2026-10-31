@@ -63,6 +63,7 @@
         if (e.target.closest('[data-act="back"]')) { view = 'portfolio'; render(); window.scrollTo(0, 0); }
     });
     render();
+    attachBackToTop(document, window);
     } catch (err) {
         if (rootEl) rootEl.innerHTML = '<p style="padding:24px">This snapshot could not be displayed: ' + String(err && err.message || err).replace(/[<>&]/g, '') + '</p>';
     }

@@ -32,6 +32,7 @@ class PhaseBoardApp {
     }
 
     init() {
+        attachBackToTop(document, window);
         this.bindEvents();
         this.initFirebase();
     }

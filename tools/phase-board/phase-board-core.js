@@ -563,3 +563,30 @@ function valueStatsHTML(t) {
   if (t.cost.once) out += stat('$' + fmtNum(t.cost.once), 'one-time cost savings');
   return out;
 }
+
+/* A back-to-top button for long pages. The document and window are passed in so the same code runs in the app
+   and inside an exported file. It appears once the reader is about three quarters of a screen down. */
+function attachBackToTop(doc, win) {
+  if (doc.getElementById('pbToTop')) return;
+  const b = doc.createElement('button');
+  b.id = 'pbToTop';
+  b.type = 'button';
+  b.className = 'pb-to-top';
+  b.hidden = true;
+  b.setAttribute('aria-label', 'Back to top');
+  b.setAttribute('title', 'Back to top');
+  b.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  b.addEventListener('click', () => {
+    const reduce = !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    win.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    b.blur();
+  });
+  doc.body.appendChild(b);
+  const update = () => {
+    const show = (win.scrollY || 0) > win.innerHeight * 0.75;
+    b.hidden = !show;
+    b.classList.toggle('is-visible', show);
+  };
+  win.addEventListener('scroll', update, { passive: true });
+  update();
+}
