@@ -41,24 +41,19 @@ function pill(status) {
 const PH = {
   discovery: { id: 'discovery', name: 'Discovery', short: 'Discovery',
     goal: 'Agree what problem is being solved, for whom, and how success will be judged.',
-    gates: ['Problem statement agreed', 'Users and stakeholders identified', 'Success metrics defined', 'Constraints and risks recorded'],
-    artifacts: ['Problem brief'] },
+    gates: ['Problem statement agreed', 'Users and stakeholders identified', 'Success metrics defined', 'Constraints and risks recorded'] },
   research: { id: 'research', name: 'Tool / Solution Research', short: 'Research',
     goal: 'Compare realistic options and record why one was chosen.',
-    gates: ['Long list of at least three options', 'Evaluation criteria weighted', 'Shortlist compared on real samples', 'Recommendation recorded as a decision'],
-    artifacts: ['Options matrix', 'Decision record'] },
+    gates: ['Long list of at least three options', 'Evaluation criteria weighted', 'Shortlist compared on real samples', 'Recommendation recorded as a decision'] },
   build: { id: 'build', name: 'Prototype / Build', short: 'Build',
     goal: 'Get the chosen approach working end to end, then harden it.',
-    gates: ['Core flow runs end to end', 'Configuration loads from the manifest', 'Logging writes to logs/', 'README matches the project layout'],
-    artifacts: ['Working prototype'] },
+    gates: ['Core flow runs end to end', 'Configuration loads from the manifest', 'Logging writes to logs/', 'README matches the project layout'] },
   test: { id: 'test', name: 'Test', short: 'Test',
     goal: 'Prove it works on real inputs and fails safely on bad ones.',
-    gates: ['Unit tests pass', 'Empty and malformed inputs handled', 'Dry run on real data', 'Reviewer sign-off'],
-    artifacts: ['Test report'] },
+    gates: ['Unit tests pass', 'Empty and malformed inputs handled', 'Dry run on real data', 'Reviewer sign-off'] },
   deploy: { id: 'deploy', name: 'Deploy', short: 'Deploy',
     goal: 'Ship it, watch the first run, and hand it over.',
-    gates: ['Release tagged', 'Environment variables set', 'Rollback plan written', 'Logs checked after first run', 'Handover notes shared'],
-    artifacts: ['Release notes', 'Runbook'] }
+    gates: ['Release tagged', 'Environment variables set', 'Rollback plan written', 'Logs checked after first run', 'Handover notes shared'] }
 };
 /* Exit criteria carry stable ids so a flow can be edited without shifting anyone's ticks. */
 function G(texts) { return texts.map((t, i) => ({ id: 'g' + (i + 1), text: t })); }
@@ -81,7 +76,7 @@ function gatesMap(def, raw) {
 
 /* ---- per-project state ---- */
 function blankPhase(def) {
-  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [], evidence: {}, completedAt: '' };
+  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, decisions: [], notes: '', log: [], actions: [], evidence: {}, completedAt: '' };
 }
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
@@ -173,20 +168,6 @@ function phaseHTML(def, st, idx, o) {
     return '<li class="crit-row"><div class="crit-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label>' + noteBlock + '</div>' + tools + '</li>';
   }).join('');
   const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '';
-  const arts = def.artifacts.map((a, ai) => {
-    const ref = (st.artifacts && st.artifacts[a]) || '';
-    if (edit) {
-      const rid = idp + 'ref-' + def.id + '-' + ai;
-      const confirm = o.confirmArt === def.id + ':' + a;
-      return '<li class="art"><label for="' + rid + '">' + esc(a) + '</label><input class="field mini-ref" id="' + rid + '" data-art-ref="' + esc(a) + '" data-phase="' + def.id + '" value="' + esc(ref) + '" placeholder="Link or file path (optional)" autocomplete="off">' +
-        (confirm
-          ? '<button type="button" class="btn small danger" data-art-del="' + esc(a) + '" data-phase="' + def.id + '">Remove artifact</button>'
-          : '<button type="button" class="x" data-art-del="' + esc(a) + '" data-phase="' + def.id + '" aria-label="Remove artifact: ' + esc(a) + '">&times;</button>') + '</li>';
-    }
-    if (!ref) return '';
-    const shown = /^https?:\/\//i.test(ref) ? '<a href="' + esc(ref) + '" target="_blank" rel="noopener noreferrer">' + esc(ref) + '</a>' : '<code>' + esc(ref) + '</code>';
-    return '<li class="art"><span>' + esc(a) + '</span>' + shown + '</li>';
-  }).join('');
   const decs = (st.decisions || []).map(d => '<li><time>' + esc(d.at) + '</time><span>' + esc(d.text) + '</span></li>').join('');
   const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
   const people = o.people || [];
@@ -213,9 +194,7 @@ function phaseHTML(def, st, idx, o) {
     '<span class="ph-count">' + n + '/' + def.gates.length + ' criteria</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul>' + critAdd + '</div>' + actBlock + '</div>' +
-    '<div class="stack"><div><p class="sub">Artifacts</p>' + (edit ? '<p class="msg" style="margin-bottom:8px">Optional. Documents or outputs this phase produced, linked from here. Add or remove them to suit the project.</p>' : '') + (arts ? '<ul class="arts">' + arts + '</ul>' : '<p class="note">' + (edit ? 'No artifacts for this phase.' : 'None attached.') + '</p>') +
-      (edit ? '<form class="dec-add" data-art-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newart-' + def.id + '" autocomplete="off" placeholder="Add an artifact, e.g. Test report" aria-label="New artifact for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '') + '</div>' +
-    '<div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
+    '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
 }
@@ -317,15 +296,15 @@ function overdueActions(tpl, proj) {
 
 /* ---- flow editing: pure helpers shared by the app and its checks ---- */
 function blankDraftPhase(idGen) {
-  return { id: 'p' + idGen(), name: '', short: '', goal: '', gates: [{ id: 'g' + idGen(), text: '' }], artifacts: [] };
+  return { id: 'p' + idGen(), name: '', short: '', goal: '', gates: [{ id: 'g' + idGen(), text: '' }] };
 }
 function phaseHasProgress(proj, phaseId) {
   const st = proj.phases && proj.phases[phaseId];
   if (!st) return false;
   const g = Array.isArray(st.gates) ? st.gates : Object.keys(st.gates || {}).map(k => st.gates[k]);
-  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes || Object.keys(st.artifacts || {}).length > 0;
+  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes;
 }
-/* Trims a draft and returns {errors, flow}. Empty criteria and artifacts are dropped; short labels fall back to the name. */
+/* Trims a draft and returns {errors, flow}. Empty criteria are dropped; short labels fall back to the name. */
 function cleanFlow(d) {
   const errors = [], name = String(d.name || '').trim();
   if (!name) errors.push('Give the flow a name.');
@@ -334,8 +313,7 @@ function cleanFlow(d) {
     if (!pn) errors.push('Phase ' + (pi + 1) + ' needs a name.');
     const gates = (p.gates || []).map(g => ({ id: g.id, text: String(g.text || '').trim() })).filter(g => g.text);
     if (!gates.length) errors.push(label + ' needs at least one exit criterion.');
-    const artifacts = (p.artifacts || []).map(a => String(a || '').trim()).filter((a, i, arr) => a && arr.indexOf(a) === i);
-    return { id: p.id, name: pn, short: String(p.short || '').trim().slice(0, 16) || pn.slice(0, 16), goal: String(p.goal || '').trim(), gates: gates, artifacts: artifacts };
+    return { id: p.id, name: pn, short: String(p.short || '').trim().slice(0, 16) || pn.slice(0, 16), goal: String(p.goal || '').trim(), gates: gates };
   });
   if (!phases.length) errors.push('Add at least one phase.');
   return { errors: errors, flow: { name: name, phases: phases } };
@@ -352,7 +330,6 @@ function reconcileProject(proj, flow) {
     if (raw && Array.isArray(raw.gates) && oldDef) oldDef.gates.forEach((g, i) => { carried[g.id] = !!raw.gates[i]; });
     else if (raw && raw.gates && !Array.isArray(raw.gates)) carried = raw.gates;
     st.gates = gatesMap(def, carried);
-    st.artifacts = Object.fromEntries(Object.keys(st.artifacts || {}).filter(k => def.artifacts.indexOf(k) >= 0).map(k => [k, st.artifacts[k]]));
     // Keep notes only for criteria that still exist.
     st.evidence = Object.fromEntries(def.gates.filter(g => st.evidence && st.evidence[g.id]).map(g => [g.id, st.evidence[g.id]]));
     if (st.status === 'done' && !def.gates.every(g => st.gates[g.id])) {
@@ -381,7 +358,6 @@ function flowEditorHTML(ed) {
   const errs = ed.errors && ed.errors.length ? '<ul class="fe-errors" role="alert">' + ed.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '';
   const phases = d.phases.map((p, pi) => {
     const gates = p.gates.map((g, gi) => '<li class="fe-row"><input class="field" id="fe-gate-' + pi + '-' + gi + '" data-fe="gate" data-p="' + pi + '" data-i="' + gi + '" value="' + esc(g.text) + '" placeholder="What must be true to finish this phase?" aria-label="Exit criterion ' + (gi + 1) + ' of ' + esc(p.name || 'phase ' + (pi + 1)) + '">' + editorRowButtons('gate', pi, gi, p.gates.length, 'criterion') + '</li>').join('');
-    const arts = p.artifacts.map((a, ai) => '<li class="fe-row"><input class="field" id="fe-art-' + pi + '-' + ai + '" data-fe="art" data-p="' + pi + '" data-i="' + ai + '" value="' + esc(a) + '" placeholder="e.g. Test report" aria-label="Artifact ' + (ai + 1) + ' of ' + esc(p.name || 'phase ' + (pi + 1)) + '"><span class="fe-btns"><button type="button" class="x" data-fe-act="art-del" data-p="' + pi + '" data-i="' + ai + '" aria-label="Remove artifact">&times;</button></span></li>').join('');
     const confirm = ed.confirmDel === 'p' + pi;
     return '<section class="fe-phase" aria-label="Phase ' + (pi + 1) + '"><div class="ph-head"><span class="ph-idx">' + String(pi + 1).padStart(2, '0') + '</span><h3>' + esc(p.name || 'New phase') + '</h3><span class="fe-btns" style="margin-left:auto">' +
       '<button type="button" class="x" data-fe-act="p-up" data-p="' + pi + '" aria-label="Move phase up"' + (pi === 0 ? ' disabled' : '') + '>&uarr;</button>' +
@@ -391,7 +367,7 @@ function flowEditorHTML(ed) {
       '<label for="fe-pshort-' + pi + '">Short label<input class="field" id="fe-pshort-' + pi + '" data-fe="pshort" data-p="' + pi + '" maxlength="16" value="' + esc(p.short) + '" placeholder="Shown on the progress rail" autocomplete="off"></label></div>' +
       '<label for="fe-pgoal-' + pi + '">Goal<textarea class="field" id="fe-pgoal-' + pi + '" data-fe="pgoal" data-p="' + pi + '" placeholder="One sentence on what this phase achieves">' + esc(p.goal) + '</textarea></label>' +
       '<div><p class="sub">Exit criteria</p><ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button></div>' +
-      '<div><p class="sub">Expected artifacts</p>' + (arts ? '<ul class="fe-list">' + arts + '</ul>' : '<p class="note">None.</p>') + '<button type="button" class="btn" data-fe-act="art-add" data-p="' + pi + '">Add artifact</button></div></section>';
+      '</section>';
   }).join('');
   return '<div><p class="eyebrow">' + esc(ed.title) + '</p><h1>' + esc(d.name || 'Untitled flow') + '</h1></div>' +
     (ed.intro ? '<p class="msg">' + esc(ed.intro) + '</p>' : '') + errs +

@@ -170,10 +170,6 @@
 .pb .gate input { margin: 2px 0 0; flex: none; }
 .pb .gate input:checked ~ span { color: var(--fg-2); }
 .pb .gate input:disabled { cursor: default; opacity: 0.8; }
-.pb .arts { display: grid; gap: 6px; }
-.pb .art { display: flex; flex-wrap: wrap; gap: 2px 10px; justify-content: space-between; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.pb .art code { color: var(--fg-2); overflow-wrap: anywhere; }
-.pb .art.missing em { color: var(--fg-2); font-size: 13px; }
 .pb .decs { display: grid; gap: 8px; }
 .pb .decs li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
 .pb .decs time { font-family: Consolas, Monaco, monospace; font-size: 12px; color: var(--fg-2); padding-top: 2px; }
@@ -247,10 +243,6 @@
 .pb .lifted-tag { flex: none; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; }
 .pb .btn.small { padding: 3px 10px; font-size: 12px; flex: none; }
 
-/* artifact link boxes */
-.pb .art label { align-self: center; }
-.pb .mini-ref { flex: 1 1 180px; min-width: 0; width: auto; padding: 3px 8px; font-size: 12px; }
-.pb .art a { color: var(--accent-secondary); overflow-wrap: anywhere; }
 
 /* inline exit-criteria editing */
 .pb .crit-row { display: flex; align-items: flex-start; gap: 6px; }
@@ -270,11 +262,6 @@
 .pb .note-form textarea.field { min-height: 72px; }
 .pb .note-btns { display: flex; gap: 8px; }
 
-/* artifact rows with a remove button */
-.pb .art .x, .pb .art .btn.small { flex: none; }
-.pb .art { align-items: center; flex-wrap: nowrap; gap: 8px; }
-.pb .art > span, .pb .art > label { flex: none; max-width: 40%; overflow-wrap: anywhere; }
-.pb .art > code, .pb .art > a { margin-left: auto; text-align: right; min-width: 0; }
 
 /* completion dates, year in review */
 .pb .ph-date { font-size: 12px; color: var(--fg-2); }
