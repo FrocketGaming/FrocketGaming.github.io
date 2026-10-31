@@ -364,10 +364,11 @@
 .pb .sec:not([open]) { padding-bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .pb .sec > summary::before { transition: none; } }
 
-/* owner and lead on the project card */
-.pb .card .meta.people { display: flex; flex-wrap: wrap; gap: 2px 14px; }
-.pb .meta.people b { font-weight: 600; color: var(--fg); margin-right: 5px; }
 
-/* stakeholders and SMEs: a second, quieter line under owner and lead */
-.pb .card .meta.people + .meta.people { margin-top: 2px; }
-.pb .meta.people.crowd b { font-weight: 400; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+
+/* who is on the project: a small label over each name, the same for every role */
+.pb .people { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 16px; border-top: 1px solid var(--line); padding-top: 10px; text-align: left; }
+.pb .pp { display: grid; gap: 1px; min-width: 0; }
+.pb .pp-k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-2); }
+.pb .pp-v { font-size: 13px; color: var(--fg); overflow-wrap: anywhere; }
+.pb .phase-badge.is-muted { color: var(--fg-2); text-transform: none; letter-spacing: 0; font-weight: 500; }

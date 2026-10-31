@@ -223,10 +223,10 @@ function cardHTML(id, p, when) {
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
-    '<div><h2>' + esc(p.name) + '</h2>' + cardMeta(p) + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + '</div>' +
+    '<div><h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
+    cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -563,10 +563,10 @@ function doneCardHTML(id, p, when) {
     : (richItems(o.value).length ? '' : '<p class="msg">No value added recorded yet.</p>');
   const text = (label, t) => richItems(t).length ? '<div class="card-text"><p class="sub">' + label + '</p><div class="rt">' + bulletsHTML(t, 4) + '</div></div>' : '';
   return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div><h2>' + esc(p.name) + '</h2>' +
-    cardMeta(p) + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + '</div>' + wins +
+    (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + archivedTag(p) + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
-    '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
+    cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
 }
 
 /* Totals of amounts saved across completed projects. Recurring amounts become an estimated annual figure. */
@@ -737,25 +737,26 @@ function portfolioBodyHTML(shown, filter, o) {
 
 /* Who is accountable and who does the work, on the project card. The hover text explains each role. */
 function cardMeta(p) {
-  const o = String(p.owner || '').trim(), l = String(p.lead || '').trim(), parts = [];
-  const role = (label, name, tip) => '<span title="' + esc(tip) + '"><b>' + esc(label) + '</b>' + esc(name) + '</span>';
-  if (o && l && sameName(o, l)) parts.push(role('Owner and lead', o, 'Accountable for the outcome and runs the work day to day'));
+  const o = String(p.owner || '').trim(), l = String(p.lead || '').trim(), items = [];
+  const item = (label, text, tip) => '<span class="pp" title="' + esc(tip) + '"><span class="pp-k">' + esc(label) + '</span><span class="pp-v">' + esc(text) + '</span></span>';
+  if (o && l && sameName(o, l)) items.push(item('Owner and lead', o, 'Accountable for the outcome and runs the work day to day'));
   else {
-    if (o) parts.push(role('Owner', o, 'Accountable for the outcome'));
-    if (l) parts.push(role('Lead', l, 'Runs the work day to day'));
+    if (o) items.push(item('Owner', o, 'Accountable for the outcome'));
+    if (l) items.push(item('Lead', l, 'Runs the work day to day'));
   }
-  if (isArchived(p)) parts.push('<span>Archived</span>');
   // Stakeholders and SMEs: the first two names and a count; hovering lists everyone. Anyone already shown as owner or lead is left out.
   const group = (one, many, names, tip) => {
     const list = [];
     listOf(names).forEach(n => { const s = String(n || '').trim(); if (s && !sameName(s, o) && !sameName(s, l) && !list.some(x => sameName(x, s))) list.push(s); });
-    if (!list.length) return '';
-    const head = list.slice(0, 2).map(esc).join(', ') + (list.length > 2 ? ' +' + (list.length - 2) : '');
-    return '<span title="' + esc(tip + ': ' + list.join(', ')) + '"><b>' + esc(list.length === 1 ? one : many) + '</b>' + head + '</span>';
+    if (!list.length) return;
+    items.push(item(list.length === 1 ? one : many, list.slice(0, 2).join(', ') + (list.length > 2 ? ' +' + (list.length - 2) : ''), tip + ': ' + list.join(', ')));
   };
-  const crowd = [group('Stakeholder', 'Stakeholders', p.stakeholders, 'Kept informed, or signs off'), group('SME', 'SMEs', p.smes, 'Subject matter expert, consulted')].filter(Boolean);
-  return (parts.length ? '<p class="meta people">' + parts.join('') + '</p>' : '') + (crowd.length ? '<p class="meta people crowd">' + crowd.join('') + '</p>' : '');
+  group('Stakeholder', 'Stakeholders', p.stakeholders, 'Kept informed, or signs off');
+  group('SME', 'SMEs', p.smes, 'Subject matter expert, consulted');
+  return items.length ? '<div class="people">' + items.join('') + '</div>' : '';
 }
+/* Archived is a status, so it sits beside the status badges rather than among the people. */
+function archivedTag(p) { return isArchived(p) ? '<span class="phase-badge is-muted">Archived</span>' : ''; }
 
 /* Two names are the same person if they differ only by capitals or extra spaces. */
 function sameName(a, b) {
