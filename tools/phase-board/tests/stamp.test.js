@@ -38,7 +38,7 @@ fs.appendFileSync(path.join(tmp, 'phase-board-core.js'), '\n// edited\n');
 run('--dir', tmp);
 const v2 = stampOf();
 ok(v2[0] !== v1[0], 'editing a file changes the version');
-const crlf = fs.readFileSync(path.join(tmp, 'phase-board-core.js'), 'utf8').replace(/\n/g, '\r\n');
+const crlf = fs.readFileSync(path.join(tmp, 'phase-board-core.js'), 'utf8').replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');   // CRLF whatever the checkout used
 fs.writeFileSync(path.join(tmp, 'phase-board-core.js'), crlf);
 run('--dir', tmp);
 ok(stampOf()[0] === v2[0], 'Windows and Unix line endings give the same version');

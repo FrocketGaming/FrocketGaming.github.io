@@ -41,8 +41,9 @@ const ok = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console
   ok(root.innerHTML.includes('Proj A') && root.innerHTML.includes('Odd'), 'the export renders both projects, including an oddly shaped one');
 
   // ---- 3. A mismatched (older) core no longer gives a blank page. ----
-  const staleCore = core.replace(/function projectMeta[\s\S]*?\n}\n/, '').replace(/function filterProjects[\s\S]*?\n}\n/, '');
-  ok(staleCore.length < core.length, 'built a stale core missing two functions');
+  // An older core is one that lacks functions the newer viewer calls. Renaming two of them makes them missing, whatever the file's layout or line endings.
+  const staleCore = core.replace('function projectMeta(', 'function projectMetaRemoved(').replace('function filterProjects(', 'function filterProjectsRemoved(');
+  ok(staleCore !== core && !/function projectMeta\(/.test(staleCore) && !/function filterProjects\(/.test(staleCore) && /function projectMeta\(/.test(core) && /function filterProjects\(/.test(core), 'built a stale core missing two functions');
   const root2 = { innerHTML: '', addEventListener() {} };
   let threw = false;
   try { new Function('document', 'window', staleCore + '\n' + viewer)({ getElementById: id => id === 'board-data' ? { textContent: data } : root2 }, { scrollTo() {} }); } catch (e) { threw = true; }
