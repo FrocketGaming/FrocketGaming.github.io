@@ -218,7 +218,7 @@ Floating overlays (tooltips, modal panels) are a distinct, legitimate second cas
 
 ### Shadow Vocabulary
 - **Ambient panel glow** (`box-shadow: 0 0 4px var(--shadow-color)`): resting state for `.box` containers.
-- **Focus glow** (`box-shadow: 0 0 15px var(--accent-primary)`): the shared focus-within/focus treatment for inputs, textareas, and select controls site-wide.
+- **Focus ring** (`outline: 2px solid var(--accent-secondary); outline-offset: 1px` plus `border-color: var(--accent-secondary)`): the focus treatment for inputs, textareas, and select controls. No glow. Phase Board uses it now; the older `0 0 15px var(--accent-primary)` focus glow remains on `.box:focus-within` and the theme select until they are moved over.
 - **Interactive hover glow** (`box-shadow: 0 0 10px var(--accent-primary)`): nav-link and button hover.
 - **Overlay separation shadow** (`box-shadow: [offsets] rgba(0,0,0,0.3-0.8)`): floating tooltips/modals lifting off page content; neutral black, not theme-colored.
 
@@ -251,7 +251,7 @@ The two steps beyond the original six were already in wide use and are now docum
 
 ### Inputs / Fields
 - **Style:** `--bg-secondary`/`--bg-tertiary` background, 1px `--border-color` border, 4-5px radius, no native outline.
-- **Focus:** border shifts to `--accent-secondary` plus the shared `0 0 15px var(--accent-primary)` glow (see Shadow Vocabulary) — this exact treatment is reused for every input, textarea, and select on the site.
+- **Focus:** border shifts to `--accent-secondary` plus a solid 2px `--accent-secondary` ring (see Shadow Vocabulary, Focus ring). Phase Board fields use it; remaining legacy glows are being moved over.
 
 ### Navigation
 - Fixed header, centered uppercase logo (3px letter-spacing), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
@@ -263,7 +263,7 @@ The two steps beyond the original six were already in wide use and are now docum
 
 ### Do:
 - **Do** keep exactly one accent color driving interactive signal per theme; a second accent only ever represents that same signal's "peak" state.
-- **Do** use the shared focus treatment (`border-color: var(--accent-secondary)` + `0 0 15px var(--accent-primary)` glow) for every new input/select/textarea, rather than inventing a new focus style per component.
+- **Do** use the focus ring (`border-color: var(--accent-secondary)` + `outline: 2px solid var(--accent-secondary)`, no glow) for every new input/select/textarea, rather than inventing a new focus style per component.
 - **Do** keep shadows as ambient, non-directional glows tinted from theme tokens — never a fixed black/gray shadow that ignores the active theme.
 - **Do** make every new themeable component render correctly across all 8 existing palettes via the CSS custom-property contract; don't hardcode a color that only looks right in the Default theme.
 
