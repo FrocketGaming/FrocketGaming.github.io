@@ -557,14 +557,16 @@ function outcomesHTML(p, edit) {
 
 /* A finished project's card leads with the value it delivered instead of progress it no longer needs to show. */
 function doneCardHTML(id, p, when) {
-  const on = projectCompletedOn(p), n = projectCounts(p), tiles = headlineMetrics(p, 3);
+  const on = projectCompletedOn(p), n = projectCounts(p), tiles = headlineMetrics(p, 3), o = p.outcomes || {};
   const meta = [p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ');
   const wins = tiles.length
     ? '<div class="wins">' + tiles.map(m => '<div class="win"><b>' + esc(metricTileText(m)) + '</b><span>' + esc(m.name) + '</span></div>').join('') + '</div>'
-    : '<p class="msg">No value added recorded yet.</p>';
+    : (richItems(o.value).length ? '' : '<p class="msg">No value added recorded yet.</p>');
+  const text = (label, t) => richItems(t).length ? '<div class="card-text"><p class="sub">' + label + '</p><div class="rt">' + bulletsHTML(t, 4) + '</div></div>' : '';
   return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div><h2>' + esc(p.name) + '</h2>' +
     (meta ? '<p class="meta">' + esc(meta) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + '</div>' + wins +
+    text('Value added', o.value) + text('Lessons learned', o.lessons) +
     '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
 }
 
@@ -693,17 +695,29 @@ function diagramsHTML(def, st, o) {
 
 /* Plain text with light structure: a line starting with *, - or a bullet dot becomes a list item; other lines
    keep their line breaks; a blank line ends a paragraph or list. Everything is escaped. */
-function bulletsHTML(text) {
+function richItems(text) {
   const lines = String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n');
-  let html = '', inList = false, para = [];
-  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
-  const flushPara = () => { if (para.length) { html += '<p class="rt-p">' + para.map(esc).join('<br>') + '</p>'; para = []; } };
+  const items = [];
+  let para = [];
+  const flush = () => { if (para.length) { items.push({ t: 'p', x: para.slice() }); para = []; } };
   lines.forEach(line => {
     const m = line.match(/^\s*[*\-\u2022]\s+(.*\S.*)$/);
-    if (m) { flushPara(); if (!inList) { html += '<ul class="rt-list">'; inList = true; } html += '<li>' + esc(m[1].trim()) + '</li>'; }
-    else if (!line.trim()) { flushPara(); closeList(); }
-    else { closeList(); para.push(line.trim()); }
+    if (m) { flush(); items.push({ t: 'li', x: m[1].trim() }); }
+    else if (!line.trim() || /^\s*[*\-\u2022]\s*$/.test(line)) flush();
+    else para.push(line.trim());
   });
-  flushPara(); closeList();
+  flush();
+  return items;
+}
+/* max (optional) shows only the first few items, then how many more there are. */
+function bulletsHTML(text, max) {
+  const all = richItems(text), items = max ? all.slice(0, max) : all;
+  let html = '', inList = false;
+  items.forEach(it => {
+    if (it.t === 'li') { if (!inList) { html += '<ul class="rt-list">'; inList = true; } html += '<li>' + esc(it.x) + '</li>'; }
+    else { if (inList) { html += '</ul>'; inList = false; } html += '<p class="rt-p">' + it.x.map(esc).join('<br>') + '</p>'; }
+  });
+  if (inList) html += '</ul>';
+  if (max && all.length > max) html += '<p class="rt-more">+' + (all.length - max) + ' more</p>';
   return html;
 }
