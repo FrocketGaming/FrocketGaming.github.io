@@ -464,7 +464,8 @@ function reviewHTML(d) {
     const decs = d.decisions.filter(x => x.project === p.name), acts = mine(d.actions, p.name);
     return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc([p.owner ? 'owner ' + p.owner : '', p.lead ? 'lead ' + p.lead : '', (p.started || '?') + ' to ' + c.on].filter(Boolean).join(' / ')) + '</p></div>' +
       (p.summary ? '<p class="lead" style="margin:0">' + esc(p.summary) + '</p>' : '') +
-      '<div><p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded.</p>') + '</div>' +
+      '<div><p class="sub">Value added</p>' + (o.value ? '<div class="rt">' + bulletsHTML(o.value) + '</div>' : '<p class="note">Not recorded.</p>') + '</div>' +
+      (o.lessons ? '<div><p class="sub">Lessons learned</p><div class="rt">' + bulletsHTML(o.lessons) + '</div></div>' : '') +
       (rows ? '<div><p class="sub">Metrics</p><ul class="metric-tiles">' + rows + '</ul></div>' : '') +
       (decs.length ? '<details><summary>' + decs.length + (decs.length === 1 ? ' decision' : ' decisions') + '</summary><ul class="decs">' + decs.map(x => '<li><time>' + esc(x.at) + '</time><span><b>' + esc(x.phase) + ':</b> ' + esc(x.text) + '</span></li>').join('') + '</ul></details>' : '') +
       (acts.length ? '<details><summary>' + acts.length + (acts.length === 1 ? ' action item completed' : ' action items completed') + '</summary><ul class="decs">' + acts.map(x => '<li><time>' + esc(x.on) + '</time><span>' + esc(x.text) + (x.who ? ' <span class="who">(' + esc(x.who) + ')</span>' : '') + '</span></li>').join('') + '</ul></details>' : '') + '</article>';
@@ -533,9 +534,16 @@ function outcomesHTML(p, edit) {
   const o = p.outcomes || {};
   const done = !summarize(tplOf(p), p).current;
   const rows = metricRowsHTML(p, edit);
+  const rich = text => '<div class="rt">' + bulletsHTML(text) + '</div>';
   const value = edit
-    ? '<label class="sub" for="out-value">Value added</label><textarea class="field" id="out-value" data-outvalue="1" placeholder="What changed for the business or users because of this project?">' + esc(o.value || '') + '</textarea>'
-    : '<p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded yet.</p>');
+    ? '<label class="sub" for="out-value">Value added</label><textarea class="field" id="out-value" data-outvalue="1" placeholder="What changed for the business or users because of this project?">' + esc(o.value || '') + '</textarea><p class="msg">Start a line with * or - to make it a bullet.</p>'
+    : '<p class="sub">Value added</p>' + (o.value ? rich(o.value) : '<p class="note">Not recorded yet.</p>');
+  // Lessons are written when the work is finished, so the box appears once every phase is done.
+  const lessons = !done
+    ? (edit ? '<p class="msg">Lessons learned can be added once every phase is done.</p>' : '')
+    : (edit
+      ? '<label class="sub" for="out-lessons">Lessons learned</label><textarea class="field" id="out-lessons" data-outlessons="1" placeholder="What went well, what to change next time, what you would tell the next team">' + esc(o.lessons || '') + '</textarea><p class="msg">Start a line with * or - to make it a bullet.</p>'
+      : '<p class="sub">Lessons learned</p>' + (o.lessons ? rich(o.lessons) : '<p class="note">Not recorded yet.</p>'));
   const opts = (map, sel) => Object.keys(map).map(k => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(map[k]) + '</option>').join('');
   const forms = !edit ? '' : '<div class="metric-forms"><p class="sub">Add an amount saved or gained</p>' +
     '<form class="amount-add" data-addamount="1" aria-label="Add an amount saved or gained"><input class="field" id="am-name" autocomplete="off" placeholder="e.g. Hours saved" aria-label="Metric name"><input class="field" id="am-amount" inputmode="decimal" autocomplete="off" placeholder="Amount" aria-label="Amount"><select class="field" id="am-unit" aria-label="Unit">' + opts(METRIC_UNITS, 'hours') + '</select><select class="field" id="am-period" aria-label="How often">' + opts(METRIC_PERIODS, 'year') + '</select><button class="btn" type="submit">Add amount</button></form>' +
@@ -544,7 +552,7 @@ function outcomesHTML(p, edit) {
   return '<section class="panel-block outcomes" aria-label="Outcomes"><div class="ph-row"><div><p class="eyebrow">Outcomes</p><h2 class="out-h">Metrics collected and value added</h2></div>' +
     (done ? '' : '<span class="msg" style="margin-left:auto">Fill this in as results come in; it is complete at project end.</span>') + '</div>' +
     '<div><p class="sub">Metrics</p>' + (rows ? '<ul class="metric-tiles">' + rows + '</ul>' : '<p class="note">No metrics recorded yet.</p>') + forms + '</div>' +
-    '<div>' + value + '</div></section>';
+    '<div>' + value + '</div>' + (lessons ? '<div>' + lessons + '</div>' : '') + '</section>';
 }
 
 /* A finished project's card leads with the value it delivered instead of progress it no longer needs to show. */
@@ -681,4 +689,21 @@ function diagramsHTML(def, st, o) {
     }
   }
   return '<div><p class="sub">Diagrams</p>' + (items ? '<div class="dgs">' + items + '</div>' : '<p class="note">None attached.</p>') + attach + '</div>';
+}
+
+/* Plain text with light structure: a line starting with *, - or a bullet dot becomes a list item; other lines
+   keep their line breaks; a blank line ends a paragraph or list. Everything is escaped. */
+function bulletsHTML(text) {
+  const lines = String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n');
+  let html = '', inList = false, para = [];
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  const flushPara = () => { if (para.length) { html += '<p class="rt-p">' + para.map(esc).join('<br>') + '</p>'; para = []; } };
+  lines.forEach(line => {
+    const m = line.match(/^\s*[*\-\u2022]\s+(.*\S.*)$/);
+    if (m) { flushPara(); if (!inList) { html += '<ul class="rt-list">'; inList = true; } html += '<li>' + esc(m[1].trim()) + '</li>'; }
+    else if (!line.trim()) { flushPara(); closeList(); }
+    else { closeList(); para.push(line.trim()); }
+  });
+  flushPara(); closeList();
+  return html;
 }

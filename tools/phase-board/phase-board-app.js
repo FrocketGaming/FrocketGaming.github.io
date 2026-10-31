@@ -900,6 +900,9 @@ class PhaseBoardApp {
             } else if (t.matches('[data-outvalue]')) {
                 const v = t.value.trim();
                 this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { value: v }) }), 'value added text');
+            } else if (t.matches('[data-outlessons]')) {
+                const v = t.value.trim();
+                this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { lessons: v }) }), 'lessons learned');
             } else if (t.matches('[data-act-assignee]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-assignee'), { assignee: t.value });
             else if (t.matches('[data-act-due]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-due'), { due: t.value });
             else if (t.matches('input[data-action]')) {
