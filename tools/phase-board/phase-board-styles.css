@@ -367,3 +367,7 @@
 /* owner and lead on the project card */
 .pb .card .meta.people { display: flex; flex-wrap: wrap; gap: 2px 14px; }
 .pb .meta.people b { font-weight: 600; color: var(--fg); margin-right: 5px; }
+
+/* stakeholders and SMEs: a second, quieter line under owner and lead */
+.pb .card .meta.people + .meta.people { margin-top: 2px; }
+.pb .meta.people.crowd b { font-weight: 400; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }

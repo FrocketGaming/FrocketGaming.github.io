@@ -745,7 +745,16 @@ function cardMeta(p) {
     if (l) parts.push(role('Lead', l, 'Runs the work day to day'));
   }
   if (isArchived(p)) parts.push('<span>Archived</span>');
-  return parts.length ? '<p class="meta people">' + parts.join('') + '</p>' : '';
+  // Stakeholders and SMEs: the first two names and a count; hovering lists everyone. Anyone already shown as owner or lead is left out.
+  const group = (one, many, names, tip) => {
+    const list = [];
+    listOf(names).forEach(n => { const s = String(n || '').trim(); if (s && !sameName(s, o) && !sameName(s, l) && !list.some(x => sameName(x, s))) list.push(s); });
+    if (!list.length) return '';
+    const head = list.slice(0, 2).map(esc).join(', ') + (list.length > 2 ? ' +' + (list.length - 2) : '');
+    return '<span title="' + esc(tip + ': ' + list.join(', ')) + '"><b>' + esc(list.length === 1 ? one : many) + '</b>' + head + '</span>';
+  };
+  const crowd = [group('Stakeholder', 'Stakeholders', p.stakeholders, 'Kept informed, or signs off'), group('SME', 'SMEs', p.smes, 'Subject matter expert, consulted')].filter(Boolean);
+  return (parts.length ? '<p class="meta people">' + parts.join('') + '</p>' : '') + (crowd.length ? '<p class="meta people crowd">' + crowd.join('') + '</p>' : '');
 }
 
 /* Two names are the same person if they differ only by capitals or extra spaces. */
