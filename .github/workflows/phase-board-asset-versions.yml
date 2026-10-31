@@ -1,0 +1,42 @@
+name: Update Phase Board asset versions
+
+# Stamps ?v=<hash> on the Phase Board's CSS/JS tags (tools/phase-board/index.html) so browsers never
+# mix a new page with stale cached scripts. The HTML export fetches the same versioned files.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/phase-board/*.js"
+      - "tools/phase-board/*.css"
+      - "tools/phase-board/version-assets.mjs"
+      - "tools/phase-board/index.html"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase-board-asset-versions
+  cancel-in-progress: false
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp asset versions
+        run: node tools/phase-board/version-assets.mjs
+
+      - name: Commit the new version if it changed
+        run: |
+          if git diff --quiet -- tools/phase-board/index.html; then
+            echo "Asset versions are already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/phase-board/index.html
+          git commit -m "Update Phase Board asset versions"
+          # Another workflow (Flow's or the newsletter's) may have pushed meanwhile.
+          git pull --rebase
+          git push
