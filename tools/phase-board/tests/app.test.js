@@ -76,7 +76,7 @@ const fakeRef = (kind) => ({ doc: id => ({ set: async d => wrote.push({ kind, op
   const fset = wrote.find(w => w.kind === 'flows' && w.op === 'set');
   ok(fset && /^f-/.test(fset.id) && fset.d.name === 'Research spike' && fset.d.phases[0].short === 'Question', 'new flow saved to the flows collection');
   app.flows = { [fset.id]: fset.d };
-  ok(app.allFlows().length === 3 && app.allFlows()[2].name === 'Research spike', 'library lists built-ins plus the new flow');
+  ok(app.allFlows().length === 4 && app.allFlows()[3].name === 'Research spike' && app.allFlows()[2].key === 'starter', 'library lists built-ins plus the new flow');
   app.view = '__flows'; app.render();
   ok(els.pbPage.innerHTML.includes('Research spike') && els.pbPage.innerHTML.includes('Duplicate to edit'), 'flows page renders both kinds');
 

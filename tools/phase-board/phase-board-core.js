@@ -68,6 +68,37 @@ const TEMPLATES = {};
 Object.keys(LEGACY_TEMPLATES).forEach(k => {
   TEMPLATES[k] = { key: k, name: LEGACY_TEMPLATES[k].name, phases: LEGACY_TEMPLATES[k].phases.map(p => Object.assign({}, p, { gates: [] })) };
 });
+/* A worked example for people who find blank criteria hard: each one is a yes/no check with evidence behind it (a name,
+   a link, a number), not a task. Pick it for a new project and trim what does not apply, or duplicate it into your own flow. */
+const STARTER_CRITERIA = {
+  discovery: ['Problem and desired outcome written in one sentence and agreed with the requester',
+    'Owner, stakeholders and SMEs named',
+    'Success measure and its current baseline recorded (hours, cost, error rate)',
+    'Data sources confirmed to exist and access granted',
+    'Scope stated, including what is out of scope'],
+  research: ['At least two options compared against the same needs',
+    'Chosen approach recorded as a decision, with the reason',
+    'Cost, licensing and security or compliance concerns checked',
+    'Feasibility shown on a small real sample, not just on paper'],
+  build: ['Core workflow runs end to end on real or representative data',
+    'Requester has seen it and confirmed it addresses the problem',
+    'Known gaps listed, each with an owner',
+    'Work is in version control and someone else can run it',
+    'No secrets or credentials in the code'],
+  test: ['Results compared with the success measure from Discovery',
+    'Edge cases and failure paths tried (empty input, bad data)',
+    'A real user or the requester completed a trial run',
+    'Open defects triaged: none critical, the rest fixed or accepted',
+    'Run time and volume acceptable for expected use'],
+  deploy: ['Running in the real environment on its production schedule or trigger',
+    'Failure alerts or monitoring in place, with a named person who receives them',
+    'Rollback or manual fallback written down',
+    'Handoff note delivered to whoever supports it',
+    'First real run checked and users told',
+    'Value measured after launch and recorded in Outcomes']
+};
+TEMPLATES.starter = { key: 'starter', name: 'Standard flow with starter criteria',
+  phases: LEGACY_TEMPLATES.standard.phases.map(p => Object.assign({}, p, { gates: G(STARTER_CRITERIA[p.id]) })) };
 /* A project carries its own copy of its flow. Projects saved before that fall back to the original built-in flow,
    criteria included, so their ticks keep their meaning. */
 function tplOf(proj) {
