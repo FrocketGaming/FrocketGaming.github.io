@@ -244,13 +244,21 @@ function risksHTML(p, edit) {
   const open = rs.filter(r => !r.resolved).length;
   const rows = rs.map(r => {
     const id = 'rk-' + r.id;
+    const del = edit ? '<button type="button" class="x" data-del-risk="' + esc(r.id) + '" aria-label="Remove: ' + esc(r.text) + '">&times;</button>' : '';
+    if (r.kind === 'constraint') {
+      // A constraint is a standing limit, not a task, so it has no checkbox; it can be lifted if it stops applying.
+      const lifted = !!r.resolved;
+      return '<li class="risk' + (lifted ? ' is-lifted' : '') + '"><span class="kind k-constraint">Constraint</span><span class="rtext">' + esc(r.text) + '</span>' +
+        (lifted ? '<span class="lifted-tag">Lifted</span>' : '') +
+        (edit ? '<button type="button" class="btn small" data-lift-risk="' + esc(r.id) + '" aria-label="' + (lifted ? 'Restore' : 'Lift') + ' constraint: ' + esc(r.text) + '">' + (lifted ? 'Restore' : 'Lift') + '</button>' : '') + del + '</li>';
+    }
     return '<li class="risk' + (r.resolved ? ' is-done' : '') + '"><span class="kind k-' + esc(r.kind) + '">' + (r.kind === 'constraint' ? 'Constraint' : 'Risk') + '</span>' +
       '<label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-risk="' + esc(r.id) + '"' + (r.resolved ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(r.text) + '</span></label>' +
-      (edit ? '<button type="button" class="x" data-del-risk="' + esc(r.id) + '" aria-label="Remove: ' + esc(r.text) + '">&times;</button>' : '') + '</li>';
+      del + '</li>';
   }).join('');
   return '<section class="panel-block" aria-label="Risks and constraints"><p class="sub">Risks and constraints' + (rs.length ? ' <span class="cnt">' + open + ' open</span>' : '') + '</p>' +
     (rows ? '<ul class="gates">' + rows + '</ul>' : '<p class="note">None recorded.</p>') +
-    (edit ? '<p class="msg">Tick a risk once it is mitigated, or a constraint once it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
+    (edit ? '<p class="msg">Tick a risk once it is mitigated. Lift a constraint if it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
 }
 function outcomesHTML(p, edit) {
   const o = p.outcomes || {}, ms = Array.isArray(o.metrics) ? o.metrics : [];

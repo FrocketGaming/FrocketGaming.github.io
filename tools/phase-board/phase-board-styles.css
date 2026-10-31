@@ -235,3 +235,10 @@
 .pb .fe-btns .x:disabled { opacity: 0.3; cursor: default; }
 .pb .fe-btns .x:disabled:hover { color: var(--fg-2); background: none; }
 .pb .fe-errors { border: 1px solid var(--crit); border-radius: 5px; padding: 10px 14px 10px 28px; color: var(--crit); font-size: 13px; background: color-mix(in srgb, var(--crit) 10%, var(--surface)); list-style: disc; display: grid; gap: 2px; }
+
+/* constraints: no checkbox, can be lifted */
+.pb .rtext { flex: 1; min-width: 0; padding: 5px 0 5px 26px; overflow-wrap: anywhere; }
+.pb .risk.is-lifted .rtext { color: var(--fg-2); }
+.pb .risk.is-lifted .kind { opacity: 0.6; }
+.pb .lifted-tag { flex: none; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; }
+.pb .btn.small { padding: 3px 10px; font-size: 12px; flex: none; }

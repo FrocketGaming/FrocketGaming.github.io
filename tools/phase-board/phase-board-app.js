@@ -593,6 +593,11 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const lift = e.target.closest('[data-lift-risk]');
+            if (lift) {
+                const k = lift.getAttribute('data-lift-risk');
+                return this.patchProject(p => ({ risks: (p.risks || []).map(r => r.id === k ? Object.assign({}, r, { resolved: !r.resolved }) : r) }), 'constraint');
+            }
             const delRisk = e.target.closest('[data-del-risk]');
             if (delRisk) {
                 const k = delRisk.getAttribute('data-del-risk');
