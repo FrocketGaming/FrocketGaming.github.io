@@ -566,7 +566,7 @@ function doneCardHTML(id, p, when) {
     (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + archivedTag(p) + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
-    cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
+    liveNotesHTML(p) + cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
 }
 
 /* Totals of amounts saved across completed projects. Recurring amounts become an estimated annual figure. */
@@ -762,4 +762,19 @@ function archivedTag(p) { return isArchived(p) ? '<span class="phase-badge is-mu
 function sameName(a, b) {
   const norm = s => String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toLowerCase();
   return norm(a) !== '' && norm(a) === norm(b);
+}
+
+/* What is still live on a finished project: risks that are open or being monitored, and constraints that still apply.
+   Mitigated and occurred risks and lifted constraints are history and are not shown. Hovering lists the wording. */
+function liveNotesHTML(p) {
+  const rs = Array.isArray(p.risks) ? p.risks : [];
+  const open = rs.filter(r => r.kind !== 'constraint' && riskStatus(r) === 'open');
+  const watching = rs.filter(r => r.kind !== 'constraint' && riskStatus(r) === 'monitoring');
+  const limits = rs.filter(r => r.kind === 'constraint' && !r.resolved);
+  const chip = (cls, text, tip, items) => '<span class="rstatus ' + cls + '" title="' + esc(tip + ': ' + items.map(r => r.text).join('; ')) + '">' + esc(text) + '</span>';
+  const parts = [];
+  if (open.length) parts.push(chip('rs-open', open.length + (open.length === 1 ? ' open risk' : ' open risks'), 'Open risks', open));
+  if (watching.length) parts.push(chip('rs-monitoring', watching.length + (watching.length === 1 ? ' risk monitoring' : ' risks monitoring'), 'Risks being monitored', watching));
+  if (limits.length) parts.push(chip('rs-constraint', limits.length + (limits.length === 1 ? ' constraint' : ' constraints'), 'Constraints that still apply', limits));
+  return parts.length ? '<div class="live-notes">' + parts.join('') + '</div>' : '';
 }

@@ -372,3 +372,7 @@
 .pb .pp-k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-2); }
 .pb .pp-v { font-size: 13px; color: var(--fg); overflow-wrap: anywhere; }
 .pb .phase-badge.is-muted { color: var(--fg-2); text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+/* risks and constraints that still apply to a finished project */
+.pb .live-notes { display: flex; flex-wrap: wrap; gap: 6px; }
+.pb .rs-constraint { --s: var(--idle); }
