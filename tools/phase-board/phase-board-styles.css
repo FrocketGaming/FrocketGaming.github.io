@@ -285,6 +285,7 @@
 .pb .dec-add select.field { flex: 0 0 auto; width: auto; max-width: 100%; }
 /* Risk and constraint rows: center the badge, text and buttons on one line. */
 .pb .risk { align-items: center; }
+.pb .grp { margin: 14px 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-2); }
 .pb .risk .kind, .pb .risk .lifted-tag { margin-top: 0; }
 
 /* current-phase badge on the portfolio card, shown beside the status badge */

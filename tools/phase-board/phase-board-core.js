@@ -311,7 +311,7 @@ function risksHTML(p, edit) {
   if (n.monitoring) parts.push(n.monitoring + ' monitoring');
   if (n.occurred) parts.push(n.occurred + ' occurred');
   if (n.constraints) parts.push(n.constraints + (n.constraints === 1 ? ' constraint' : ' constraints'));
-  const rows = rs.map(r => {
+  const rowOf = r => {
     const del = edit ? '<button type="button" class="x" data-del-risk="' + esc(r.id) + '" aria-label="Remove: ' + esc(r.text) + '">&times;</button>' : '';
     if (r.kind === 'constraint') {
       // A constraint is a standing limit, not a task, so it has no status; it can be lifted if it stops applying.
@@ -325,9 +325,13 @@ function risksHTML(p, edit) {
       ? '<select class="field mini-sel rs-sel rs-' + s + '" data-risk-status="' + esc(r.id) + '" aria-label="Status of risk: ' + esc(r.text) + '">' + Object.keys(RISK_STATUS).map(k => '<option value="' + k + '"' + (k === s ? ' selected' : '') + '>' + RISK_STATUS[k] + '</option>').join('') + '</select>'
       : '<span class="rstatus rs-' + s + '">' + RISK_STATUS[s] + '</span>';
     return '<li class="risk' + (s === 'mitigated' ? ' is-lifted' : '') + '"><span class="kind k-risk">Risk</span><span class="rtext">' + esc(r.text) + '</span>' + control + del + '</li>';
-  }).join('');
+  };
+  // Risks first, then the standing constraints, each in its own list; the headings only help when both kinds are present.
+  const risks = rs.filter(r => r.kind !== 'constraint'), cons = rs.filter(r => r.kind === 'constraint');
+  const group = (label, list) => !list.length ? '' : (risks.length && cons.length ? '<p class="grp">' + label + ' (' + list.length + ')</p>' : '') + '<ul class="gates">' + list.map(rowOf).join('') + '</ul>';
+  const rows = group('Risks', risks) + group('Constraints', cons);
   return '<section class="panel-block" aria-label="Risks and constraints"><p class="sub">Risks and constraints' + (rs.length ? ' <span class="cnt">' + parts.join(' / ') + '</span>' : '') + '</p>' +
-    (rows ? '<ul class="gates">' + rows + '</ul>' : '<p class="note">None recorded.</p>') +
+    (rows || '<p class="note">None recorded.</p>') +
     (edit ? '<p class="msg">Set a risk\'s status as things change. Monitoring is for a risk you cannot solve or cannot predict. Lift a constraint if it no longer applies.</p><form class="dec-add" data-addrisk="1"><select class="field sel" id="risk-kind" aria-label="Type"><option value="risk">Risk</option><option value="constraint">Constraint</option></select><input class="field" id="risk-text" autocomplete="off" placeholder="Describe it" aria-label="Risk or constraint"><button class="btn" type="submit">Add</button></form>' : '') + '</section>';
 }
 
