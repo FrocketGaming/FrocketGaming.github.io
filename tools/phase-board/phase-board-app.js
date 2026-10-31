@@ -243,7 +243,7 @@ class PhaseBoardApp {
             ? '<button class="btn" type="button" data-act="unarchive">Restore from archive</button>'
             : '<button class="btn" type="button" data-act="archive">Archive project</button>';
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + (projectCompletedOn(p) ? ' / completed ' + esc(projectCompletedOn(p)) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
+            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1></div>' +
             this.statusLine() + overviewHTML(p, true) + risksHTML(p, true) +
             '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
             '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + this.openActionsHTML(p) + '</aside></div>' +

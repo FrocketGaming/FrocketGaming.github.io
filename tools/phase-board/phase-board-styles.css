@@ -290,3 +290,9 @@
 .pb details[open] > summary { margin-bottom: 8px; }
 .pb details.panel-block { display: block; }
 .pb .decs b { font-weight: 600; }
+
+/* The add forms let every field grow to fill the row; a dropdown should only be as wide as its options. */
+.pb .dec-add select.field { flex: 0 0 auto; width: auto; max-width: 100%; }
+/* Risk and constraint rows: center the badge, text and buttons on one line. */
+.pb .risk { align-items: center; }
+.pb .risk .kind, .pb .risk .lifted-tag { margin-top: 0; }

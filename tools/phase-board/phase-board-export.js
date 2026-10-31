@@ -25,7 +25,7 @@
         const idx = tpl.phases.findIndex(d => d.id === sel), def = tpl.phases[idx];
         const prev = tpl.phases[idx - 1], next = tpl.phases[idx + 1];
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + (projectCompletedOn(p) ? ' / completed ' + esc(projectCompletedOn(p)) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
+            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1></div>' +
             overviewHTML(p, false) + risksHTML(p, false) +
             '<div class="railbox">' + railHTML(tpl, p, { button: true, sel: sel }) + barHTML(tpl, p) +
             '<p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met. Select a phase to read its details.</p></div>' +

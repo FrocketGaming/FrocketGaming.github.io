@@ -236,7 +236,7 @@ function cardHTML(id, p, when) {
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
-    '<div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (isArchived(p) ? ' / archived' : '') + '</p>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div><h2>' + esc(p.name) + '</h2>' + ([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).length ? '<p class="meta">' + esc([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ')) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? 'Now in <b>' + esc(cur.short) + '</b> ' + pill(curSt.status) : pill('done') + ' All phases complete') + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
     '<div class="foot"><span>' + s.g + ' of ' + s.gt + ' criteria' + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
@@ -480,8 +480,7 @@ function reviewHTML(d) {
   const proj = c => {
     const p = c.p, o = p.outcomes || {}, rows = metricRows(p);
     const decs = d.decisions.filter(x => x.project === p.name), acts = mine(d.actions, p.name);
-    return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc(tplOf(p).name) +
-      (p.owner ? ' / owner ' + esc(p.owner) : '') + (p.lead ? ' / lead ' + esc(p.lead) : '') + ' / ' + esc(p.started || '?') + ' to ' + esc(c.on) + '</p></div>' +
+    return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc([p.owner ? 'owner ' + p.owner : '', p.lead ? 'lead ' + p.lead : '', (p.started || '?') + ' to ' + c.on].filter(Boolean).join(' / ')) + '</p></div>' +
       (p.summary ? '<p class="lead" style="margin:0">' + esc(p.summary) + '</p>' : '') +
       '<div><p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded.</p>') + '</div>' +
       (rows ? '<div><p class="sub">Metrics</p><ul class="metrics">' + rows + '</ul></div>' : '') +
@@ -495,4 +494,10 @@ function reviewHTML(d) {
     '<div class="rv-stats">' + stat(d.completed.length, d.completed.length === 1 ? 'project completed' : 'projects completed') + stat(d.actions.length, 'action items completed') + stat(d.decisions.length, 'decisions recorded') + stat(metricsN, 'metrics from completed projects') + '</div>' +
     (d.completed.length ? '<div class="rv-list">' + d.completed.map(proj).join('') + '</div>' : '<div class="empty"><h2>No projects completed in ' + esc(d.year) + ' yet</h2><p>A project is completed when its last phase is done. Its completion date comes from that moment.</p></div>') +
     wins + undated + allActs;
+}
+
+/* The line above a project's title: who owns it and when it started and finished. */
+function projectMeta(p) {
+  const done = projectCompletedOn(p);
+  return esc([p.owner, p.started ? 'started ' + p.started : '', done ? 'completed ' + done : ''].filter(Boolean).join(' / '));
 }
