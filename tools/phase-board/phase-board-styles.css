@@ -201,15 +201,7 @@
 
 /* outcomes */
 .pb .out-h { font-size: 16px; font-weight: 600; }
-.pb .metrics { display: grid; border: 1px solid var(--line); border-radius: 5px; }
-.pb .metric { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.pb .metric:last-child { border-bottom: 0; }
-.pb .m-name { font-weight: 600; overflow-wrap: anywhere; }
-.pb .m-val { display: grid; font-family: Consolas, Monaco, monospace; font-size: 13px; color: var(--fg-2); min-width: 0; overflow-wrap: anywhere; }
-.pb .m-val.strong { color: var(--fg); }
-.pb .m-val small { font-family: "Raleway", sans-serif; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-2); }
 .pb .metric-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
-@media (max-width: 640px) { .pb .metric, .pb .metric-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pb .m-name { grid-column: 1 / -1; } }
 
 .pb .newform { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 16px 18px; }
 .pb .newform label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--fg-2); flex: 1 1 220px; }
@@ -288,8 +280,8 @@
 .pb .phase-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
 
 /* value metrics and the finished-project card */
-.pb .metric.is-amount .span2 { grid-column: span 2; }
 .pb .metric-forms { display: grid; gap: 4px; margin-top: 10px; }
+.pb .metric-add input:first-child { min-width: 0; }
 .pb .amount-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto auto; gap: 8px; margin-top: 10px; }
 .pb .amount-add select.field { width: auto; }
 @media (max-width: 640px) { .pb .amount-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pb .amount-add input:first-child { grid-column: 1 / -1; } }
@@ -306,3 +298,12 @@
 .pb-to-top:hover { background-color: var(--accent-secondary); box-shadow: 0 0 10px var(--accent-primary); }
 .pb-to-top:focus-visible { outline: 2px solid var(--accent-secondary); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .pb-to-top { transition: none; } }
+
+/* metric tiles: number first, then what it is */
+.pb .metric-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.pb .mtile { position: relative; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 14px 16px; display: grid; gap: 2px; align-content: start; min-width: 0; }
+.pb .mt-val { font-size: 24px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; padding-right: 22px; }
+.pb .mt-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pb .mt-note { font-size: 12px; color: var(--fg-2); }
+.pb .mt-del { position: absolute; top: 6px; right: 6px; }
+@media (max-width: 640px) { .pb .metric-add input:first-child { grid-column: 1 / -1; } }

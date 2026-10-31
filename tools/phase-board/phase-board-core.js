@@ -451,7 +451,7 @@ function reviewHTML(d) {
     return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc([p.owner ? 'owner ' + p.owner : '', p.lead ? 'lead ' + p.lead : '', (p.started || '?') + ' to ' + c.on].filter(Boolean).join(' / ')) + '</p></div>' +
       (p.summary ? '<p class="lead" style="margin:0">' + esc(p.summary) + '</p>' : '') +
       '<div><p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded.</p>') + '</div>' +
-      (rows ? '<div><p class="sub">Metrics</p><ul class="metrics">' + rows + '</ul></div>' : '') +
+      (rows ? '<div><p class="sub">Metrics</p><ul class="metric-tiles">' + rows + '</ul></div>' : '') +
       (decs.length ? '<details><summary>' + decs.length + (decs.length === 1 ? ' decision' : ' decisions') + '</summary><ul class="decs">' + decs.map(x => '<li><time>' + esc(x.at) + '</time><span><b>' + esc(x.phase) + ':</b> ' + esc(x.text) + '</span></li>').join('') + '</ul></details>' : '') +
       (acts.length ? '<details><summary>' + acts.length + (acts.length === 1 ? ' action item completed' : ' action items completed') + '</summary><ul class="decs">' + acts.map(x => '<li><time>' + esc(x.on) + '</time><span>' + esc(x.text) + (x.who ? ' <span class="who">(' + esc(x.who) + ')</span>' : '') + '</span></li>').join('') + '</ul></details>' : '') + '</article>';
   };
@@ -505,13 +505,14 @@ function projectCounts(p) {
   tplOf(p).phases.forEach(d => { const st = phaseState(p, d); decisions += (st.decisions || []).length; actions += (st.actions || []).filter(a => a.done).length; });
   return { decisions: decisions, actions: actions };
 }
+/* One tile per metric: the number large, its name under it, and a small note (how often, or the starting value). */
 function metricRowsHTML(p, edit) {
   const ms = Array.isArray((p.outcomes || {}).metrics) ? p.outcomes.metrics : [];
   return ms.map(m => {
-    const del = edit ? '<button type="button" class="x" data-del-metric="' + esc(m.id) + '" aria-label="Remove metric ' + esc(m.name) + '">&times;</button>' : '';
+    const del = edit ? '<button type="button" class="x mt-del" data-del-metric="' + esc(m.id) + '" aria-label="Remove metric ' + esc(m.name) + '">&times;</button>' : '';
     return isAmount(m)
-      ? '<li class="metric is-amount"><span class="m-name">' + esc(m.name) + '</span><span class="m-val strong span2"><small>' + esc(METRIC_PERIODS[m.period] || 'One-time') + '</small>' + esc(amountText(m, false)) + '</span>' + del + '</li>'
-      : '<li class="metric"><span class="m-name">' + esc(m.name) + '</span><span class="m-val"><small>Before</small>' + esc(m.before || '-') + '</span><span class="m-val strong"><small>After</small>' + esc(m.after || '-') + '</span>' + del + '</li>';
+      ? '<li class="mtile"><b class="mt-val">' + esc(amountText(m, false)) + '</b><span class="mt-name">' + esc(m.name) + '</span><span class="mt-note">' + esc(METRIC_PERIODS[m.period] || 'One-time') + '</span>' + del + '</li>'
+      : '<li class="mtile"><b class="mt-val">' + esc(m.after || '-') + '</b><span class="mt-name">' + esc(m.name) + '</span><span class="mt-note">Before: ' + esc(m.before || '-') + '</span>' + del + '</li>';
   }).join('');
 }
 function outcomesHTML(p, edit) {
@@ -522,12 +523,13 @@ function outcomesHTML(p, edit) {
     ? '<label class="sub" for="out-value">Value added</label><textarea class="field" id="out-value" data-outvalue="1" placeholder="What changed for the business or users because of this project?">' + esc(o.value || '') + '</textarea>'
     : '<p class="sub">Value added</p>' + (o.value ? '<p class="note">' + esc(o.value) + '</p>' : '<p class="note">Not recorded yet.</p>');
   const opts = (map, sel) => Object.keys(map).map(k => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(map[k]) + '</option>').join('');
-  const forms = !edit ? '' : '<div class="metric-forms">' +
-    '<form class="amount-add" data-addamount="1" aria-label="Add an amount saved or gained"><input class="field" id="am-name" autocomplete="off" placeholder="Amount saved or gained, e.g. Hours saved" aria-label="Metric name"><input class="field" id="am-amount" inputmode="decimal" autocomplete="off" placeholder="Amount" aria-label="Amount"><select class="field" id="am-unit" aria-label="Unit">' + opts(METRIC_UNITS, 'hours') + '</select><select class="field" id="am-period" aria-label="How often">' + opts(METRIC_PERIODS, 'year') + '</select><button class="btn" type="submit">Add amount</button></form>' +
-    '<form class="metric-add" data-addmetric="1" aria-label="Add a before and after metric"><input class="field" id="m-name" autocomplete="off" placeholder="Before and after, e.g. Invoices matched per hour" aria-label="Metric name"><input class="field" id="m-before" autocomplete="off" placeholder="Before" aria-label="Value before"><input class="field" id="m-after" autocomplete="off" placeholder="After" aria-label="Value after"><button class="btn" type="submit">Add metric</button></form></div>';
+  const forms = !edit ? '' : '<div class="metric-forms"><p class="sub">Add an amount saved or gained</p>' +
+    '<form class="amount-add" data-addamount="1" aria-label="Add an amount saved or gained"><input class="field" id="am-name" autocomplete="off" placeholder="e.g. Hours saved" aria-label="Metric name"><input class="field" id="am-amount" inputmode="decimal" autocomplete="off" placeholder="Amount" aria-label="Amount"><select class="field" id="am-unit" aria-label="Unit">' + opts(METRIC_UNITS, 'hours') + '</select><select class="field" id="am-period" aria-label="How often">' + opts(METRIC_PERIODS, 'year') + '</select><button class="btn" type="submit">Add amount</button></form>' +
+    '<p class="sub" style="margin-top:12px">Add a before and after metric</p>' +
+    '<form class="metric-add" data-addmetric="1" aria-label="Add a before and after metric"><input class="field" id="m-name" autocomplete="off" placeholder="e.g. Invoices matched per hour" aria-label="Metric name"><input class="field" id="m-before" autocomplete="off" placeholder="Before" aria-label="Value before"><input class="field" id="m-after" autocomplete="off" placeholder="After" aria-label="Value after"><button class="btn" type="submit">Add metric</button></form></div>';
   return '<section class="panel-block outcomes" aria-label="Outcomes"><div class="ph-row"><div><p class="eyebrow">Outcomes</p><h2 class="out-h">Metrics collected and value added</h2></div>' +
     (done ? '' : '<span class="msg" style="margin-left:auto">Fill this in as results come in; it is complete at project end.</span>') + '</div>' +
-    '<div><p class="sub">Metrics</p>' + (rows ? '<ul class="metrics">' + rows + '</ul>' : '<p class="note">No metrics recorded yet.</p>') + forms + '</div>' +
+    '<div><p class="sub">Metrics</p>' + (rows ? '<ul class="metric-tiles">' + rows + '</ul>' : '<p class="note">No metrics recorded yet.</p>') + forms + '</div>' +
     '<div>' + value + '</div></section>';
 }
 
