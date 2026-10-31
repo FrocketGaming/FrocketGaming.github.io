@@ -55,30 +55,45 @@ const PH = {
     gates: ['Release tagged', 'Environment variables set', 'Rollback plan written', 'Logs checked after first run', 'Handover notes shared'],
     artifacts: ['Release notes', 'Runbook'] }
 };
+/* Exit criteria carry stable ids so a flow can be edited without shifting anyone's ticks. */
+function G(texts) { return texts.map((t, i) => ({ id: 'g' + (i + 1), text: t })); }
+Object.keys(PH).forEach(k => { PH[k].gates = G(PH[k].gates); });
 const TEMPLATES = {
   standard: { key: 'standard', name: 'Standard flow', phases: [PH.discovery, PH.research, PH.build, PH.test, PH.deploy] },
   lite: { key: 'lite', name: 'Lite flow', phases: [PH.discovery, PH.build, PH.test, PH.deploy] }
 };
-function tplOf(proj) { return TEMPLATES[proj.template] || TEMPLATES.standard; }
+/* A project carries its own copy of its flow; older projects fall back to the built-in template. */
+function tplOf(proj) {
+  if (proj.flow && Array.isArray(proj.flow.phases) && proj.flow.phases.length) return proj.flow;
+  return TEMPLATES[proj.template] || TEMPLATES.standard;
+}
+/* Ticks are stored as {criterionId: true}. Older projects stored a boolean array by position, so accept both. */
+function gatesMap(def, raw) {
+  const m = {};
+  def.gates.forEach((g, i) => { m[g.id] = Array.isArray(raw) ? !!raw[i] : !!(raw && raw[g.id]); });
+  return m;
+}
 
 /* ---- per-project state ---- */
 function blankPhase(def) {
-  return { status: 'not_started', gates: def.gates.map(() => false), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [] };
+  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [] };
 }
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
 }
-function blankProject(name, tplKey, owner) {
-  const tpl = TEMPLATES[tplKey] || TEMPLATES.standard;
+function blankProject(name, flow, owner) {
+  const copy = clone({ name: flow.name, phases: flow.phases });
   const phases = {};
-  tpl.phases.forEach(d => { phases[d.id] = blankPhase(d); });
-  return { name: name, template: tpl.key, owner: owner || '', started: today(), phases: phases, updatedAt: Date.now() };
+  copy.phases.forEach(d => { phases[d.id] = blankPhase(d); });
+  return { name: name, template: flow.key || 'custom', flow: copy, owner: owner || '', started: today(), phases: phases, updatedAt: Date.now() };
 }
 function phaseState(proj, def) {
   const st = (proj.phases && proj.phases[def.id]) || blankPhase(def);
-  return Object.assign(blankPhase(def), st);
+  const out = Object.assign(blankPhase(def), st);
+  out.gates = gatesMap(def, st.gates);
+  return out;
 }
-function gateCount(def, st) { return def.gates.filter((_, i) => st.gates && st.gates[i]).length; }
+function gateCount(def, st) { return def.gates.filter(g => st.gates && st.gates[g.id]).length; }
 function summarize(tpl, proj) {
   let doneP = 0, g = 0, gt = 0, current = null, attention = false;
   tpl.phases.forEach(d => {
@@ -92,10 +107,11 @@ function summarize(tpl, proj) {
 
 /* Gate toggle rules. Mutates st, returns a log message or null. */
 function applyGate(def, st, i, checked) {
-  const gates = def.gates.map((_, k) => !!(st.gates && st.gates[k]));
-  gates[i] = checked;
+  const gates = gatesMap(def, st.gates);
+  gates[def.gates[i].id] = checked;
   st.gates = gates;
-  const all = gates.every(Boolean), any = gates.some(Boolean);
+  const vals = def.gates.map(g => gates[g.id]);
+  const all = vals.every(Boolean), any = vals.some(Boolean);
   if (st.status === 'done' && !all) { st.status = 'reopened'; st.reopened = (st.reopened || 0) + 1; return 'Reopened: a criterion was unchecked'; }
   if (all && st.status !== 'done') { st.status = 'done'; return 'All exit criteria met'; }
   if (st.status === 'not_started' && any) { st.status = 'in_progress'; return 'Started'; }
@@ -135,7 +151,7 @@ function phaseHTML(def, st, idx, o) {
   const idp = o.idp || '';
   const gates = def.gates.map((g, i) => {
     const id = idp + 'g-' + def.id + '-' + i;
-    return '<li><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[i] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g) + '</span></label></li>';
+    return '<li><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label></li>';
   }).join('');
   const arts = def.artifacts.map(a => {
     const ref = st.artifacts && st.artifacts[a];
@@ -256,4 +272,81 @@ function peopleOf(p) {
 }
 function overdueActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done && a.due && a.due < today()).length, 0);
+}
+
+/* ---- flow editing: pure helpers shared by the app and its checks ---- */
+function blankDraftPhase(idGen) {
+  return { id: 'p' + idGen(), name: '', short: '', goal: '', gates: [{ id: 'g' + idGen(), text: '' }], artifacts: [] };
+}
+function phaseHasProgress(proj, phaseId) {
+  const st = proj.phases && proj.phases[phaseId];
+  if (!st) return false;
+  const g = Array.isArray(st.gates) ? st.gates : Object.keys(st.gates || {}).map(k => st.gates[k]);
+  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes || Object.keys(st.artifacts || {}).length > 0;
+}
+/* Trims a draft and returns {errors, flow}. Empty criteria and artifacts are dropped; short labels fall back to the name. */
+function cleanFlow(d) {
+  const errors = [], name = String(d.name || '').trim();
+  if (!name) errors.push('Give the flow a name.');
+  const phases = (d.phases || []).map((p, pi) => {
+    const pn = String(p.name || '').trim(), label = pn || 'Phase ' + (pi + 1);
+    if (!pn) errors.push('Phase ' + (pi + 1) + ' needs a name.');
+    const gates = (p.gates || []).map(g => ({ id: g.id, text: String(g.text || '').trim() })).filter(g => g.text);
+    if (!gates.length) errors.push(label + ' needs at least one exit criterion.');
+    const artifacts = (p.artifacts || []).map(a => String(a || '').trim()).filter((a, i, arr) => a && arr.indexOf(a) === i);
+    return { id: p.id, name: pn, short: String(p.short || '').trim().slice(0, 16) || pn.slice(0, 16), goal: String(p.goal || '').trim(), gates: gates, artifacts: artifacts };
+  });
+  if (!phases.length) errors.push('Add at least one phase.');
+  return { errors: errors, flow: { name: name, phases: phases } };
+}
+/* Rebuilds a project's per-phase state for an edited flow. Ticks follow their criterion id; a done phase
+   that gained a criterion is reopened. Legacy index-based ticks are converted using the old flow. */
+function reconcileProject(proj, flow) {
+  const oldTpl = tplOf(proj), phases = {};
+  flow.phases.forEach(def => {
+    const raw = (proj.phases && proj.phases[def.id]) || null;
+    const st = Object.assign(blankPhase(def), raw || {});
+    const oldDef = oldTpl.phases.find(d => d.id === def.id);
+    let carried = {};
+    if (raw && Array.isArray(raw.gates) && oldDef) oldDef.gates.forEach((g, i) => { carried[g.id] = !!raw.gates[i]; });
+    else if (raw && raw.gates && !Array.isArray(raw.gates)) carried = raw.gates;
+    st.gates = gatesMap(def, carried);
+    if (st.status === 'done' && !def.gates.every(g => st.gates[g.id])) {
+      st.status = 'reopened';
+      st.reopened = (st.reopened || 0) + 1;
+      st.log = (st.log || []).concat([{ at: today(), text: 'Reopened: exit criteria changed' }]).slice(-12);
+    }
+    phases[def.id] = st;
+  });
+  return phases;
+}
+function editorRowButtons(kind, pi, i, n, label) {
+  return '<span class="fe-btns">' +
+    '<button type="button" class="x" data-fe-act="' + kind + '-up" data-p="' + pi + '" data-i="' + i + '" aria-label="Move ' + label + ' up"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+    '<button type="button" class="x" data-fe-act="' + kind + '-down" data-p="' + pi + '" data-i="' + i + '" aria-label="Move ' + label + ' down"' + (i === n - 1 ? ' disabled' : '') + '>&darr;</button>' +
+    '<button type="button" class="x" data-fe-act="' + kind + '-del" data-p="' + pi + '" data-i="' + i + '" aria-label="Remove ' + label + '">&times;</button></span>';
+}
+/* ed: {title, intro, draft, errors, confirmDel, projectMode} */
+function flowEditorHTML(ed) {
+  const d = ed.draft, last = d.phases.length - 1;
+  const errs = ed.errors && ed.errors.length ? '<ul class="fe-errors" role="alert">' + ed.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '';
+  const phases = d.phases.map((p, pi) => {
+    const gates = p.gates.map((g, gi) => '<li class="fe-row"><input class="field" id="fe-gate-' + pi + '-' + gi + '" data-fe="gate" data-p="' + pi + '" data-i="' + gi + '" value="' + esc(g.text) + '" placeholder="What must be true to finish this phase?" aria-label="Exit criterion ' + (gi + 1) + ' of ' + esc(p.name || 'phase ' + (pi + 1)) + '">' + editorRowButtons('gate', pi, gi, p.gates.length, 'criterion') + '</li>').join('');
+    const arts = p.artifacts.map((a, ai) => '<li class="fe-row"><input class="field" id="fe-art-' + pi + '-' + ai + '" data-fe="art" data-p="' + pi + '" data-i="' + ai + '" value="' + esc(a) + '" placeholder="e.g. Test report" aria-label="Artifact ' + (ai + 1) + ' of ' + esc(p.name || 'phase ' + (pi + 1)) + '"><span class="fe-btns"><button type="button" class="x" data-fe-act="art-del" data-p="' + pi + '" data-i="' + ai + '" aria-label="Remove artifact">&times;</button></span></li>').join('');
+    const confirm = ed.confirmDel === 'p' + pi;
+    return '<section class="fe-phase" aria-label="Phase ' + (pi + 1) + '"><div class="ph-head"><span class="ph-idx">' + String(pi + 1).padStart(2, '0') + '</span><h3>' + esc(p.name || 'New phase') + '</h3><span class="fe-btns" style="margin-left:auto">' +
+      '<button type="button" class="x" data-fe-act="p-up" data-p="' + pi + '" aria-label="Move phase up"' + (pi === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+      '<button type="button" class="x" data-fe-act="p-down" data-p="' + pi + '" aria-label="Move phase down"' + (pi === last ? ' disabled' : '') + '>&darr;</button>' +
+      '<button type="button" class="btn' + (confirm ? ' danger' : '') + '" data-fe-act="p-del" data-p="' + pi + '">' + (confirm ? 'Remove phase and its progress' : 'Remove phase') + '</button></span></div>' +
+      '<div class="fe-grid"><label for="fe-pname-' + pi + '">Name<input class="field" id="fe-pname-' + pi + '" data-fe="pname" data-p="' + pi + '" value="' + esc(p.name) + '" autocomplete="off"></label>' +
+      '<label for="fe-pshort-' + pi + '">Short label<input class="field" id="fe-pshort-' + pi + '" data-fe="pshort" data-p="' + pi + '" maxlength="16" value="' + esc(p.short) + '" placeholder="Shown on the progress rail" autocomplete="off"></label></div>' +
+      '<label for="fe-pgoal-' + pi + '">Goal<textarea class="field" id="fe-pgoal-' + pi + '" data-fe="pgoal" data-p="' + pi + '" placeholder="One sentence on what this phase achieves">' + esc(p.goal) + '</textarea></label>' +
+      '<div><p class="sub">Exit criteria</p><ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button></div>' +
+      '<div><p class="sub">Expected artifacts</p>' + (arts ? '<ul class="fe-list">' + arts + '</ul>' : '<p class="note">None.</p>') + '<button type="button" class="btn" data-fe-act="art-add" data-p="' + pi + '">Add artifact</button></div></section>';
+  }).join('');
+  return '<div><p class="eyebrow">' + esc(ed.title) + '</p><h1>' + esc(d.name || 'Untitled flow') + '</h1></div>' +
+    (ed.intro ? '<p class="msg">' + esc(ed.intro) + '</p>' : '') + errs +
+    '<div class="fe-top"><label for="fe-name">Flow name<input class="field" id="fe-name" data-fe="name" value="' + esc(d.name) + '" autocomplete="off"></label></div>' +
+    phases +
+    '<div class="ph-row"><button type="button" class="btn" data-fe-act="p-add">Add phase</button><span style="margin-left:auto;display:flex;gap:8px"><button type="button" class="btn" data-fe-act="cancel">Cancel</button><button type="button" class="btn primary" data-fe-act="save">' + (ed.projectMode ? 'Save phases' : 'Save flow') + '</button></span></div>';
 }

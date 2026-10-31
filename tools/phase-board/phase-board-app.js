@@ -21,6 +21,10 @@ class PhaseBoardApp {
         this.noteTimer = null;
         this.slowTimer = null;
         this.chains = {};
+        this.flows = {};
+        this.editor = null;
+        this.confirmFlowDelete = null;
+        this.unsubFlows = null;
     }
 
     init() {
@@ -66,6 +70,8 @@ class PhaseBoardApp {
             document.getElementById('pbApp').style.display = 'none';
             this.stopSync();
             this.projects = {};
+            this.flows = {};
+            this.editor = null;
             this.view = 'portfolio';
             this.loaded = false;
         }
@@ -82,6 +88,12 @@ class PhaseBoardApp {
         this.render();
         // Offline or blocked networks can leave the listener silent, so say so after 10 s.
         this.slowTimer = setTimeout(() => { this.setNote('Still trying to reach your projects. What you see may be out of date.', false, 0); }, 10000);
+        this.unsubFlows = this.flowsRef().onSnapshot(snap => {
+            const next = {};
+            snap.docs.forEach(d => { next[d.id] = d.data(); });
+            this.flows = next;
+            this.render();
+        }, err => console.error('Phase Board: Flow sync error:', err));
         this.unsub = this.projectsRef().onSnapshot(snap => {
             const next = {};
             snap.docs.forEach(d => { next[d.id] = d.data(); });
@@ -102,6 +114,7 @@ class PhaseBoardApp {
 
     stopSync() {
         if (this.unsub) { this.unsub(); this.unsub = null; }
+        if (this.unsubFlows) { this.unsubFlows(); this.unsubFlows = null; }
         clearTimeout(this.slowTimer);
     }
 
@@ -169,8 +182,8 @@ class PhaseBoardApp {
 
     newFormHTML() {
         return '<form class="newform" id="pbNewForm"><label for="npName">Project name<input class="field" id="npName" autocomplete="off" required></label>' +
-            '<label for="npTpl">Flow<select class="field" id="npTpl">' + Object.keys(TEMPLATES).map(k =>
-                '<option value="' + k + '">' + esc(TEMPLATES[k].name) + ' (' + TEMPLATES[k].phases.length + ' phases)</option>').join('') + '</select></label>' +
+            '<label for="npTpl">Flow<select class="field" id="npTpl">' + this.allFlows().map(f =>
+                '<option value="' + esc(f.key) + '">' + esc(f.name) + ' (' + f.phases.length + ' phases)</option>').join('') + '</select></label>' +
             '<button class="btn primary" type="submit">Create project</button><button class="btn" type="button" id="pbNewCancel">Cancel</button></form>';
     }
 
@@ -220,7 +233,7 @@ class PhaseBoardApp {
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
             '<div><p class="eyebrow">' + esc(tpl.name) + (p.owner ? ' / ' + esc(p.owner) : '') + (p.started ? ' / started ' + esc(p.started) : '') + '</p><h1>' + esc(p.name) + '</h1></div>' +
             this.statusLine() + overviewHTML(p, true) + risksHTML(p, true) +
-            '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p></div>' +
+            '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
             '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + this.openActionsHTML(p) + '</aside></div>' +
             outcomesHTML(p, true) + '<div class="danger-zone">' + del + '</div>';
     }
@@ -243,7 +256,10 @@ class PhaseBoardApp {
         if (!this.user) return;
         this.keepFocus(() => {
             const page = document.getElementById('pbPage');
-            page.innerHTML = this.view === 'portfolio' ? this.portfolioHTML() : this.detailHTML();
+            page.innerHTML = this.view === 'portfolio' ? this.portfolioHTML()
+                : this.view === '__flows' ? this.flowsHTML()
+                : this.view === '__editor' ? this.editorHTML()
+                : this.detailHTML();
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
         });
     }
@@ -316,11 +332,11 @@ class PhaseBoardApp {
         this.patchProject(() => ({ [field]: value }), 'project detail');
     }
 
-    async createProject(name, tplKey) {
+    async createProject(name, flowKey) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'project';
         const id = slug + '-' + this.newId();
         try {
-            await this.projectsRef().doc(id).set(blankProject(name, tplKey, this.user.displayName || ''));
+            await this.projectsRef().doc(id).set(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, this.user.displayName || ''));
             this.showNew = false;
             this.openProject(id);
         } catch (err) {
@@ -339,6 +355,173 @@ class PhaseBoardApp {
         } catch (err) {
             console.error('Phase Board:', err);
             this.setNote('The project was not deleted. Check your connection and try again.', true);
+        }
+    }
+
+    // ─── Flows ────────────────────────────────────────────────
+
+    flowsRef() {
+        return this.db.collection('users').doc(this.user.uid).collection('flows');
+    }
+
+    // Built-in flows first, then the user's own, alphabetically.
+    allFlows() {
+        const builtIn = Object.keys(TEMPLATES).map(k => ({ key: k, name: TEMPLATES[k].name, phases: TEMPLATES[k].phases, builtIn: true }));
+        const mine = Object.keys(this.flows)
+            .map(k => ({ key: k, name: this.flows[k].name || 'Untitled flow', phases: this.flows[k].phases || [], builtIn: false }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        return builtIn.concat(mine);
+    }
+
+    findFlow(key) {
+        return this.allFlows().find(f => f.key === key) || null;
+    }
+
+    flowsHTML() {
+        const rows = this.allFlows().map(f => {
+            const crit = f.phases.reduce((n, p) => n + p.gates.length, 0);
+            const k = esc(f.key);
+            let btns;
+            if (f.builtIn) {
+                btns = '<button class="btn" type="button" data-act="flow-dup" data-key="' + k + '">Duplicate to edit</button>';
+            } else if (this.confirmFlowDelete === f.key) {
+                btns = '<button class="btn danger" type="button" data-act="flow-del-confirm" data-key="' + k + '">Delete flow</button><button class="btn" type="button" data-act="flow-del-cancel">Keep it</button>';
+            } else {
+                btns = '<button class="btn" type="button" data-act="flow-edit" data-key="' + k + '">Edit</button>' +
+                    '<button class="btn" type="button" data-act="flow-dup" data-key="' + k + '">Duplicate</button>' +
+                    '<button class="btn" type="button" data-act="flow-del" data-key="' + k + '">Delete</button>';
+            }
+            return '<li class="flow-row"><div class="flow-main"><p class="flow-name">' + esc(f.name) + (f.builtIn ? ' <span class="cnt">Built in</span>' : '') + '</p>' +
+                '<p class="msg">' + f.phases.map(p => esc(p.short || p.name)).join(' / ') + ' &middot; ' + f.phases.length + ' phases, ' + crit + ' exit criteria</p></div><div class="flow-btns">' + btns + '</div></li>';
+        }).join('');
+        return '<button class="back" type="button" data-act="back">Back to projects</button>' +
+            '<div class="ph-row"><div><p class="eyebrow">Library</p><h1>Flows</h1></div><button class="btn primary" type="button" data-act="flow-new" style="margin-left:auto">New flow</button></div>' +
+            this.statusLine() +
+            '<p class="msg">A flow is the list of phases and exit criteria a project follows. Each project keeps its own copy, so editing a flow here only affects projects you create afterwards. To change a running project, open it and choose Edit phases.</p>' +
+            '<ul class="flows">' + rows + '</ul>';
+    }
+
+    editorHTML() {
+        if (!this.editor) return this.portfolioHTML();
+        return '<button class="back" type="button" data-fe-act="cancel">Cancel and go back</button>' + this.statusLine() + flowEditorHTML(this.editor);
+    }
+
+    startEditor(opts) {
+        this.editor = Object.assign({ errors: [], confirmDel: null }, opts);
+        this.view = '__editor';
+        this.render();
+        window.scrollTo(0, 0);
+    }
+
+    editFlow(key) {
+        const f = this.flows[key];
+        if (!f) return;
+        this.startEditor({ mode: 'flow', projectMode: false, flowId: key, returnTo: '__flows', title: 'Edit flow',
+            intro: 'Changes apply to projects you create afterwards. Existing projects keep their own copy.',
+            draft: clone({ name: f.name, phases: f.phases }) });
+    }
+
+    newFlow() {
+        this.startEditor({ mode: 'flow', projectMode: false, flowId: null, returnTo: '__flows', title: 'New flow',
+            intro: 'Add the phases a project moves through. Each phase needs at least one exit criterion.',
+            draft: { name: '', phases: [blankDraftPhase(() => this.newId())] } });
+    }
+
+    duplicateFlow(key) {
+        const f = this.findFlow(key);
+        if (!f) return;
+        this.startEditor({ mode: 'flow', projectMode: false, flowId: null, returnTo: '__flows', title: 'New flow from ' + f.name,
+            intro: 'This is a copy. Save it to add it to your library.',
+            draft: clone({ name: f.name + ' (copy)', phases: f.phases }) });
+    }
+
+    editProjectFlow() {
+        const id = this.view, p = this.projects[id];
+        if (!p) return;
+        const tpl = tplOf(p);
+        this.startEditor({ mode: 'project', projectMode: true, projectId: id, returnTo: id, title: 'Edit phases: ' + p.name,
+            intro: 'Changes apply to this project only. A finished phase that gains a criterion is reopened, and removing a phase deletes its progress.',
+            draft: clone({ name: tpl.name, phases: tpl.phases }) });
+    }
+
+    async deleteFlow(key) {
+        try {
+            await this.flowsRef().doc(key).delete();
+            this.confirmFlowDelete = null;
+            this.render();
+        } catch (err) {
+            console.error('Phase Board:', err);
+            this.setNote('The flow was not deleted. Check your connection and try again.', true);
+        }
+    }
+
+    // Draft edits are kept in memory and only written when the user saves.
+    editorInput(t) {
+        const d = this.editor.draft, kind = t.getAttribute('data-fe');
+        const p = d.phases[+t.getAttribute('data-p')], i = +t.getAttribute('data-i');
+        if (kind === 'name') d.name = t.value;
+        else if (kind === 'pname') p.name = t.value;
+        else if (kind === 'pshort') p.short = t.value;
+        else if (kind === 'pgoal') p.goal = t.value;
+        else if (kind === 'gate') p.gates[i].text = t.value;
+        else if (kind === 'art') p.artifacts[i] = t.value;
+    }
+
+    editorAction(k, pi, i) {
+        const ed = this.editor, d = ed.draft, p = d.phases[pi];
+        const swap = (arr, a, b) => { if (b < 0 || b >= arr.length) return; const t = arr[a]; arr[a] = arr[b]; arr[b] = t; };
+        let focusId = null;
+        const keepConfirm = ed.confirmDel;
+        ed.confirmDel = null;
+        if (k === 'cancel') { this.editor = null; this.view = ed.returnTo; this.render(); window.scrollTo(0, 0); return; }
+        if (k === 'save') { this.saveEditor(); return; }
+        else if (k === 'p-add') { d.phases.push(blankDraftPhase(() => this.newId())); focusId = 'fe-pname-' + (d.phases.length - 1); }
+        else if (k === 'p-up') swap(d.phases, pi, pi - 1);
+        else if (k === 'p-down') swap(d.phases, pi, pi + 1);
+        else if (k === 'p-del') {
+            const proj = ed.mode === 'project' ? this.projects[ed.projectId] : null;
+            if (proj && phaseHasProgress(proj, p.id) && keepConfirm !== 'p' + pi) { ed.confirmDel = 'p' + pi; }
+            else d.phases.splice(pi, 1);
+        }
+        else if (k === 'gate-add') { p.gates.push({ id: 'g' + this.newId(), text: '' }); focusId = 'fe-gate-' + pi + '-' + (p.gates.length - 1); }
+        else if (k === 'gate-up') swap(p.gates, i, i - 1);
+        else if (k === 'gate-down') swap(p.gates, i, i + 1);
+        else if (k === 'gate-del') p.gates.splice(i, 1);
+        else if (k === 'art-add') { p.artifacts.push(''); focusId = 'fe-art-' + pi + '-' + (p.artifacts.length - 1); }
+        else if (k === 'art-del') p.artifacts.splice(i, 1);
+        this.render();
+        if (focusId) document.getElementById(focusId)?.focus();
+    }
+
+    async saveEditor() {
+        const ed = this.editor, result = cleanFlow(ed.draft);
+        if (result.errors.length) {
+            ed.errors = result.errors;
+            this.render();
+            window.scrollTo(0, 0);
+            return;
+        }
+        const flow = result.flow;
+        try {
+            if (ed.mode === 'flow') {
+                const id = ed.flowId || 'f-' + this.newId();
+                await this.flowsRef().doc(id).set({ name: flow.name, phases: flow.phases, updatedAt: Date.now() });
+                this.editor = null;
+                this.view = '__flows';
+            } else {
+                const p = this.projects[ed.projectId];
+                if (!p) throw new Error('project is gone');
+                const phases = clone(reconcileProject(p, flow));
+                await this.projectsRef().doc(ed.projectId).update({ flow: flow, phases: phases, updatedAt: Date.now() });
+                this.editor = null;
+                this.view = ed.projectId;
+            }
+            this.render();
+            window.scrollTo(0, 0);
+        } catch (err) {
+            console.error('Phase Board:', err);
+            ed.errors = [];
+            this.setNote('The flow was not saved. Check your connection and try again.', true);
         }
     }
 
@@ -392,6 +575,7 @@ class PhaseBoardApp {
         document.getElementById('pbSignInBtn')?.addEventListener('click', () => this.signIn());
         document.getElementById('pbSignOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('pbExportBtn')?.addEventListener('click', () => this.exportSnapshot());
+        document.getElementById('pbFlowsBtn')?.addEventListener('click', () => { this.view = '__flows'; this.editor = null; this.confirmFlowDelete = null; this.render(); window.scrollTo(0, 0); });
         document.getElementById('pbNewBtn')?.addEventListener('click', () => {
             this.view = 'portfolio';
             this.showNew = true;
@@ -417,6 +601,8 @@ class PhaseBoardApp {
                 const k = delMetric.getAttribute('data-del-metric');
                 return this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { metrics: ((p.outcomes || {}).metrics || []).filter(m => m.id !== k) }) }), 'removal');
             }
+            const fe = e.target.closest('[data-fe-act]');
+            if (fe) return this.editorAction(fe.getAttribute('data-fe-act'), +fe.getAttribute('data-p'), +fe.getAttribute('data-i'));
             const act = e.target.closest('[data-act]');
             if (act) {
                 const k = act.getAttribute('data-act');
@@ -425,6 +611,13 @@ class PhaseBoardApp {
                 else if (k === 'del') { this.confirmDelete = true; this.render(); }
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
                 else if (k === 'del-confirm') { this.deleteProject(); }
+                else if (k === 'edit-flow') { this.editProjectFlow(); }
+                else if (k === 'flow-new') { this.newFlow(); }
+                else if (k === 'flow-edit') { this.editFlow(act.getAttribute('data-key')); }
+                else if (k === 'flow-dup') { this.duplicateFlow(act.getAttribute('data-key')); }
+                else if (k === 'flow-del') { this.confirmFlowDelete = act.getAttribute('data-key'); this.render(); }
+                else if (k === 'flow-del-cancel') { this.confirmFlowDelete = null; this.render(); }
+                else if (k === 'flow-del-confirm') { this.deleteFlow(act.getAttribute('data-key')); }
                 return;
             }
             if (e.target.id === 'pbNewCancel') { this.showNew = false; this.render(); }
@@ -447,6 +640,10 @@ class PhaseBoardApp {
                 const aid = t.getAttribute('data-action'), done = t.checked;
                 this.editAction(t.getAttribute('data-phase'), aid, { done: done });
             }
+        });
+
+        page.addEventListener('input', e => {
+            if (this.editor && e.target.matches && e.target.matches('[data-fe]')) this.editorInput(e.target);
         });
 
         page.addEventListener('submit', e => {
