@@ -260,3 +260,12 @@
 .pb .link-btn:hover { text-decoration: underline; }
 .pb .crit-form { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
 .pb .crit-form .field { flex: 1 1 200px; min-width: 0; width: auto; }
+
+/* criterion notes */
+.pb .crit-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pb .crit-main .gate { flex: none; }
+.pb .crit-note { padding-left: 26px; font-size: 13px; color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb .crit-note a { color: var(--accent-secondary); }
+.pb .note-form { display: grid; gap: 8px; padding: 4px 0 6px 26px; }
+.pb .note-form textarea.field { min-height: 72px; }
+.pb .note-btns { display: flex; gap: 8px; }

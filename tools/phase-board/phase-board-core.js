@@ -18,6 +18,11 @@ const ICONS = {
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+/* A criterion note is plain text; a note that is just one http(s) link becomes a clickable link. */
+function noteHTML(text) {
+  const t = String(text || '').trim();
+  return /^https?:\/\/\S+$/i.test(t) ? '<a href="' + esc(t) + '" target="_blank" rel="noopener noreferrer">' + esc(t) + '</a>' : esc(t);
+}
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function today() {
   const d = new Date(), pad = n => String(n).padStart(2, '0');
@@ -76,7 +81,7 @@ function gatesMap(def, raw) {
 
 /* ---- per-project state ---- */
 function blankPhase(def) {
-  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [] };
+  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, artifacts: {}, decisions: [], notes: '', log: [], actions: [], evidence: {} };
 }
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
@@ -151,15 +156,21 @@ function phaseHTML(def, st, idx, o) {
   const idp = o.idp || '';
   const gates = def.gates.map((g, i) => {
     const id = idp + 'g-' + def.id + '-' + i, key = def.id + ':' + g.id;
+    const note = (st.evidence && st.evidence[g.id]) || '';
+    const noteEditing = edit && o.editingNote === key;
     if (edit && o.editingGate === key) {
       return '<li><form class="crit-form" data-crit-form="' + esc(g.id) + '" data-phase="' + def.id + '"><input class="field" id="crit-' + def.id + '-' + esc(g.id) + '" data-crit-input="1" value="' + esc(g.text) + '" autocomplete="off" aria-label="Edit exit criterion">' +
         '<button class="btn small primary" type="submit">Save</button><button class="btn small" type="button" data-crit-cancel="1">Cancel</button></form></li>';
     }
     const tools = !edit ? '' : '<span class="crit-btns"><button type="button" class="link-btn" data-crit-edit="' + esc(g.id) + '" data-phase="' + def.id + '" aria-label="Edit criterion: ' + esc(g.text) + '">Edit</button>' +
+      '<button type="button" class="link-btn" data-note-edit="' + esc(g.id) + '" data-phase="' + def.id + '" aria-label="' + (note ? 'Edit' : 'Add') + ' note for: ' + esc(g.text) + '">' + (note ? 'Edit note' : 'Add note') + '</button>' +
       (def.gates.length < 2 ? '' : (o.confirmCrit === key
         ? '<button type="button" class="btn small danger" data-crit-del="' + esc(g.id) + '" data-phase="' + def.id + '">Remove criterion</button>'
         : '<button type="button" class="x" data-crit-del="' + esc(g.id) + '" data-phase="' + def.id + '" aria-label="Remove criterion: ' + esc(g.text) + '">&times;</button>')) + '</span>';
-    return '<li class="crit-row"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label>' + tools + '</li>';
+    const noteBlock = noteEditing
+      ? '<form class="note-form" data-note-form="' + esc(g.id) + '" data-phase="' + def.id + '"><textarea class="field" id="note-' + def.id + '-' + esc(g.id) + '" data-note-input="1" maxlength="1000" placeholder="What was agreed or produced? Paste text or a link." aria-label="Note for ' + esc(g.text) + '">' + esc(note) + '</textarea><div class="note-btns"><button class="btn small primary" type="submit">Save note</button><button class="btn small" type="button" data-note-cancel="1">Cancel</button></div></form>'
+      : (note ? '<p class="crit-note">' + noteHTML(note) + '</p>' : '');
+    return '<li class="crit-row"><div class="crit-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-phase="' + def.id + '" data-gate="' + i + '"' + (st.gates && st.gates[g.id] ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(g.text) + '</span></label>' + noteBlock + '</div>' + tools + '</li>';
   }).join('');
   const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' : '';
   const arts = def.artifacts.map((a, ai) => {
@@ -335,6 +346,8 @@ function reconcileProject(proj, flow) {
     if (raw && Array.isArray(raw.gates) && oldDef) oldDef.gates.forEach((g, i) => { carried[g.id] = !!raw.gates[i]; });
     else if (raw && raw.gates && !Array.isArray(raw.gates)) carried = raw.gates;
     st.gates = gatesMap(def, carried);
+    // Keep notes only for criteria that still exist.
+    st.evidence = Object.fromEntries(def.gates.filter(g => st.evidence && st.evidence[g.id]).map(g => [g.id, st.evidence[g.id]]));
     if (st.status === 'done' && !def.gates.every(g => st.gates[g.id])) {
       st.status = 'reopened';
       st.reopened = (st.reopened || 0) + 1;

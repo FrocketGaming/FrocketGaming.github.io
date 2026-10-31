@@ -27,6 +27,7 @@ class PhaseBoardApp {
         this.unsubFlows = null;
         this.editingGate = null;
         this.confirmCrit = null;
+        this.editingNote = null;
     }
 
     init() {
@@ -229,7 +230,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -346,6 +347,30 @@ class PhaseBoardApp {
             this.saveFailed('exit criteria change');
             return false;
         });
+    }
+
+    startNoteEdit(pid, gid) {
+        this.editingNote = pid + ':' + gid;
+        this.editingGate = null;
+        this.render();
+        document.getElementById('note-' + pid + '-' + gid)?.focus();
+    }
+
+    cancelNoteEdit() {
+        this.editingNote = null;
+        this.render();
+    }
+
+    // A note records what a criterion produced (the agreed statement, the metrics, a link). Empty clears it.
+    saveNote(pid, gid, text) {
+        const value = String(text || '').trim().slice(0, 1000);
+        this.editingNote = null;
+        this.render();
+        this.mutatePhase(pid, st => {
+            const next = Object.assign({}, st.evidence || {});
+            if (value) next[gid] = value; else delete next[gid];
+            st.evidence = next;
+        }, 'note');
     }
 
     startCritEdit(pid, gid) {
@@ -604,6 +629,7 @@ class PhaseBoardApp {
     }
 
     openProject(id) {
+        this.editingNote = null;
         this.editingGate = null;
         this.confirmCrit = null;
         this.view = id;
@@ -671,6 +697,9 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const noteEdit = e.target.closest('[data-note-edit]');
+            if (noteEdit) return this.startNoteEdit(noteEdit.getAttribute('data-phase'), noteEdit.getAttribute('data-note-edit'));
+            if (e.target.closest('[data-note-cancel]')) return this.cancelNoteEdit();
             const critEdit = e.target.closest('[data-crit-edit]');
             if (critEdit) return this.startCritEdit(critEdit.getAttribute('data-phase'), critEdit.getAttribute('data-crit-edit'));
             if (e.target.closest('[data-crit-cancel]')) return this.cancelCritEdit();
@@ -701,7 +730,7 @@ class PhaseBoardApp {
             const act = e.target.closest('[data-act]');
             if (act) {
                 const k = act.getAttribute('data-act');
-                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.editingGate = null; this.confirmCrit = null; this.render(); window.scrollTo(0, 0); }
+                if (k === 'back') { this.view = 'portfolio'; this.confirmDelete = false; this.editingGate = null; this.confirmCrit = null; this.editingNote = null; this.render(); window.scrollTo(0, 0); }
                 else if (k === 'new') { this.showNew = true; this.render(); document.getElementById('npName')?.focus(); }
                 else if (k === 'del') { this.confirmDelete = true; this.render(); }
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
@@ -740,7 +769,9 @@ class PhaseBoardApp {
         });
 
         page.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && e.target.matches && e.target.matches('[data-crit-input]')) this.cancelCritEdit();
+            if (e.key !== 'Escape' || !e.target.matches) return;
+            if (e.target.matches('[data-crit-input]')) this.cancelCritEdit();
+            else if (e.target.matches('[data-note-input]')) this.cancelNoteEdit();
         });
 
         page.addEventListener('input', e => {
@@ -753,6 +784,8 @@ class PhaseBoardApp {
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
                 if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim());
+            } else if (f.hasAttribute('data-note-form')) {
+                this.saveNote(f.getAttribute('data-phase'), f.getAttribute('data-note-form'), f.querySelector('textarea').value);
             } else if (f.hasAttribute('data-crit-form')) {
                 this.saveCriterion(f.getAttribute('data-phase'), f.getAttribute('data-crit-form'), f.querySelector('input').value);
             } else if (f.hasAttribute('data-crit-add')) {
