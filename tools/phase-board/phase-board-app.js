@@ -524,7 +524,7 @@ class PhaseBoardApp {
 
     newFlow() {
         this.startEditor({ mode: 'flow', projectMode: false, flowId: null, returnTo: '__flows', title: 'New flow',
-            intro: 'Add the phases a project moves through. Each phase needs at least one exit criterion.',
+            intro: 'Add the phases a project moves through. Exit criteria are optional here; a project cannot finish a phase until it has some.',
             draft: { name: '', phases: [blankDraftPhase(() => this.newId())] } });
     }
 

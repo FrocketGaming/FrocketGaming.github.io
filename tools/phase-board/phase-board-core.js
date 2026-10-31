@@ -58,14 +58,21 @@ const PH = {
 /* Exit criteria carry stable ids so a flow can be edited without shifting anyone's ticks. */
 function G(texts) { return texts.map((t, i) => ({ id: 'g' + (i + 1), text: t })); }
 Object.keys(PH).forEach(k => { PH[k].gates = G(PH[k].gates); });
-const TEMPLATES = {
+const LEGACY_TEMPLATES = {
   standard: { key: 'standard', name: 'Standard flow', phases: [PH.discovery, PH.research, PH.build, PH.test, PH.deploy] },
   lite: { key: 'lite', name: 'Lite flow', phases: [PH.discovery, PH.build, PH.test, PH.deploy] }
 };
-/* A project carries its own copy of its flow; older projects fall back to the built-in template. */
+/* The built-in flows are skeletons: phases and goals, no exit criteria. The user adds their own, or saves a flow
+   with criteria as a template. */
+const TEMPLATES = {};
+Object.keys(LEGACY_TEMPLATES).forEach(k => {
+  TEMPLATES[k] = { key: k, name: LEGACY_TEMPLATES[k].name, phases: LEGACY_TEMPLATES[k].phases.map(p => Object.assign({}, p, { gates: [] })) };
+});
+/* A project carries its own copy of its flow. Projects saved before that fall back to the original built-in flow,
+   criteria included, so their ticks keep their meaning. */
 function tplOf(proj) {
   if (proj.flow && Array.isArray(proj.flow.phases) && proj.flow.phases.length) return proj.flow;
-  return TEMPLATES[proj.template] || TEMPLATES.standard;
+  return LEGACY_TEMPLATES[proj.template] || LEGACY_TEMPLATES.standard;
 }
 /* Ticks are stored as {criterionId: true}. Older projects stored a boolean array by position, so accept both. */
 function gatesMap(def, raw) {
@@ -124,7 +131,7 @@ function railHTML(tpl, proj, o) {
   const items = tpl.phases.map((d, i) => {
     const st = phaseState(proj, d), prev = i ? phaseState(proj, tpl.phases[i - 1]) : null;
     const meta = STATUS[st.status] || STATUS.not_started;
-    const sub = gateCount(d, st) + ' of ' + d.gates.length + ' criteria';
+    const sub = d.gates.length ? gateCount(d, st) + ' of ' + d.gates.length + ' criteria' : 'No criteria yet';
     const inner = '<span class="rn-icon">' + icon(st.status, 22) + '</span><span class="rn-name">' + esc(d.short) + '</span><span class="rn-sub">' + sub + '</span>';
     const cls = 'rn ' + meta.cls + (prev && prev.status === 'done' ? ' prev-done' : '');
     const label = ' aria-label="' + esc(d.name + ': ' + meta.label + ', ' + sub) + '"';
@@ -140,8 +147,8 @@ function railHTML(tpl, proj, o) {
 function barHTML(tpl, proj) {
   const groups = tpl.phases.map(d => {
     const st = phaseState(proj, d), meta = STATUS[st.status] || STATUS.not_started, n = gateCount(d, st);
-    const segs = d.gates.map((_, i) => '<i class="' + (i < n ? 'on' : '') + '"></i>').join('');
-    return '<div class="bar-g ' + meta.cls + '" style="flex:' + d.gates.length + '" title="' + esc(d.name + ': ' + n + ' of ' + d.gates.length) + '">' + segs + '</div>';
+    const segs = d.gates.length ? d.gates.map((_, i) => '<i class="' + (i < n ? 'on' : '') + '"></i>').join('') : '<i></i>';
+    return '<div class="bar-g ' + meta.cls + '" style="flex:' + Math.max(1, d.gates.length) + '" title="' + esc(d.name + ': ' + (d.gates.length ? n + ' of ' + d.gates.length : 'no criteria yet')) + '">' + segs + '</div>';
   });
   return '<div class="bar" role="img" aria-label="Exit criteria met per phase">' + groups.join('') + '</div>';
 }
@@ -191,9 +198,9 @@ function phaseHTML(def, st, idx, o) {
   const loop = st.reopened > 0 ? '<p class="loop">' + icon('reopened', 16) + 'Reopened ' + st.reopened + (st.reopened === 1 ? ' time' : ' times') + '</p>' : '';
   return '<article class="phase ' + meta.cls + '" id="' + idp + 'ph-' + def.id + '">' +
     '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) + (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
-    '<span class="ph-count">' + n + '/' + def.gates.length + ' criteria</span></div>' +
+    '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
-    '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p><ul class="gates">' + gates + '</ul>' + critAdd + '</div>' + actBlock + '</div>' +
+    '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p>' + (def.gates.length ? '<ul class="gates">' + gates + '</ul>' : '<p class="note">' + (edit ? 'No exit criteria yet. Add at least one below to track this phase. It cannot be completed until it has criteria.' : 'No exit criteria set.') + '</p>') + critAdd + '</div>' + actBlock + '</div>' +
     '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
@@ -218,7 +225,7 @@ function cardHTML(id, p, when) {
     '<div><h2>' + esc(p.name) + '</h2>' + ([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).length ? '<p class="meta">' + esc([p.owner, isArchived(p) ? 'archived' : ''].filter(Boolean).join(' / ')) + '</p>' : '') + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    '<div class="foot"><span>' + s.g + ' of ' + s.gt + ' criteria' + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
+    '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -312,7 +319,6 @@ function cleanFlow(d) {
     const pn = String(p.name || '').trim(), label = pn || 'Phase ' + (pi + 1);
     if (!pn) errors.push('Phase ' + (pi + 1) + ' needs a name.');
     const gates = (p.gates || []).map(g => ({ id: g.id, text: String(g.text || '').trim() })).filter(g => g.text);
-    if (!gates.length) errors.push(label + ' needs at least one exit criterion.');
     return { id: p.id, name: pn, short: String(p.short || '').trim().slice(0, 16) || pn.slice(0, 16), goal: String(p.goal || '').trim(), gates: gates };
   });
   if (!phases.length) errors.push('Add at least one phase.');
@@ -366,7 +372,7 @@ function flowEditorHTML(ed) {
       '<div class="fe-grid"><label for="fe-pname-' + pi + '">Name<input class="field" id="fe-pname-' + pi + '" data-fe="pname" data-p="' + pi + '" value="' + esc(p.name) + '" autocomplete="off"></label>' +
       '<label for="fe-pshort-' + pi + '">Short label<input class="field" id="fe-pshort-' + pi + '" data-fe="pshort" data-p="' + pi + '" maxlength="16" value="' + esc(p.short) + '" placeholder="Shown on the progress rail" autocomplete="off"></label></div>' +
       '<label for="fe-pgoal-' + pi + '">Goal<textarea class="field" id="fe-pgoal-' + pi + '" data-fe="pgoal" data-p="' + pi + '" placeholder="One sentence on what this phase achieves">' + esc(p.goal) + '</textarea></label>' +
-      '<div><p class="sub">Exit criteria</p><ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button></div>' +
+      '<div><p class="sub">Exit criteria</p>' + (p.gates.length ? '' : '<p class="note">None in this flow. A project using it must add its own before the phase can be completed.</p>') + '<ul class="fe-list">' + gates + '</ul><button type="button" class="btn" data-fe-act="gate-add" data-p="' + pi + '">Add criterion</button></div>' +
       '</section>';
   }).join('');
   return '<div><p class="eyebrow">' + esc(ed.title) + '</p><h1>' + esc(d.name || 'Untitled flow') + '</h1></div>' +
