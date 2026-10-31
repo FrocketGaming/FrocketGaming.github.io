@@ -6,7 +6,7 @@
     const DATA = JSON.parse(document.getElementById('board-data').textContent);
     const root = document.getElementById('root');
     const ids = Object.keys(DATA.projects).sort((a, b) => (DATA.projects[b].updatedAt || 0) - (DATA.projects[a].updatedAt || 0));
-    let view = 'portfolio', sel = null, filter = 'all';
+    let view = 'portfolio', sel = null, filter = 'all', doneOpen = true;
 
     function updated(p) {
         return p.updatedAt ? 'updated ' + new Date(p.updatedAt).toISOString().slice(0, 10) : '';
@@ -17,7 +17,7 @@
         const shown = filterProjects(list, filter);
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, filter) + '</div></div>' +
             (shown.length
-                ? '<div class="grid">' + shown.map(i => cardHTML(i.id, i.p, updated(i.p))).join('') + '</div>'
+                ? portfolioBodyHTML(shown, filter, { when: updated, completedOpen: doneOpen })
                 : '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>');
     }
 
@@ -62,6 +62,7 @@
         if (s && s.getAttribute('data-sel')) { sel = s.getAttribute('data-sel'); render(); return; }
         if (e.target.closest('[data-act="back"]')) { view = 'portfolio'; render(); window.scrollTo(0, 0); }
     });
+    root.addEventListener('toggle', e => { if (e.target && e.target.id === 'pbDoneSec' && filter === 'all') doneOpen = !!e.target.open; }, true);
     render();
     attachBackToTop(document, window);
     } catch (err) {

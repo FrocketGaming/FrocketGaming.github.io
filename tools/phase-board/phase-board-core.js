@@ -721,3 +721,17 @@ function bulletsHTML(text, max) {
   if (max && all.length > max) html += '<p class="rt-more">+' + (all.length - max) + ' more</p>';
   return html;
 }
+
+/* The project cards, grouped: in progress first, then a collapsible Completed section. shown is [{id, p}] already
+   filtered. o: {when(p) -> text, completedOpen}. The Archived and Needs attention views stay a single grid. */
+function portfolioBodyHTML(shown, filter, o) {
+  const card = i => cardHTML(i.id, i.p, o.when(i.p));
+  const grid = items => '<div class="grid">' + items.map(card).join('') + '</div>';
+  if (filter === 'archived' || filter === 'attention') return grid(shown);
+  const doing = shown.filter(i => !isComplete(i.p)), done = shown.filter(i => isComplete(i.p));
+  if (!done.length) return grid(doing);
+  const open = o.completedOpen || filter === 'done';
+  const section = '<details class="sec" id="pbDoneSec"' + (open ? ' open' : '') + '><summary><h2 class="sec-h">Completed</h2><span class="sec-count">' + done.length + '</span></summary>' + grid(done) + '</details>';
+  if (!doing.length) return section;
+  return '<div class="sec-head"><h2 class="sec-h">In progress</h2><span class="sec-count">' + doing.length + '</span></div>' + grid(doing) + section;
+}

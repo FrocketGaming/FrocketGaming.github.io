@@ -35,6 +35,8 @@ class PhaseBoardApp {
         this.confirmDiagram = null;
         this.flowStaticPromise = null;
         this.diagramBusy = false;
+        this.completedOpen = true;
+        try { if (localStorage.getItem('pb-completed-open') === '0') this.completedOpen = false; } catch (e) { /* storage unavailable: the section stays open */ }
     }
 
     init() {
@@ -207,7 +209,7 @@ class PhaseBoardApp {
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
         else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p><button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
-        else body = '<div class="grid">' + shown.map(i => cardHTML(i.id, i.p, i.p.updatedAt ? ago(i.p.updatedAt) : '')).join('') + '</div>';
+        else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
             this.statusLine() + (this.showNew ? this.newFormHTML() : '') + body;
     }
@@ -913,6 +915,13 @@ class PhaseBoardApp {
 
         page.addEventListener('toggle', e => {
             const el = e.target;
+            // Remember whether the Completed section was left open (only from the All view, where it is the user's choice).
+            if (el && el.id === 'pbDoneSec') {
+                if (this.filter !== 'all') return;
+                this.completedOpen = !!el.open;
+                try { localStorage.setItem('pb-completed-open', el.open ? '1' : '0'); } catch (err) { /* the choice lasts for this visit */ }
+                return;
+            }
             if (!el.matches || !el.matches('details[data-dg]')) return;
             const id = el.getAttribute('data-dg');
             this.openDiagrams = el.open ? this.openDiagrams.filter(x => x !== id).concat([id]) : this.openDiagrams.filter(x => x !== id);
