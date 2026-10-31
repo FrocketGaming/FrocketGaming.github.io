@@ -97,10 +97,43 @@ const STARTER_CRITERIA = {
     'First real run checked and users told',
     'Value measured after launch and recorded in Outcomes']
 };
+/* More ideas, offered only as suggestions (the starter flow stays short). Some overlap on purpose; use what fits. */
+const EXTRA_SUGGESTIONS = {
+  discovery: ['Current process documented: who does what today and how long it takes',
+    'Volume and frequency estimated (runs per week, records per run)',
+    'Definition of done written down and agreed with the requester',
+    'Sensitive data and compliance needs identified (PII, retention, approvals)',
+    'Dependencies on other teams or systems listed',
+    'Go or no-go decision recorded, with the reason'],
+  research: ['Build versus buy considered, with the reason for the choice recorded',
+    'Ongoing cost per month or year estimated',
+    'Who maintains it afterwards, named',
+    'Integration with existing systems confirmed to be possible',
+    'Vendor or tool limits checked (quotas, rate limits, licences)',
+    'Rejected options and why recorded as a decision'],
+  build: ['Configuration kept outside the code, with no hard-coded paths or IDs',
+    'Errors are logged and a failure does not pass silently',
+    'Setup and run steps written so a newcomer can follow them',
+    'Runs unattended without manual fixes',
+    'Reviewed by someone other than the author',
+    'Demo shown to the requester mid-build, with their feedback logged'],
+  test: ['Repeat runs give the same result (no duplicates)',
+    'Tested with the largest realistic volume',
+    'A failure alert was seen to fire during a test',
+    'Access and permissions tested with a non-admin account',
+    'Output spot-checked against a known-good answer',
+    'Requester signed off on the results in writing'],
+  deploy: ['Runs under the right service account, not a personal one',
+    'Credentials and secrets stored in the approved place',
+    'Support contact and escalation path documented',
+    'Change or release approval recorded, if your team requires it',
+    'Old process retired or switched off, with a date',
+    'Review date set to check the value after six months']
+};
 /* Starter criteria for a phase that is not yet in its list, matched by the phase id (so duplicated and edited flows keep them). */
 function critSuggestions(def) {
   const have = (def.gates || []).map(g => String(g.text || '').trim().toLowerCase());
-  return (STARTER_CRITERIA[def.id] || []).filter(t => have.indexOf(t.toLowerCase()) < 0);
+  return (STARTER_CRITERIA[def.id] || []).concat(EXTRA_SUGGESTIONS[def.id] || []).filter(t => have.indexOf(t.toLowerCase()) < 0);
 }
 TEMPLATES.starter = { key: 'starter', name: 'Standard flow with starter criteria',
   phases: LEGACY_TEMPLATES.standard.phases.map(p => Object.assign({}, p, { gates: G(STARTER_CRITERIA[p.id]) })) };

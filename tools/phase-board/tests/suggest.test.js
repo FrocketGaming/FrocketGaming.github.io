@@ -24,7 +24,7 @@ const wait = () => new Promise(r => setTimeout(r, 20));
   const proj = K.blankProject('P', { key: 'standard', name: std.name, phases: std.phases });
   const def = K.tplOf(proj).phases[0];
   const html = K.phaseHTML(def, K.phaseState(proj, def), 0, { mode: 'edit', people: [] });
-  ok(/<details class="sugg" data-sugg="discovery">/.test(html) && html.includes('Suggested exit criteria (5)') && (html.match(/data-crit-suggest="discovery"/g) || []).length === 5, 'the edit view shows a collapsed list of the 5 Discovery ideas');
+  ok(/<details class="sugg" data-sugg="discovery">/.test(html) && html.includes('Suggested exit criteria (11)') && (html.match(/data-crit-suggest="discovery"/g) || []).length === 11, 'the edit view shows a collapsed list of all 11 Discovery ideas');
   ok(!/data-sugg="discovery" open/.test(html) && /data-sugg="discovery" open/.test(K.phaseHTML(def, K.phaseState(proj, def), 0, { mode: 'edit', people: [], suggOpen: ['discovery'] })), 'it stays open when the user left it open');
   ok(!K.phaseHTML(def, K.phaseState(proj, def), 0, { mode: 'view' }).includes('sugg'), 'the read-only view and exports never show suggestions');
   const testDef = K.tplOf(proj).phases.find(p => p.id === 'test');
@@ -40,7 +40,7 @@ const wait = () => new Promise(r => setTimeout(r, 20));
   els.pbPage.h.click({ target: { closest: s => s === '[data-crit-suggest]' ? { getAttribute: k => k === 'data-crit-suggest' ? 'discovery' : text } : null } });
   await wait();
   ok(wrote.length === 1 && wrote[0].flow.phases[0].gates.length === 1 && wrote[0].flow.phases[0].gates[0].text === text, 'clicking a suggestion adds it as a real criterion');
-  ok(!K.critSuggestions(app.projects.p1.flow.phases[0]).includes(text) && K.critSuggestions(app.projects.p1.flow.phases[0]).length === 4, 'and it leaves the suggestions');
+  ok(!K.critSuggestions(app.projects.p1.flow.phases[0]).includes(text) && K.critSuggestions(app.projects.p1.flow.phases[0]).length === 10, 'and it leaves the suggestions');
 
   // opening and closing is remembered across redraws
   els.pbPage.h.toggle({ target: { id: 'x', matches: s => s === 'details[data-sugg]', getAttribute: () => 'discovery', open: true } });
@@ -51,7 +51,7 @@ const wait = () => new Promise(r => setTimeout(r, 20));
   // the flow editor
   const draft = { name: 'Mine', phases: [{ id: 'discovery', name: 'Discovery', short: 'Disc', goal: '', gates: [] }, { id: 'zz', name: 'Custom', short: 'Cust', goal: '', gates: [] }] };
   const ed = K.flowEditorHTML({ title: 'New flow', errors: [], draft: draft, mode: 'flow' });
-  ok((ed.match(/data-fe-act="gate-suggest" data-p="0"/g) || []).length === 5 && !ed.includes('data-fe-act="gate-suggest" data-p="1"'), 'the flow editor lists ideas for a known phase and none for a custom one');
+  ok((ed.match(/data-fe-act="gate-suggest" data-p="0"/g) || []).length === 11 && !ed.includes('data-fe-act="gate-suggest" data-p="1"'), 'the flow editor lists ideas for a known phase and none for a custom one');
   app.editor = { mode: 'flow', draft: draft, errors: [], confirmDel: null, returnTo: '__flows' };
   app.view = '__editor';
   app.editorAction('gate-suggest', 0, 1);
@@ -59,6 +59,12 @@ const wait = () => new Promise(r => setTimeout(r, 20));
   app.editorAction('gate-suggest', 0, 99);
   ok(draft.phases[0].gates.length === 1, 'a stale click adds nothing');
 
+  // The extra ideas are suggestions only: the starter flow keeps its short list.
+  const counts = ['discovery', 'research', 'build', 'test', 'deploy'].map(id => K.critSuggestions({ id: id, gates: [] }).length);
+  ok(counts.every(n => n >= 10), 'every phase offers 10 or more ideas in total (' + counts.join(', ') + ')');
+  ok(K.TEMPLATES.starter.phases.every(p => p.gates.length >= 4 && p.gates.length <= 6), 'the starter flow still has only its 4 to 6 criteria per phase');
+  const every = ['discovery', 'research', 'build', 'test', 'deploy'].reduce((a, id) => a.concat(K.critSuggestions({ id: id, gates: [] })), []);
+  ok(new Set(every.map(t => t.toLowerCase())).size === every.length && every.every(t => t.trim() && !t.includes('  ')), 'no idea is listed twice');
   console.log(fails ? fails + ' FAILED' : 'ALL PASSED');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.log('ERROR', e); process.exit(1); });
