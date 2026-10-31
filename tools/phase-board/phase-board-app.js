@@ -29,6 +29,12 @@ class PhaseBoardApp {
         this.confirmCrit = null;
         this.editingNote = null;
         this.reviewYear = null;
+        this.picker = null;
+        this.svgs = {};
+        this.openDiagrams = [];
+        this.confirmDiagram = null;
+        this.flowStaticPromise = null;
+        this.diagramBusy = false;
     }
 
     init() {
@@ -234,7 +240,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -273,6 +279,7 @@ class PhaseBoardApp {
                 : this.view === '__editor' ? this.editorHTML()
                 : this.view === '__review' ? this.reviewPageHTML()
                 : this.detailHTML();
+            if (this.view !== 'portfolio' && this.view.indexOf('__') !== 0) this.prepareDiagrams();
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
         });
     }
@@ -355,6 +362,105 @@ class PhaseBoardApp {
             this.saveFailed('exit criteria change');
             return false;
         });
+    }
+
+    // ─── Diagrams from the Flow tool ──────────────────────────
+
+    // flow-static.js (the Flow tool's renderer) is large, so load it only when a diagram needs drawing.
+    ensureFlowStatic() {
+        if (window.FlowStatic) return Promise.resolve(true);
+        if (!this.flowStaticPromise) {
+            this.flowStaticPromise = new Promise(resolve => {
+                const s = document.createElement('script');
+                s.src = '../flow/flow-static.js';
+                s.onload = () => resolve(!!window.FlowStatic);
+                s.onerror = () => resolve(false);
+                document.head.appendChild(s);
+            });
+        }
+        return this.flowStaticPromise;
+    }
+
+    // Draw any attached diagrams that have no picture yet, then redraw once.
+    prepareDiagrams() {
+        const p = this.projects[this.view];
+        if (!p || this.diagramBusy) return;
+        const need = [];
+        tplOf(p).phases.forEach(d => (phaseState(p, d).diagrams || []).forEach(g => { if (this.svgs[g.id] === undefined) need.push(g); }));
+        if (!need.length) return;
+        this.diagramBusy = true;
+        this.ensureFlowStatic().then(ready => {
+            need.forEach(g => {
+                let svg = '';
+                if (ready) { try { svg = safeSvg(window.FlowStatic.toSVG(JSON.parse(g.canvas), { padding: 16, background: false }).svg); } catch (e) { svg = ''; } }
+                this.svgs[g.id] = svg;
+            });
+        }).finally(() => { this.diagramBusy = false; this.render(); });
+    }
+
+    // Saved charts from the cloud (when signed in) and from this browser, merged.
+    async loadCharts() {
+        const remote = this.db
+            ? this.projectsRef().firestore.collection('users').doc(this.user.uid).collection('snippets').where('extension', '==', 'canvas').get()
+                .then(snap => snap.docs.map(d => d.data())).catch(() => [])
+            : Promise.resolve([]);
+        const local = (typeof StorageManager !== 'undefined')
+            ? StorageManager.getAll('snippets').then(all => all.filter(s => s && s.extension === 'canvas')).catch(() => [])
+            : Promise.resolve([]);
+        return mergeCharts(await Promise.all([remote, local]));
+    }
+
+    async openPicker(pid) {
+        this.picker = { pid: pid, loading: true, items: [], error: '' };
+        this.render();
+        try {
+            this.picker.items = await this.loadCharts();
+        } catch (err) {
+            this.picker.error = 'Your charts could not be read. Check your connection and try again.';
+        }
+        this.picker.loading = false;
+        this.render();
+    }
+
+    closePicker() {
+        this.picker = null;
+        this.render();
+    }
+
+    attachDiagram(pid, snippetId) {
+        const item = this.picker && this.picker.items.find(i => i.snippetId === snippetId);
+        const p = this.projects[this.view];
+        if (!item || !p) return;
+        const def = tplOf(p).phases.find(d => d.id === pid);
+        const made = makeDiagram(item, this.newId(), p, phaseState(p, def));
+        if (made.error) { this.setNote(made.error, true); return; }
+        this.picker = null;
+        this.mutatePhase(pid, st => { st.diagrams = (st.diagrams || []).concat([made.diagram]); }, 'diagram');
+        this.openDiagrams = this.openDiagrams.concat([made.diagram.id]);
+        this.render();
+    }
+
+    async refreshDiagram(pid, did) {
+        const p = this.projects[this.view];
+        const cur = p && (phaseState(p, tplOf(p).phases.find(d => d.id === pid)).diagrams || []).find(x => x.id === did);
+        if (!cur) return;
+        let items;
+        try { items = await this.loadCharts(); } catch (err) { this.setNote('Your charts could not be read. Try again.', true); return; }
+        const item = items.find(i => i.snippetId === cur.snippetId);
+        if (!item) { this.setNote('That chart was not found in your saved Flow charts. It may have been deleted or renamed in Snippets.', true); return; }
+        if (item.content.length > DIAGRAM_MAX_CHARS) { this.setNote('The chart is now too large to attach.', true); return; }
+        delete this.svgs[did];
+        this.mutatePhase(pid, st => {
+            st.diagrams = (st.diagrams || []).map(x => x.id === did ? Object.assign({}, x, { title: item.title, canvas: item.content, cards: item.cards, links: item.links, savedAt: today() }) : x);
+        }, 'diagram');
+        this.setNote('Diagram updated from Snippets.', false);
+    }
+
+    removeDiagram(pid, did) {
+        this.confirmDiagram = null;
+        delete this.svgs[did];
+        this.mutatePhase(pid, st => { st.diagrams = (st.diagrams || []).filter(x => x.id !== did); }, 'diagram');
+        this.render();
     }
 
     startNoteEdit(pid, gid) {
@@ -634,6 +740,8 @@ class PhaseBoardApp {
     }
 
     openProject(id) {
+        this.picker = null;
+        this.confirmDiagram = null;
         this.editingNote = null;
         this.editingGate = null;
         this.confirmCrit = null;
@@ -658,7 +766,15 @@ class PhaseBoardApp {
             const ver = tag ? (tag.getAttribute('src').split('?')[1] || '') : '';
             const [css, core, viewer] = await Promise.all(['phase-board-styles.css', 'phase-board-core.js', 'phase-board-export.js'].map(f =>
                 fetch(f + (ver ? '?' + ver : ''), { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.text(); })));
-            const data = JSON.stringify({ projects: this.projects, takenAt: today(), mode: opts.mode || 'board', year: opts.year || '' }).replace(/</g, '\\u003c');
+            const out = clone(this.projects), svgs = {};
+            const attached = [];
+            Object.keys(out).forEach(id => Object.keys(out[id].phases || {}).forEach(pid => (out[id].phases[pid].diagrams || []).forEach(g => attached.push(g))));
+            if (attached.length && await this.ensureFlowStatic()) {
+                const paint = window.FlowStatic.resolvedPaint(null, null);
+                attached.forEach(g => { try { svgs[g.id] = safeSvg(window.FlowStatic.toSVG(JSON.parse(g.canvas), { paint: paint, padding: 16, background: false }).svg); } catch (e) { svgs[g.id] = ''; } });
+            }
+            attached.forEach(g => { delete g.canvas; });
+            const data = JSON.stringify({ projects: out, svgs: svgs, takenAt: today(), mode: opts.mode || 'board', year: opts.year || '' }).replace(/</g, '\\u003c');
             const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<title>' + (opts.mode === 'review' ? 'Phase Board year in review ' + opts.year : 'Phase Board snapshot ' + today()) + '</title>' +
                 '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:wght@100..900&display=swap">' +
@@ -705,6 +821,20 @@ class PhaseBoardApp {
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
+            const dgAttach = e.target.closest('[data-dg-attach]');
+            if (dgAttach) return this.openPicker(dgAttach.getAttribute('data-dg-attach'));
+            if (e.target.closest('[data-dg-cancel]')) return this.closePicker();
+            const dgPick = e.target.closest('[data-dg-pick]');
+            if (dgPick) return this.attachDiagram(dgPick.getAttribute('data-phase'), dgPick.getAttribute('data-dg-pick'));
+            const dgRefresh = e.target.closest('[data-dg-refresh]');
+            if (dgRefresh) return this.refreshDiagram(dgRefresh.getAttribute('data-phase'), dgRefresh.getAttribute('data-dg-refresh'));
+            const dgDel = e.target.closest('[data-dg-del]');
+            if (dgDel) {
+                const pid = dgDel.getAttribute('data-phase'), did = dgDel.getAttribute('data-dg-del');
+                if (this.confirmDiagram === pid + ':' + did) return this.removeDiagram(pid, did);
+                this.confirmDiagram = pid + ':' + did;
+                return this.render();
+            }
             const noteEdit = e.target.closest('[data-note-edit]');
             if (noteEdit) return this.startNoteEdit(noteEdit.getAttribute('data-phase'), noteEdit.getAttribute('data-note-edit'));
             if (e.target.closest('[data-note-cancel]')) return this.cancelNoteEdit();
@@ -777,6 +907,13 @@ class PhaseBoardApp {
                 this.editAction(t.getAttribute('data-phase'), aid, { done: done, doneAt: done ? today() : '' });
             }
         });
+
+        page.addEventListener('toggle', e => {
+            const el = e.target;
+            if (!el.matches || !el.matches('details[data-dg]')) return;
+            const id = el.getAttribute('data-dg');
+            this.openDiagrams = el.open ? this.openDiagrams.filter(x => x !== id).concat([id]) : this.openDiagrams.filter(x => x !== id);
+        }, true);
 
         page.addEventListener('keydown', e => {
             if (e.key !== 'Escape' || !e.target.matches) return;

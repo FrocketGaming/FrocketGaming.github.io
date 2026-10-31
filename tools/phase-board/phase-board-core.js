@@ -83,7 +83,7 @@ function gatesMap(def, raw) {
 
 /* ---- per-project state ---- */
 function blankPhase(def) {
-  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, decisions: [], notes: '', log: [], actions: [], evidence: {}, completedAt: '' };
+  return { status: 'not_started', gates: gatesMap(def, null), reopened: 0, decisions: [], notes: '', log: [], actions: [], evidence: {}, completedAt: '', diagrams: [] };
 }
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
@@ -201,7 +201,7 @@ function phaseHTML(def, st, idx, o) {
     '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span></div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p>' + (def.gates.length ? '<ul class="gates">' + gates + '</ul>' : '<p class="note">' + (edit ? 'No exit criteria yet. Add at least one below to track this phase. It cannot be completed until it has criteria.' : 'No exit criteria set.') + '</p>') + critAdd + '</div>' + actBlock + '</div>' +
-    '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' +
+    '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' + diagramsHTML(def, st, o) +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
 }
@@ -295,7 +295,7 @@ function phaseHasProgress(proj, phaseId) {
   const st = proj.phases && proj.phases[phaseId];
   if (!st) return false;
   const g = Array.isArray(st.gates) ? st.gates : Object.keys(st.gates || {}).map(k => st.gates[k]);
-  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes;
+  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes || (st.diagrams || []).length > 0;
 }
 /* Trims a draft and returns {errors, flow}. Empty criteria are dropped; short labels fall back to the name. */
 function cleanFlow(d) {
@@ -591,4 +591,80 @@ function attachBackToTop(doc, win) {
   };
   win.addEventListener('scroll', update, { passive: true });
   update();
+}
+
+/* ---- diagrams: snapshots of charts saved from the Flow tool, attached to a phase ---- */
+const DIAGRAM_MAX_CHARS = 250000;   // one chart's JSON, images included
+const DIAGRAM_MAX_PER_PHASE = 3;
+const PROJECT_MAX_CHARS = 800000;   // a project is one Firestore document (1 MiB limit)
+
+/* Cards (not groups) and connectors in a JSON Canvas string; null when it is not a chart. */
+function chartCounts(content) {
+  let doc;
+  try { doc = JSON.parse(content); } catch (e) { return null; }
+  if (!doc || typeof doc !== 'object' || (doc.nodes && !Array.isArray(doc.nodes)) || (doc.edges && !Array.isArray(doc.edges))) return null;
+  const nodes = doc.nodes || [], edges = doc.edges || [];
+  return { cards: nodes.filter(n => n && n.type !== 'group').length, links: edges.length };
+}
+/* A saved chart (a Snippets record with extension "canvas") as a picker row, or null if unusable. */
+function chartItem(s) {
+  if (!s || s.extension !== 'canvas' || typeof s.content !== 'string') return null;
+  const c = chartCounts(s.content);
+  return c ? { snippetId: String(s.id), title: String(s.name || 'Untitled chart'), content: s.content, updatedAt: s.updatedAt || '', cards: c.cards, links: c.links } : null;
+}
+/* Merge charts from the cloud and this browser: one per snippet id, newest wins, newest first. */
+function mergeCharts(lists) {
+  const byId = {};
+  lists.forEach(list => (list || []).forEach(s => {
+    const it = chartItem(s);
+    if (it && (!byId[it.snippetId] || Date.parse(it.updatedAt) > Date.parse(byId[it.snippetId].updatedAt || 0))) byId[it.snippetId] = it;
+  }));
+  return Object.keys(byId).map(k => byId[k]).sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
+}
+/* The stored snapshot, or {error} when it cannot be attached. */
+function makeDiagram(item, id, project, phaseState_) {
+  if (item.content.length > DIAGRAM_MAX_CHARS) return { error: 'That chart is too large to attach (' + Math.round(item.content.length / 1000) + ' KB; the limit is ' + Math.round(DIAGRAM_MAX_CHARS / 1000) + ' KB). Pictures inside the chart are the usual cause.' };
+  if ((phaseState_.diagrams || []).length >= DIAGRAM_MAX_PER_PHASE) return { error: 'A phase can hold up to ' + DIAGRAM_MAX_PER_PHASE + ' diagrams.' };
+  if (JSON.stringify(project).length + item.content.length > PROJECT_MAX_CHARS) return { error: 'This project is full. Remove a diagram first.' };
+  return { diagram: { id: id, snippetId: item.snippetId, title: item.title, canvas: item.content, cards: item.cards, links: item.links, savedAt: today() } };
+}
+/* Markup from the Flow renderer is inserted as HTML, so refuse anything that carries script. */
+function safeSvg(svg) {
+  const s = String(svg || '');
+  return /<script|\son[a-z]+\s*=|javascript:/i.test(s) ? '' : s;
+}
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
+/* o: {mode, svgs, openDiagrams, picker, confirmDiagram}. Collapsed by default, so a phase with diagrams costs one line each. */
+function diagramsHTML(def, st, o) {
+  const list = Array.isArray(st.diagrams) ? st.diagrams : [], edit = o.mode === 'edit';
+  if (!list.length && !edit) return '';
+  const svgs = o.svgs || {}, open = o.openDiagrams || [], pid = def.id;
+  const items = list.map(d => {
+    const svg = svgs[d.id];
+    const body = svg ? '<div class="dg-canvas">' + svg + '</div>' : (svg === '' ? '<p class="note">The preview could not be drawn.</p>' : '<p class="note">Drawing the diagram</p>');
+    const confirm = o.confirmDiagram === pid + ':' + d.id;
+    const tools = !edit ? '' : '<div class="dg-tools"><a class="link-btn" href="../flow/index.html?snippet=' + encodeURIComponent(d.snippetId) + '" target="_blank" rel="noopener noreferrer">Open in Flow</a>' +
+      '<button type="button" class="link-btn" data-dg-refresh="' + esc(d.id) + '" data-phase="' + pid + '">Update from Snippets</button>' +
+      (confirm ? '<button type="button" class="btn small danger" data-dg-del="' + esc(d.id) + '" data-phase="' + pid + '">Remove diagram</button>' : '<button type="button" class="link-btn" data-dg-del="' + esc(d.id) + '" data-phase="' + pid + '">Remove</button>') + '</div>';
+    return '<details class="dg" data-dg="' + esc(d.id) + '"' + (open.indexOf(d.id) >= 0 ? ' open' : '') + '><summary><span class="dg-title">' + esc(d.title) + '</span><span class="dg-meta">' +
+      plural(d.cards || 0, 'card', 'cards') + ', ' + plural(d.links || 0, 'connector', 'connectors') + ' / saved ' + esc(d.savedAt || '') + '</span></summary>' + body + tools + '</details>';
+  }).join('');
+  let attach = '';
+  if (edit) {
+    const pk = o.picker && o.picker.pid === pid ? o.picker : null;
+    if (!pk) {
+      attach = list.length >= DIAGRAM_MAX_PER_PHASE ? '<p class="msg">A phase can hold up to ' + DIAGRAM_MAX_PER_PHASE + ' diagrams.</p>'
+        : '<button type="button" class="btn small" data-dg-attach="' + pid + '">Attach a diagram</button>';
+    } else if (pk.loading) {
+      attach = '<p class="msg">Looking for your saved Flow charts</p>';
+    } else if (pk.error) {
+      attach = '<p class="msg err">' + esc(pk.error) + '</p><button type="button" class="btn small" data-dg-cancel="1">Close</button>';
+    } else if (!pk.items.length) {
+      attach = '<p class="note">No saved Flow charts found. Draw one in <a href="../flow/index.html" target="_blank" rel="noopener noreferrer">Flow</a> and save it to Snippets (Ctrl+S), then try again.</p><button type="button" class="btn small" data-dg-cancel="1">Close</button>';
+    } else {
+      attach = '<ul class="dg-pick">' + pk.items.map(i => '<li><button type="button" data-dg-pick="' + esc(i.snippetId) + '" data-phase="' + pid + '"><b>' + esc(i.title) + '</b><span>' + plural(i.cards, 'card', 'cards') + ', ' + plural(i.links, 'connector', 'connectors') + '</span></button></li>').join('') + '</ul><button type="button" class="btn small" data-dg-cancel="1">Cancel</button>';
+    }
+  }
+  return '<div><p class="sub">Diagrams</p>' + (items ? '<div class="dgs">' + items + '</div>' : '<p class="note">None attached.</p>') + attach + '</div>';
 }

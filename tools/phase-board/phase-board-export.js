@@ -31,7 +31,7 @@
             overviewHTML(p, false) + risksHTML(p, false) +
             '<div class="railbox">' + railHTML(tpl, p, { button: true, sel: sel }) + barHTML(tpl, p) +
             '<p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met. Select a phase to read its details.</p></div>' +
-            phaseHTML(def, phaseState(p, def), idx, { mode: 'view', idp: 'x-' }) +
+            phaseHTML(def, phaseState(p, def), idx, { mode: 'view', idp: 'x-', svgs: DATA.svgs || {} }) +
             '<div class="ph-row"><button class="btn" type="button" data-sel="' + (prev ? prev.id : '') + '"' + (prev ? '' : ' disabled') + '>Previous phase</button>' +
             '<button class="btn" type="button" data-sel="' + (next ? next.id : '') + '"' + (next ? '' : ' disabled') + '>Next phase</button></div>' +
             outcomesHTML(p, false);

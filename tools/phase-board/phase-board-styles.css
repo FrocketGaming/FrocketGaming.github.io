@@ -307,3 +307,26 @@
 .pb .mt-note { font-size: 12px; color: var(--fg-2); }
 .pb .mt-del { position: absolute; top: 6px; right: 6px; }
 @media (max-width: 640px) { .pb .metric-add input:first-child { grid-column: 1 / -1; } }
+
+/* diagrams from Flow: one quiet line each until opened */
+.pb .dgs { display: grid; gap: 6px; }
+.pb .dg { border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); min-width: 0; }
+.pb .dg > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 8px 12px 8px 28px; cursor: pointer; list-style: none; position: relative; color: var(--fg); }
+.pb .dg > summary::-webkit-details-marker { display: none; }
+.pb .dg > summary::before { content: ""; position: absolute; left: 12px; top: 50%; margin-top: -4px; border: 4px solid transparent; border-left-color: var(--fg-2); border-right-width: 0; border-left-width: 6px; transition: transform 0.15s ease; }
+.pb .dg[open] > summary::before { transform: rotate(90deg); }
+.pb .dg > summary:hover .dg-title { text-decoration: underline; }
+.pb .dg-title { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.pb .dg-meta { font-size: 12px; color: var(--fg-2); }
+.pb .dg-canvas { margin: 0 12px 10px; padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg-primary); overflow: auto; max-height: 440px; }
+.pb .dg-canvas svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.pb .dg > .note { padding: 0 12px 10px; }
+.pb .dg-tools { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 0 8px 10px; }
+.pb .dg-tools a.link-btn { text-decoration: none; }
+.pb .dg-tools a.link-btn:hover { text-decoration: underline; }
+.pb .dg-pick { display: grid; gap: 6px; margin: 8px 0; }
+.pb .dg-pick button { display: grid; gap: 1px; width: 100%; text-align: left; background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; cursor: pointer; }
+.pb .dg-pick button:hover { border-color: var(--accent-secondary); }
+.pb .dg-pick b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.pb .dg-pick span { font-size: 12px; color: var(--fg-2); }
+@media (prefers-reduced-motion: reduce) { .pb .dg > summary::before { transition: none; } }
