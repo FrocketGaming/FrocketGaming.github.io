@@ -42,7 +42,8 @@ const proj = (extra) => Object.assign({ name: 'Mini project', template: 'custom'
   legacy.completedOn = '2025-12-20';
   ok(K.projectCompletedOn(legacy) === '2025-12-20', 'a hand-entered date is used for legacy projects');
   ok(K.projectCompletedOn(proj()) === '', 'an unfinished project has no completion date');
-  ok(K.overviewHTML(legacy, true).includes('data-ov="completedOn"') && !K.overviewHTML(done, true).includes('completedOn'), 'Completed on field appears only when a date is missing');
+  ok(K.overviewHTML(legacy, true).includes('data-ov="completedOn"') && K.overviewHTML(done, true).includes('data-ov="completedOn"') && !K.overviewHTML(proj(), true).includes('completedOn'), 'the Completed on field appears for every finished project, and not for one still in progress');
+  ok(K.overviewHTML(Object.assign({}, legacy, { completedOn: '' }), true).includes('Not recorded for this project') && !K.overviewHTML(legacy, true).includes('Not recorded for this project') && !K.overviewHTML(done, true).includes('Not recorded for this project') && K.overviewHTML(done, true).includes('Change it for a project from the past'), 'its hint says whether the date is missing or can be changed');
   ok(K.cardHTML('x', done, 'updated 2d ago').includes('Completed 2026-06-15'), 'the portfolio card shows the completion date');
 
   // 3. Archive and filters.

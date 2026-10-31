@@ -376,3 +376,12 @@
 /* risks and constraints that still apply to a finished project */
 .pb .live-notes { display: flex; flex-wrap: wrap; gap: 6px; }
 .pb .rs-constraint { --s: var(--idle); }
+
+/* restore from a backup file */
+.pb .restore-panel { background: var(--surface); border: 1px solid var(--accent-primary); border-radius: 5px; padding: 16px 18px; display: grid; gap: 10px; box-shadow: 0 0 4px var(--shadow-color); }
+.pb .restore-panel p { overflow-wrap: anywhere; }
+
+/* project tag: a neutral chip with a colored dot and border, so its text is as readable as any other badge */
+.pb .ptag { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin-bottom: 6px; padding: 1px 10px 1px 8px; border-radius: 999px; border: 1px solid var(--tc); background: var(--surface-2); color: var(--fg); font-size: 12px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.pb .ptag::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 999px; background: var(--tc); }
+.pb h1 + .ptag { margin: 6px 0 0; }

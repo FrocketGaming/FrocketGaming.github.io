@@ -36,6 +36,7 @@ class PhaseBoardApp {
         this.flowStaticPromise = null;
         this.diagramBusy = false;
         this.completedOpen = true;
+        this.restore = null;
         try { if (localStorage.getItem('pb-completed-open') === '0') this.completedOpen = false; } catch (e) { /* storage unavailable: the section stays open */ }
     }
 
@@ -197,6 +198,7 @@ class PhaseBoardApp {
         return '<form class="newform" id="pbNewForm"><label for="npName">Project name<input class="field" id="npName" autocomplete="off" required></label>' +
             '<label for="npOwner">Owner (optional)<input class="field" id="npOwner" autocomplete="off"></label>' +
             '<label for="npLead">Lead (optional)<input class="field" id="npLead" autocomplete="off"></label>' +
+            '<label for="npTag">Tag (optional)<input class="field" id="npTag" maxlength="' + TAG_MAX + '" list="pb-tags-new" autocomplete="off" placeholder="e.g. NHOP"><datalist id="pb-tags-new">' + tagsOf(this.projects).map(t => '<option value="' + esc(t) + '">').join('') + '</datalist></label>' +
             '<label for="npTpl">Flow<select class="field" id="npTpl">' + this.allFlows().map(f =>
                 '<option value="' + esc(f.key) + '">' + esc(f.name) + ' (' + f.phases.length + ' phases)</option>').join('') + '</select></label>' +
             '<button class="btn primary" type="submit">Create project</button><button class="btn" type="button" id="pbNewCancel">Cancel</button></form>';
@@ -209,9 +211,9 @@ class PhaseBoardApp {
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
         else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p><button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
-        else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen });
+        else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects) });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
-            this.statusLine() + (this.showNew ? this.newFormHTML() : '') + body;
+            this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') + body;
     }
 
     reviewPageHTML() {
@@ -251,8 +253,8 @@ class PhaseBoardApp {
             ? '<button class="btn" type="button" data-act="unarchive">Restore from archive</button>'
             : '<button class="btn" type="button" data-act="archive">Archive project</button>';
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1></div>' +
-            this.statusLine() + overviewHTML(p, true) + risksHTML(p, true) +
+            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(this.projects)) + '</div>' +
+            this.statusLine() + overviewHTML(p, true, { tags: tagsOf(this.projects) }) + risksHTML(p, true) +
             '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
             '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + this.openActionsHTML(p) + '</aside></div>' +
             outcomesHTML(p, true) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
@@ -282,6 +284,13 @@ class PhaseBoardApp {
                 : this.view === '__review' ? this.reviewPageHTML()
                 : this.detailHTML();
             if (this.view !== 'portfolio' && this.view.indexOf('__') !== 0) this.prepareDiagrams();
+            const backupBtn = document.getElementById('pbBackupBtn');
+            if (backupBtn) {
+                backupBtn.hidden = !this.loaded || (!Object.keys(this.projects).length && !Object.keys(this.flows).length);
+                let last = '';
+                try { last = localStorage.getItem('pb-last-backup') || ''; } catch (e) { last = ''; }
+                backupBtn.title = 'Download every project and your own flows as one JSON file. ' + (last ? 'Last backup from this browser: ' + last + '.' : 'No backup made from this browser yet.');
+            }
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
         });
     }
@@ -306,8 +315,10 @@ class PhaseBoardApp {
             if (!p) return;
             const def = tplOf(p).phases.find(d => d.id === pid);
             const st = clone(phaseState(p, def));
+            const wasDone = st.status === 'done';
             fn(st, def);
-            await this.projectsRef().doc(id).update({ ['phases.' + pid]: st, updatedAt: Date.now() });
+            const reopened = wasDone && st.status !== 'done' && p.completedOn;
+            await this.projectsRef().doc(id).update(Object.assign({ ['phases.' + pid]: st, updatedAt: Date.now() }, reopened ? { completedOn: '' } : {}));
         }).catch(err => { console.error('Phase Board:', err); this.saveFailed(what || 'change'); });
     }
 
@@ -357,7 +368,7 @@ class PhaseBoardApp {
             const tpl = tplOf(p), flow = clone({ name: tpl.name, phases: tpl.phases });
             fn(flow);
             const phases = clone(reconcileProject(p, flow));
-            await this.projectsRef().doc(id).update({ flow: flow, phases: phases, updatedAt: Date.now() });
+            await this.projectsRef().doc(id).update(Object.assign({ flow: flow, phases: phases, updatedAt: Date.now() }, p.completedOn && anyPhaseReopened(p, phases) ? { completedOn: '' } : {}));
             return true;
         }).catch(err => {
             console.error('Phase Board:', err);
@@ -465,6 +476,78 @@ class PhaseBoardApp {
         this.render();
     }
 
+    // ─── Backup and restore ───────────────────────────────────
+
+    // Saves text as a file the user downloads (the same way Export HTML does).
+    downloadText(text, filename, type) {
+        const url = URL.createObjectURL(new Blob([text], { type: type }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    backupData() {
+        const nP = Object.keys(this.projects).length, nF = Object.keys(this.flows).length;
+        this.downloadText(JSON.stringify(buildBackup(this.projects, this.flows), null, 2), 'phase-board-backup-' + today() + '.json', 'application/json');
+        try { localStorage.setItem('pb-last-backup', today()); } catch (e) { /* the reminder just will not show a date */ }
+        this.setNote('Backup saved: ' + plural(nP, 'project', 'projects') + ' and ' + plural(nF, 'flow of your own', 'flows of your own') + '. Keep the file somewhere safe.', false);
+    }
+
+    async readRestoreFile(file) {
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { this.setNote('That file is too large to be a Phase Board backup.', true); return; }
+        let text;
+        try { text = await file.text(); } catch (err) { this.setNote('That file could not be read.', true); return; }
+        const parsed = parseBackup(text);
+        if (parsed.error) { this.setNote(parsed.error, true); return; }
+        this.restore = Object.assign({ fileName: file.name }, parsed);
+        this.view = 'portfolio';
+        this.render();
+        window.scrollTo(0, 0);
+    }
+
+    restoreHTML() {
+        const r = this.restore;
+        if (!r) return '';
+        const plan = planImport(r, this.projects, this.flows, false);
+        const total = Object.keys(r.projects).length + Object.keys(r.flows).length;
+        const made = r.exportedAt ? ', made ' + r.exportedAt.slice(0, 10) : '';
+        const skipped = r.skipped.length
+            ? '<p class="msg err">' + r.skipped.length + (r.skipped.length === 1 ? ' item' : ' items') + ' in the file cannot be restored: ' + r.skipped.slice(0, 3).map(esc).join('; ') + (r.skipped.length > 3 ? '; and ' + (r.skipped.length - 3) + ' more' : '') + '.</p>' : '';
+        let buttons;
+        if (!total) buttons = '<p class="note">There is nothing in this file to restore.</p>';
+        else buttons = (plan.fresh ? '<button class="btn primary" type="button" data-act="restore-new">Add the ' + plural(plan.fresh, 'new item', 'new items') + '</button>' : '') +
+            (plan.present ? '<button class="btn" type="button" data-act="restore-all">' + (plan.fresh ? 'Add new and replace' : 'Replace') + ' the ' + plan.present + ' already here</button>' : '');
+        return '<section class="restore-panel" aria-label="Restore from backup"><p class="eyebrow">Restore from backup</p>' +
+            '<p><b>' + esc(r.fileName) + '</b>' + esc(made) + ' holds ' + plural(Object.keys(r.projects).length, 'project', 'projects') + ' and ' + plural(Object.keys(r.flows).length, 'flow', 'flows') + '.</p>' +
+            '<p class="msg">' + (plan.fresh ? plural(plan.fresh, 'item is', 'items are') + ' not in the board yet. ' : 'Everything in the file is already in the board. ') +
+            (plan.present ? plural(plan.present, 'is', 'are') + ' already here and will be left as ' + (plan.present === 1 ? 'it is' : 'they are') + ' unless you choose to replace ' + (plan.present === 1 ? 'it' : 'them') + ', which discards any changes made since the backup.' : '') + '</p>' +
+            skipped + '<div class="ph-row">' + buttons + '<button class="btn" type="button" data-act="restore-cancel">Cancel</button></div></section>';
+    }
+
+    async applyRestore(replace) {
+        const r = this.restore;
+        if (!r) return;
+        const plan = planImport(r, this.projects, this.flows, replace);
+        this.restore = null;
+        this.render();
+        try {
+            for (let i = 0; i < plan.writes.length; i += 400) {
+                const batch = this.db.batch();
+                plan.writes.slice(i, i + 400).forEach(w => batch.set((w.kind === 'projects' ? this.projectsRef() : this.flowsRef()).doc(w.id), w.data));
+                await batch.commit();
+            }
+            this.setNote('Restored ' + plural(plan.writes.length, 'item', 'items') + ' from ' + r.fileName + '.', false);
+        } catch (err) {
+            console.error('Phase Board:', err);
+            this.setNote('The restore did not finish. Some items may have been added; check the board and try again.', true);
+        }
+    }
+
     startNoteEdit(pid, gid) {
         this.editingNote = pid + ':' + gid;
         this.editingGate = null;
@@ -538,15 +621,25 @@ class PhaseBoardApp {
     }
 
     saveOverview(field, raw) {
-        const value = (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead' || field === 'completedOn') ? raw.trim() : parseList(raw);
+        const value = field === 'tag' ? cleanTag(raw) : (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead' || field === 'completedOn' || field === 'started') ? raw.trim() : parseList(raw);
+        if (field === 'completedOn' || field === 'started') {
+            const p = this.projects[this.view];
+            if (value && !DATE_RE.test(value)) { this.render(); return; }
+            const start = field === 'started' ? value : (p && p.started) || '';
+            const end = field === 'completedOn' ? value : (p ? projectCompletedOn(p) : '');
+            if (start && end && end < start) {
+                this.setNote('The completed date cannot be before the start date, so it was not changed.', true);
+                return;
+            }
+        }
         this.patchProject(() => ({ [field]: value }), 'project detail');
     }
 
-    async createProject(name, flowKey, owner, lead) {
+    async createProject(name, flowKey, owner, lead, tag) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'project';
         const id = slug + '-' + this.newId();
         try {
-            await this.projectsRef().doc(id).set(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, owner || '', lead || ''));
+            await this.projectsRef().doc(id).set(Object.assign(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, owner || '', lead || ''), cleanTag(tag) ? { tag: cleanTag(tag) } : {}));
             this.showNew = false;
             this.openProject(id);
         } catch (err) {
@@ -719,7 +812,7 @@ class PhaseBoardApp {
                 const p = this.projects[ed.projectId];
                 if (!p) throw new Error('project is gone');
                 const phases = clone(reconcileProject(p, flow));
-                await this.projectsRef().doc(ed.projectId).update({ flow: flow, phases: phases, updatedAt: Date.now() });
+                await this.projectsRef().doc(ed.projectId).update(Object.assign({ flow: flow, phases: phases, updatedAt: Date.now() }, p.completedOn && anyPhaseReopened(p, phases) ? { completedOn: '' } : {}));
                 this.editor = null;
                 this.view = ed.projectId;
             }
@@ -807,6 +900,9 @@ class PhaseBoardApp {
         document.getElementById('pbSignOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('pbExportBtn')?.addEventListener('click', () => this.exportSnapshot());
         document.getElementById('pbReviewBtn')?.addEventListener('click', () => { this.view = '__review'; this.editor = null; this.render(); window.scrollTo(0, 0); });
+        document.getElementById('pbBackupBtn')?.addEventListener('click', () => this.backupData());
+        document.getElementById('pbRestoreBtn')?.addEventListener('click', () => document.getElementById('pbRestoreFile')?.click());
+        document.getElementById('pbRestoreFile')?.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; this.readRestoreFile(f); });
         document.getElementById('pbFlowsBtn')?.addEventListener('click', () => { this.view = '__flows'; this.editor = null; this.confirmFlowDelete = null; this.render(); window.scrollTo(0, 0); });
         document.getElementById('pbNewBtn')?.addEventListener('click', () => {
             this.view = 'portfolio';
@@ -878,6 +974,9 @@ class PhaseBoardApp {
                 else if (k === 'edit-flow') { this.editProjectFlow(); }
                 else if (k === 'archive') { this.setArchived(true); }
                 else if (k === 'unarchive') { this.setArchived(false); }
+                else if (k === 'restore-new') { this.applyRestore(false); }
+                else if (k === 'restore-all') { this.applyRestore(true); }
+                else if (k === 'restore-cancel') { this.restore = null; this.render(); }
                 else if (k === 'export-review') { this.exportSnapshot({ mode: 'review', year: this.reviewYear }); }
                 else if (k === 'flow-new') { this.newFlow(); }
                 else if (k === 'flow-edit') { this.editFlow(act.getAttribute('data-key')); }
@@ -942,7 +1041,7 @@ class PhaseBoardApp {
             const f = e.target;
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
-                if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim());
+                if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim(), document.getElementById('npTag').value);
             } else if (f.hasAttribute('data-note-form')) {
                 this.saveNote(f.getAttribute('data-phase'), f.getAttribute('data-note-form'), f.querySelector('textarea').value);
             } else if (f.hasAttribute('data-crit-form')) {

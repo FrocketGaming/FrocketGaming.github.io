@@ -17,7 +17,7 @@
         const shown = filterProjects(list, filter);
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, filter) + '</div></div>' +
             (shown.length
-                ? portfolioBodyHTML(shown, filter, { when: updated, completedOpen: doneOpen })
+                ? portfolioBodyHTML(shown, filter, { when: updated, completedOpen: doneOpen, hues: tagHues(DATA.projects) })
                 : '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>');
     }
 
@@ -27,7 +27,7 @@
         const idx = tpl.phases.findIndex(d => d.id === sel), def = tpl.phases[idx];
         const prev = tpl.phases[idx - 1], next = tpl.phases[idx + 1];
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1></div>' +
+            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(DATA.projects)) + '</div>' +
             overviewHTML(p, false) + risksHTML(p, false) +
             '<div class="railbox">' + railHTML(tpl, p, { button: true, sel: sel }) + barHTML(tpl, p) +
             '<p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met. Select a phase to read its details.</p></div>' +

@@ -214,8 +214,8 @@ function ago(ts) {
   if (s < 86400) return Math.round(s / 3600) + ' h ago';
   return Math.round(s / 86400) + ' d ago';
 }
-function cardHTML(id, p, when) {
-  if (isComplete(p)) return doneCardHTML(id, p, when);
+function cardHTML(id, p, when, hues) {
+  if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
   const cur = s.current, curSt = cur ? phaseState(p, cur) : null;
   const icons = tpl.phases.map((d, i) => {
@@ -223,7 +223,7 @@ function cardHTML(id, p, when) {
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
-    '<div><h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
     cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
@@ -232,17 +232,20 @@ function cardHTML(id, p, when) {
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
 function listOf(v) { return Array.isArray(v) ? v : []; }
 function parseList(text) { return String(text || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean); }
-function overviewHTML(p, edit) {
+function overviewHTML(p, edit, o) {
+  o = o || {};
   const s = summarize(tplOf(p), p), late = p.target && s.current && p.target < today();
   const chips = a => a.length ? '<ul class="chips">' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<span class="none">Not set</span>';
   if (edit) {
     return '<section class="overview" aria-label="Project overview"><div class="ov-grid">' + summaryHTML(p, true) +
       '<div class="ov"><label class="sub" for="ov-owner">Owner</label><input class="field" id="ov-owner" data-ov="owner" autocomplete="off" placeholder="One name" value="' + esc(p.owner || '') + '"><p class="msg">Accountable for the outcome</p></div>' +
       '<div class="ov"><label class="sub" for="ov-lead">Lead</label><input class="field" id="ov-lead" data-ov="lead" autocomplete="off" placeholder="One name" value="' + esc(p.lead || '') + '"><p class="msg">Runs the work day to day</p></div>' +
+      '<div class="ov"><label class="sub" for="ov-tag">Tag</label><input class="field" id="ov-tag" data-ov="tag" maxlength="' + TAG_MAX + '" list="pb-tags" autocomplete="off" placeholder="e.g. NHOP" value="' + esc(p.tag || '') + '"><datalist id="pb-tags">' + (o.tags || []).map(t => '<option value="' + esc(t) + '">').join('') + '</datalist><p class="msg">Groups related projects. The same tag always has the same color.</p></div>' +
       '<div class="ov"><label class="sub" for="ov-stakeholders">Stakeholders</label><input class="field" id="ov-stakeholders" data-ov="stakeholders" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.stakeholders).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-smes">SMEs</label><input class="field" id="ov-smes" data-ov="smes" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.smes).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-target">Target date</label><input class="field" type="date" id="ov-target" data-ov="target" value="' + esc(p.target || '') + '">' + (late ? '<p class="late">Past the target date</p>' : '') + '</div>' +
-      (needsCompletedOn(p) ? '<div class="ov"><label class="sub" for="ov-completedOn">Completed on</label><input class="field" type="date" id="ov-completedOn" data-ov="completedOn" value="' + esc(p.completedOn || '') + '"><p class="msg">Not recorded for this project. Set it so it appears in your year in review.</p></div>' : '') + '</div></section>';
+      '<div class="ov"><label class="sub" for="ov-started">Started</label><input class="field" type="date" id="ov-started" data-ov="started" value="' + esc(DATE_RE.test(p.started || '') ? p.started : '') + '"></div>' +
+      (isComplete(p) ? '<div class="ov"><label class="sub" for="ov-completedOn">Completed on</label><input class="field" type="date" id="ov-completedOn" data-ov="completedOn" value="' + esc(projectCompletedOn(p)) + '"><p class="msg">' + (!DATE_RE.test(p.completedOn || '') && !hasPhaseDates(p) ? 'Not recorded for this project. Set it so it appears in your year in review.' : 'Taken from when the last phase finished. Change it for a project from the past.') + '</p></div>' : '') + '</div></section>';
   }
   return '<section class="overview" aria-label="Project overview">' + summaryHTML(p, false) + '<div class="ov-grid">' +
     '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p><p class="msg">Accountable for the outcome</p></div>' +
@@ -387,11 +390,17 @@ function isComplete(p) { return !summarize(tplOf(p), p).current; }
 function isArchived(p) { return !!p.archived; }
 /* A project finished when its last phase did. Phases stamp their own date; older projects have none, so
    fall back to a date the user entered by hand. */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function projectCompletedOn(p) {
   if (!isComplete(p)) return '';
+  if (DATE_RE.test(p.completedOn || '')) return p.completedOn;   // set by hand, for example for a project from the past
   const dates = tplOf(p).phases.map(d => phaseState(p, d).completedAt || '');
-  return dates.every(Boolean) ? dates.slice().sort().pop() : (p.completedOn || '');
+  return dates.every(Boolean) ? dates.slice().sort().pop() : '';
 }
+/* True when a finished project's phases were each stamped with a date (so the date can be worked out without a hand-set one). */
+function hasPhaseDates(p) { return tplOf(p).phases.every(d => !!phaseState(p, d).completedAt); }
+/* A hand-set completion date no longer stands once a finished phase is opened again. */
+function anyPhaseReopened(p, newPhases) { return tplOf(p).phases.some(d => phaseState(p, d).status === 'done' && newPhases[d.id] && newPhases[d.id].status !== 'done'); }
 function needsCompletedOn(p) {
   return isComplete(p) && tplOf(p).phases.some(d => !phaseState(p, d).completedAt);
 }
@@ -417,7 +426,7 @@ function filterChipsHTML(list, filter) {
 /* Everything a year in review needs, from {id: project}. */
 function reviewData(projects, year) {
   const y = String(year), inYear = d => !!d && String(d).slice(0, 4) === y;
-  const out = { year: y, completed: [], undated: [], wins: [], actions: [], decisions: [] };
+  const out = { hues: tagHues(projects), year: y, completed: [], undated: [], wins: [], actions: [], decisions: [] };
   Object.keys(projects).forEach(id => {
     const p = projects[id], tpl = tplOf(p), complete = isComplete(p), on = projectCompletedOn(p);
     const doneThisYear = complete && inYear(on);
@@ -462,7 +471,7 @@ function reviewHTML(d) {
   const proj = c => {
     const p = c.p, o = p.outcomes || {}, rows = metricRows(p);
     const decs = d.decisions.filter(x => x.project === p.name), acts = mine(d.actions, p.name);
-    return '<article class="rv-proj"><div><h2>' + esc(p.name) + '</h2><p class="meta">' + esc([p.owner ? 'owner ' + p.owner : '', p.lead ? 'lead ' + p.lead : '', (p.started || '?') + ' to ' + c.on].filter(Boolean).join(' / ')) + '</p></div>' +
+    return '<article class="rv-proj"><div>' + tagChip(p, d.hues) + '<h2>' + esc(p.name) + '</h2><p class="meta">' + esc([p.owner ? 'owner ' + p.owner : '', p.lead ? 'lead ' + p.lead : '', (p.started || '?') + ' to ' + c.on].filter(Boolean).join(' / ')) + '</p></div>' +
       (p.summary ? '<p class="lead" style="margin:0">' + esc(p.summary) + '</p>' : '') +
       '<div><p class="sub">Value added</p>' + (o.value ? '<div class="rt">' + bulletsHTML(o.value) + '</div>' : '<p class="note">Not recorded.</p>') + '</div>' +
       (o.lessons ? '<div><p class="sub">Lessons learned</p><div class="rt">' + bulletsHTML(o.lessons) + '</div></div>' : '') +
@@ -556,13 +565,13 @@ function outcomesHTML(p, edit) {
 }
 
 /* A finished project's card leads with the value it delivered instead of progress it no longer needs to show. */
-function doneCardHTML(id, p, when) {
+function doneCardHTML(id, p, when, hues) {
   const on = projectCompletedOn(p), n = projectCounts(p), tiles = headlineMetrics(p, 3), o = p.outcomes || {};
   const wins = tiles.length
     ? '<div class="wins">' + tiles.map(m => '<div class="win"><b>' + esc(metricTileText(m)) + '</b><span>' + esc(m.name) + '</span></div>').join('') + '</div>'
     : (richItems(o.value).length ? '' : '<p class="msg">No value added recorded yet.</p>');
   const text = (label, t) => richItems(t).length ? '<div class="card-text"><p class="sub">' + label + '</p><div class="rt">' + bulletsHTML(t, 4) + '</div></div>' : '';
-  return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div><h2>' + esc(p.name) + '</h2>' +
+  return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' +
     (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + archivedTag(p) + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
@@ -724,7 +733,7 @@ function bulletsHTML(text, max) {
 /* The project cards, grouped: in progress first, then a collapsible Completed section. shown is [{id, p}] already
    filtered. o: {when(p) -> text, completedOpen}. The Archived and Needs attention views stay a single grid. */
 function portfolioBodyHTML(shown, filter, o) {
-  const card = i => cardHTML(i.id, i.p, o.when(i.p));
+  const card = i => cardHTML(i.id, i.p, o.when(i.p), o.hues);
   const grid = items => '<div class="grid">' + items.map(card).join('') + '</div>';
   if (filter === 'archived' || filter === 'attention') return grid(shown);
   const doing = shown.filter(i => !isComplete(i.p)), done = shown.filter(i => isComplete(i.p));
@@ -777,4 +786,134 @@ function liveNotesHTML(p) {
   if (watching.length) parts.push(chip('rs-monitoring', watching.length + (watching.length === 1 ? ' risk monitoring' : ' risks monitoring'), 'Risks being monitored', watching));
   if (limits.length) parts.push(chip('rs-constraint', limits.length + (limits.length === 1 ? ' constraint' : ' constraints'), 'Constraints that still apply', limits));
   return parts.length ? '<div class="live-notes">' + parts.join('') + '</div>' : '';
+}
+
+/* ---- backup and restore: every project and your own flows in one JSON file ---- */
+const BACKUP_APP = 'phase-board';
+const BACKUP_VERSION = 1;
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;   // the ids this tool makes; ids are written into HTML, so others are refused
+
+function buildBackup(projects, flows) {
+  return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), projects: clone(projects || {}), flows: clone(flows || {}) };
+}
+/* Firestore document ids: letters, digits and a few symbols, and nothing the database reserves. */
+function validDocId(id) {
+  return typeof id === 'string' && /^[A-Za-z0-9_.~:@+-]{1,150}$/.test(id) && id !== '.' && id !== '..' && !/^__.*__$/.test(id);
+}
+/* The first id inside a document that is not one this tool would have made, or ''. */
+function unsafeIdIn(doc, isFlow) {
+  const ids = [];
+  const flowIds = f => (Array.isArray(f && f.phases) ? f.phases : []).forEach(ph => { ids.push(ph && ph.id); (Array.isArray(ph && ph.gates) ? ph.gates : []).forEach(g => ids.push(g && g.id)); });
+  if (isFlow) flowIds(doc);
+  else {
+    flowIds(doc.flow);
+    Object.keys(doc.phases || {}).forEach(k => {
+      ids.push(k);
+      const st = doc.phases[k] || {};
+      Object.keys(st.gates && !Array.isArray(st.gates) ? st.gates : {}).forEach(g => ids.push(g));
+      Object.keys(st.evidence || {}).forEach(g => ids.push(g));
+      ['actions', 'diagrams'].forEach(list => (Array.isArray(st[list]) ? st[list] : []).forEach(x => ids.push(x && x.id)));
+    });
+    (Array.isArray(doc.risks) ? doc.risks : []).forEach(r => ids.push(r && r.id));
+    (Array.isArray((doc.outcomes || {}).metrics) ? doc.outcomes.metrics : []).forEach(m => ids.push(m && m.id));
+  }
+  const bad = ids.find(i => typeof i !== 'string' || !SAFE_ID.test(i));
+  return bad === undefined ? '' : String(bad).slice(0, 30);
+}
+function projectProblem(d) {
+  if (typeof d.name !== 'string' || !d.name.trim()) return 'it has no name';
+  if (d.phases != null && (typeof d.phases !== 'object' || Array.isArray(d.phases))) return 'its phases cannot be read';
+  if (d.flow != null && !(d.flow && Array.isArray(d.flow.phases))) return 'its flow cannot be read';
+  return '';
+}
+function flowProblem(d) {
+  if (typeof d.name !== 'string' || !d.name.trim()) return 'it has no name';
+  if (!Array.isArray(d.phases) || !d.phases.length) return 'it has no phases';
+  return d.phases.every(ph => ph && typeof ph.id === 'string' && typeof ph.name === 'string' && Array.isArray(ph.gates)) ? '' : 'a phase in it cannot be read';
+}
+/* Reads a backup file's text. Returns {error} or {projects, flows, skipped, exportedAt}; documents that are not
+   usable are skipped with a reason and the rest are kept. */
+function parseBackup(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return { error: 'That file is not valid JSON, so it is not a Phase Board backup.' }; }
+  if (!data || typeof data !== 'object' || data.app !== BACKUP_APP) return { error: 'That file is not a Phase Board backup.' };
+  if (typeof data.version !== 'number' || data.version > BACKUP_VERSION) return { error: 'That backup was made by a newer version of the Phase Board. Reload the page and try again.' };
+  const out = { projects: {}, flows: {}, skipped: [], exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '' };
+  const take = (label, src, dest, problemOf, isFlow) => {
+    if (src == null) return;
+    if (typeof src !== 'object' || Array.isArray(src)) { out.skipped.push(label + 's: the list cannot be read'); return; }
+    Object.keys(src).forEach(id => {
+      const d = src[id], tag = label + ' "' + id.slice(0, 30) + '"';
+      if (!validDocId(id)) return out.skipped.push(tag + ': the id is not allowed');
+      if (!d || typeof d !== 'object' || Array.isArray(d)) return out.skipped.push(tag + ': it cannot be read');
+      const why = problemOf(d) || (unsafeIdIn(d, isFlow) ? 'it contains an id that is not allowed' : '') || (JSON.stringify(d).length > 900000 ? 'it is too large' : '');
+      if (why) out.skipped.push(tag + ': ' + why); else dest[id] = d;
+    });
+  };
+  take('project', data.projects, out.projects, projectProblem, false);
+  take('flow', data.flows, out.flows, flowProblem, true);
+  return out;
+}
+/* What a restore would write. By default anything already in the board is left as it is; replace overwrites it. */
+function planImport(parsed, existingProjects, existingFlows, replace) {
+  const writes = [];
+  let fresh = 0, present = 0;
+  [['projects', parsed.projects, existingProjects || {}], ['flows', parsed.flows, existingFlows || {}]].forEach(([kind, docs, have]) => {
+    Object.keys(docs).forEach(id => {
+      const exists = Object.prototype.hasOwnProperty.call(have, id);
+      if (exists) present++; else fresh++;
+      if (!exists || replace) writes.push({ kind: kind, id: id, data: docs[id] });
+    });
+  });
+  return { writes: writes, fresh: fresh, present: present };
+}
+
+/* ---- tags: an optional label that groups related projects, with a color made from the text ---- */
+const TAG_MAX = 24;
+const TAG_SAT = 70, TAG_LIGHT = 75;   // light enough to reach 3:1 against every theme's surfaces, whatever the hue
+function cleanTag(t) { return String(t == null ? '' : t).trim().replace(/\s+/g, ' ').slice(0, TAG_MAX).trim(); }
+function tagKey(t) { return cleanTag(t).toLowerCase(); }
+/* The same tag always gives the same hue, whatever its capitals or spacing, on every device. */
+function tagHue(t) {
+  let h = 2166136261;
+  const s = tagKey(t);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) % 360;
+}
+function tagChip(p, hues) {
+  const t = cleanTag(p && p.tag);
+  if (!t) return '';
+  return '<span class="ptag" style="--tc:hsl(' + (hues && hues[tagKey(t)] !== undefined ? hues[tagKey(t)] : tagHue(t)) + ' ' + TAG_SAT + '% ' + TAG_LIGHT + '%)" title="Tag: ' + esc(t) + '">' + esc(t) + '</span>';
+}
+/* Every tag in use, each spelled once (the first spelling seen), alphabetical, for the picker. */
+function tagsOf(projects) {
+  const seen = {}, out = [];
+  Object.keys(projects || {}).forEach(id => { const t = cleanTag((projects[id] || {}).tag); if (t && !seen[tagKey(t)]) { seen[tagKey(t)] = true; out.push(t); } });
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
+/* One hue per tag in use. Each starts at its own hash. If that is within 30 degrees of a tag before it (alphabetically),
+   it takes the hue with the most room instead, so tags never look alike; with many tags the room shrinks but stays as
+   wide as the wheel allows. A tag's color only changes if an earlier tag is added, renamed or removed. */
+function tagHues(projects) {
+  const keys = [];
+  Object.keys(projects || {}).forEach(id => { const k = tagKey((projects[id] || {}).tag); if (k && keys.indexOf(k) < 0) keys.push(k); });
+  keys.sort();
+  const apart = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+  const out = {}, used = [];
+  const room = h => used.length ? Math.min.apply(null, used.map(u => apart(u, h))) : 360;
+  keys.forEach(k => {
+    const want = tagHue(k);
+    let h = want;
+    if (room(h) < 30) {
+      let best = -1;
+      for (let c = 0; c < 360; c++) {
+        const r = room(c);
+        if (r > best || (r === best && apart(c, want) < apart(h, want))) { best = r; h = c; }
+      }
+    }
+    out[k] = h;
+    used.push(h);
+  });
+  return out;
 }
