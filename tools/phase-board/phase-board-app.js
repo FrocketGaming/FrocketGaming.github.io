@@ -182,6 +182,8 @@ class PhaseBoardApp {
 
     newFormHTML() {
         return '<form class="newform" id="pbNewForm"><label for="npName">Project name<input class="field" id="npName" autocomplete="off" required></label>' +
+            '<label for="npOwner">Owner (optional)<input class="field" id="npOwner" autocomplete="off"></label>' +
+            '<label for="npLead">Lead (optional)<input class="field" id="npLead" autocomplete="off"></label>' +
             '<label for="npTpl">Flow<select class="field" id="npTpl">' + this.allFlows().map(f =>
                 '<option value="' + esc(f.key) + '">' + esc(f.name) + ' (' + f.phases.length + ' phases)</option>').join('') + '</select></label>' +
             '<button class="btn primary" type="submit">Create project</button><button class="btn" type="button" id="pbNewCancel">Cancel</button></form>';
@@ -328,15 +330,15 @@ class PhaseBoardApp {
     }
 
     saveOverview(field, raw) {
-        const value = (field === 'target' || field === 'summary') ? raw.trim() : parseList(raw);
+        const value = (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead') ? raw.trim() : parseList(raw);
         this.patchProject(() => ({ [field]: value }), 'project detail');
     }
 
-    async createProject(name, flowKey) {
+    async createProject(name, flowKey, owner, lead) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'project';
         const id = slug + '-' + this.newId();
         try {
-            await this.projectsRef().doc(id).set(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, this.user.displayName || ''));
+            await this.projectsRef().doc(id).set(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, owner || '', lead || ''));
             this.showNew = false;
             this.openProject(id);
         } catch (err) {
@@ -651,7 +653,7 @@ class PhaseBoardApp {
             const f = e.target;
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
-                if (name) this.createProject(name, document.getElementById('npTpl').value);
+                if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim());
             } else if (f.hasAttribute('data-addrisk')) {
                 const text = document.getElementById('risk-text').value.trim(), kind = document.getElementById('risk-kind').value;
                 if (text) this.patchProject(p => ({ risks: (p.risks || []).concat([{ id: this.newId(), kind: kind, text: text, resolved: false }]) }), 'risk');

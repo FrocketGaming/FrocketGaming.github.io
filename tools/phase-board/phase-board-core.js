@@ -81,11 +81,11 @@ function blankPhase(def) {
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
 }
-function blankProject(name, flow, owner) {
+function blankProject(name, flow, owner, lead) {
   const copy = clone({ name: flow.name, phases: flow.phases });
   const phases = {};
   copy.phases.forEach(d => { phases[d.id] = blankPhase(d); });
-  return { name: name, template: flow.key || 'custom', flow: copy, owner: owner || '', started: today(), phases: phases, updatedAt: Date.now() };
+  return { name: name, template: flow.key || 'custom', flow: copy, owner: owner || '', lead: lead || '', started: today(), phases: phases, updatedAt: Date.now() };
 }
 function phaseState(proj, def) {
   const st = (proj.phases && proj.phases[def.id]) || blankPhase(def);
@@ -220,13 +220,15 @@ function overviewHTML(p, edit) {
   const chips = a => a.length ? '<ul class="chips">' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<span class="none">Not set</span>';
   if (edit) {
     return '<section class="overview" aria-label="Project overview"><div class="ov-grid">' + summaryHTML(p, true) +
-      '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p></div>' +
+      '<div class="ov"><label class="sub" for="ov-owner">Owner</label><input class="field" id="ov-owner" data-ov="owner" autocomplete="off" placeholder="One name" value="' + esc(p.owner || '') + '"><p class="msg">Accountable for the outcome</p></div>' +
+      '<div class="ov"><label class="sub" for="ov-lead">Lead</label><input class="field" id="ov-lead" data-ov="lead" autocomplete="off" placeholder="One name" value="' + esc(p.lead || '') + '"><p class="msg">Runs the work day to day</p></div>' +
       '<div class="ov"><label class="sub" for="ov-stakeholders">Stakeholders</label><input class="field" id="ov-stakeholders" data-ov="stakeholders" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.stakeholders).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-smes">SMEs</label><input class="field" id="ov-smes" data-ov="smes" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.smes).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-target">Target date</label><input class="field" type="date" id="ov-target" data-ov="target" value="' + esc(p.target || '') + '">' + (late ? '<p class="late">Past the target date</p>' : '') + '</div></div></section>';
   }
   return '<section class="overview" aria-label="Project overview">' + summaryHTML(p, false) + '<div class="ov-grid">' +
-    '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p></div>' +
+    '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p><p class="msg">Accountable for the outcome</p></div>' +
+    '<div class="ov"><p class="sub">Lead</p><p>' + (p.lead ? esc(p.lead) : '<span class="none">Not set</span>') + '</p><p class="msg">Runs the work day to day</p></div>' +
     '<div class="ov"><p class="sub">Stakeholders</p>' + chips(listOf(p.stakeholders)) + '</div>' +
     '<div class="ov"><p class="sub">SMEs</p>' + chips(listOf(p.smes)) + '</div>' +
     '<div class="ov"><p class="sub">Target date</p><p>' + (p.target ? '<span class="mono">' + esc(p.target) + '</span>' : '<span class="none">Not set</span>') + '</p>' + (late ? '<p class="late">Past the target date</p>' : '') + '</div></div></section>';
@@ -265,9 +267,9 @@ function outcomesHTML(p, edit) {
     '<div>' + value + '</div></section>';
 }
 
-/* people who can own an action item: owner, stakeholders, SMEs */
+/* people who can own an action item: owner, lead, stakeholders, SMEs */
 function peopleOf(p) {
-  const all = [p.owner].concat(listOf(p.stakeholders), listOf(p.smes)).filter(Boolean);
+  const all = [p.owner, p.lead].concat(listOf(p.stakeholders), listOf(p.smes)).filter(Boolean);
   return all.filter((x, i) => all.indexOf(x) === i);
 }
 function overdueActions(tpl, proj) {
