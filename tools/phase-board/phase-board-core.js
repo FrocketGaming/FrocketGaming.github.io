@@ -358,13 +358,15 @@ function rankBadge(r) {
 }
 /* Open action items are work someone owes, so on the card they get a chip of their own (red once any is overdue). */
 function openActionsChip(tpl, p) {
-  const open = openActions(tpl, p), late = overdueActions(tpl, p), due = dueActions(tpl, p);
+  const open = openActions(tpl, p), late = overdueActions(tpl, p);
   if (!open) return '';
-  // Only the most urgent flag is shown, in a short form, so the chip never pushes the priority badge onto a second line.
-  if (late) return '<span class="acts is-late">' + open + ' open action' + (open === 1 ? '' : 's') + ' / ' + late + ' overdue</span>';
-  if (due.today) return '<span class="acts is-soon">' + open + ' open / ' + due.today + ' due today</span>';
-  if (due.soon) return '<span class="acts is-soon">' + open + ' open / ' + due.soon + ' due soon</span>';
-  return '<span class="acts">' + open + ' open action' + (open === 1 ? '' : 's') + '</span>';
+  return '<span class="acts' + (late ? ' is-late' : '') + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') + '</span>';
+}
+/* A small flag beside the phase status when an open action is due today or within DUE_SOON_DAYS. It sits in the status row, which has room, not in the footer. */
+function dueFlag(tpl, p) {
+  const due = dueActions(tpl, p), n = due.today + due.soon;
+  if (!n) return '';
+  return '<span class="due-flag" title="' + (due.today ? plural(due.today, 'action', 'actions') + ' due today' : '') + (due.today && due.soon ? ', ' : '') + (due.soon ? plural(due.soon, 'action', 'actions') + ' due in the next ' + DUE_SOON_DAYS + ' days' : '') + '">' + (due.today ? 'Due today' : 'Due soon') + '</span>';
 }
 /* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
 function cardHTML(id, p, when, hues, rank, drag) {
@@ -377,7 +379,7 @@ function cardHTML(id, p, when, hues, rank, drag) {
   }).join('');
   return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' + rankBadge(rank) +
     '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
+    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) + dueFlag(tpl, p) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
     cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span>' + priorityBadge(p) + '</div></button>';
 }
