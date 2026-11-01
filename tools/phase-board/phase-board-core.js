@@ -358,9 +358,11 @@ function rankBadge(r) {
 }
 /* Open action items are work someone owes, so on the card they get a chip of their own (red once any is overdue). */
 function openActionsChip(tpl, p) {
-  const open = openActions(tpl, p), late = overdueActions(tpl, p);
+  const open = openActions(tpl, p), late = overdueActions(tpl, p), due = dueActions(tpl, p);
   if (!open) return '';
-  return '<span class="acts' + (late ? ' is-late' : '') + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') + '</span>';
+  const cls = late ? ' is-late' : (due.today || due.soon ? ' is-soon' : '');
+  return '<span class="acts' + cls + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') +
+    (due.today ? ' / ' + due.today + ' due today' : '') + (due.soon ? ' / ' + due.soon + ' due soon' : '') + '</span>';
 }
 /* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
 function cardHTML(id, p, when, hues, rank, drag) {
@@ -457,6 +459,20 @@ function peopleOf(p) {
 }
 function overdueActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done && a.due && a.due < today()).length, 0);
+}
+
+/* Open actions due today, and due in the next DUE_SOON_DAYS days (counted apart from "today"). */
+const DUE_SOON_DAYS = 3;
+function dueActions(tpl, proj) {
+  const t = today(), d = new Date();
+  d.setDate(d.getDate() + DUE_SOON_DAYS);
+  const pad = n => String(n).padStart(2, '0'), limit = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const out = { today: 0, soon: 0 };
+  tpl.phases.forEach(ph => (phaseState(proj, ph).actions || []).forEach(a => {
+    if (a.done || !a.due) return;
+    if (a.due === t) out.today++; else if (a.due > t && a.due <= limit) out.soon++;
+  }));
+  return out;
 }
 
 /* ---- flow editing: pure helpers shared by the app and its checks ---- */

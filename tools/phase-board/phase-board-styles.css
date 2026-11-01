@@ -109,6 +109,7 @@
 .pb .foot .prio { margin-left: auto; }
 .pb .foot-l { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 .pb .acts { font-size: 12px; font-weight: 700; color: var(--prog); background: color-mix(in srgb, var(--prog) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--prog) 45%, var(--surface)); border-radius: 999px; padding: 1px 10px; }
+.pb .acts.is-soon { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 45%, var(--surface)); }
 .pb .acts.is-late { color: var(--crit); background: color-mix(in srgb, var(--crit) 14%, var(--surface)); border-color: color-mix(in srgb, var(--crit) 45%, var(--surface)); }
 .pb .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 36px 20px; text-align: center; display: grid; gap: 10px; justify-items: center; color: var(--fg-2); }
 .pb .empty h2 { font-size: 16px; color: var(--fg); text-align: center; }
