@@ -307,7 +307,8 @@ function priorityBadge(p) {
 }
 /* Most urgent first among projects still in progress; ties, and finished projects, go by latest change. */
 function byPriority(a, b) {
-  const rank = x => isComplete(x.p) ? 0 : ({ high: 0, medium: 1, low: 2 })[priorityOf(x.p)] === undefined ? 3 : ({ high: 0, medium: 1, low: 2 })[priorityOf(x.p)];
+  const order = ['high', 'medium', 'low', ''];
+  const rank = x => isComplete(x.p) ? 0 : order.indexOf(priorityOf(x.p));
   return (rank(a) - rank(b)) || ((b.p.updatedAt || 0) - (a.p.updatedAt || 0));
 }
 function cardHTML(id, p, when, hues) {
