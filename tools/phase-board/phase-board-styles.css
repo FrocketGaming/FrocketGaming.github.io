@@ -156,7 +156,8 @@
 .pb .phases { display: grid; gap: 14px; min-width: 0; }
 .pb .feed { display: grid; gap: 12px; }
 .pb .feed ul { display: grid; gap: 8px; }
-.pb .feed li small { display: block; color: var(--fg-2); font-size: 12px; }
+.pb .feed li small { display: block; color: var(--fg-2); font-size: 12px; padding-left: 23px; }
+.pb .feed .gate { padding: 0; }
 .pb .who-grp { border-left: 3px solid var(--tc, var(--line)); padding-left: 12px; display: grid; gap: 6px; }
 .pb .who { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; color: var(--fg); }
 .pb .who::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 999px; background: var(--tc, var(--fg-2)); }

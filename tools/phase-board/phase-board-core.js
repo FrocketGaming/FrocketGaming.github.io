@@ -1111,6 +1111,7 @@ function openActionsHTML(p) {
   if (!groups.length) return '<p class="msg">No open action items.</p>';
   return groups.map(g => '<div class="who-grp' + (g.key ? '' : ' is-none') + '"' + (g.key ? ' style="--tc:' + personColor(g.key, hues) + '"' : '') + '>' +
     '<p class="who">' + esc(g.key ? g.name : 'Unassigned') + '<span class="cnt">' + g.items.length + '</span></p><ul>' + g.items.map(r =>
-      '<li>' + esc(r.a.text) + '<small><a class="pj" href="#ph-' + esc(r.d.id) + '">' + esc(r.d.short) + '</a>' +
+      '<li><label class="gate" for="fa-' + esc(r.a.id) + '"><input type="checkbox" id="fa-' + esc(r.a.id) + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '"><span>' + esc(r.a.text) + '</span></label>' +
+      '<small><a class="pj" href="#ph-' + esc(r.d.id) + '">' + esc(r.d.short) + '</a>' +
       (r.a.due ? ' / due <span class="mono' + (r.a.due < today() ? ' late' : '') + '">' + esc(r.a.due) + '</span>' : '') + '</small></li>').join('') + '</ul></div>').join('');
 }
