@@ -360,9 +360,11 @@ function rankBadge(r) {
 function openActionsChip(tpl, p) {
   const open = openActions(tpl, p), late = overdueActions(tpl, p), due = dueActions(tpl, p);
   if (!open) return '';
-  const cls = late ? ' is-late' : (due.today || due.soon ? ' is-soon' : '');
-  return '<span class="acts' + cls + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') +
-    (due.today ? ' / ' + due.today + ' due today' : '') + (due.soon ? ' / ' + due.soon + ' due soon' : '') + '</span>';
+  // Only the most urgent flag is shown, in a short form, so the chip never pushes the priority badge onto a second line.
+  if (late) return '<span class="acts is-late">' + open + ' open action' + (open === 1 ? '' : 's') + ' / ' + late + ' overdue</span>';
+  if (due.today) return '<span class="acts is-soon">' + open + ' open / ' + due.today + ' due today</span>';
+  if (due.soon) return '<span class="acts is-soon">' + open + ' open / ' + due.soon + ' due soon</span>';
+  return '<span class="acts">' + open + ' open action' + (open === 1 ? '' : 's') + '</span>';
 }
 /* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
 function cardHTML(id, p, when, hues, rank, drag) {
