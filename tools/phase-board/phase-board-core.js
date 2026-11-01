@@ -330,6 +330,13 @@ function rankMap(projects) {
 function rankBadge(r) {
   return r ? '<span class="rank" title="Work order: ' + r.n + ' of ' + r.of + ' active projects" aria-label="Work order ' + r.n + ' of ' + r.of + '">#' + r.n + '</span>' : '';
 }
+/* Open action items are work someone owes, so on the card they get a chip of their own (red once any is overdue). */
+function openActionsChip(tpl, p) {
+  const open = openActions(tpl, p), late = overdueActions(tpl, p);
+  if (!open) return '';
+  return '<span class="acts' + (late ? ' is-late' : '') + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') + '</span>';
+}
+/* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
 function cardHTML(id, p, when, hues, rank) {
   if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
@@ -342,7 +349,7 @@ function cardHTML(id, p, when, hues, rank) {
     '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span class="foot-r"><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span>' + priorityBadge(p) + '</span></div></button>';
+    cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span>' + priorityBadge(p) + '</div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -706,7 +713,7 @@ function doneCardHTML(id, p, when, hues) {
     (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + archivedTag(p) + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
-    liveNotesHTML(p) + cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span><span>' + esc(on ? '' : (when || '')) + '</span></div></button>';
+    liveNotesHTML(p) + cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span></div></button>';
 }
 
 /* Totals of amounts saved across completed projects. Recurring amounts become an estimated annual figure. */

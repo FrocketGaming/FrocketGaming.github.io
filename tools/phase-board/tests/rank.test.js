@@ -29,5 +29,9 @@ const shown = [{ id: 'f', p: projects.f }, { id: 'c', p: projects.c }];
 const html = K.portfolioBodyHTML(shown, 'all', { when: () => '', hues: {}, ranks: r });
 ok(html.includes('>#4<') && html.includes('>#1<') && !html.includes('>#2<'), 'a filtered view keeps each card\'s rank among all active projects');
 
+// the card no longer shows when it was last updated
+ok(!K.cardHTML('b', projects.b, '6 min ago', {}, r.b).includes('6 min ago') && !K.cardHTML('d', projects.d, '6 min ago', {}).includes('6 min ago'), 'neither card shows when the project was last updated');
+const foot = K.cardHTML('b', projects.c, 'x', {}, r.c).split('class="foot"')[1];
+ok(foot.includes('</span><span class="prio prio-high">High priority</span></div></button>'), 'the priority badge is the last thing in the footer, on the same line as the criteria count');
 console.log(fails ? fails + ' FAILED' : 'ALL PASSED');
 process.exit(fails ? 1 : 0);
