@@ -374,12 +374,13 @@ class PhaseBoardApp {
     }
 
     addDecision(pid, text) {
-        this.mutatePhase(pid, st => { st.decisions = (st.decisions || []).concat([{ at: today(), text: text }]); }, 'decision');
+        this.mutatePhase(pid, st => { st.decisions = (st.decisions || []).concat([{ at: today(), text: text }]); startOnActivity(st); }, 'decision');
     }
 
     addAction(pid, text, assignee, due) {
         this.mutatePhase(pid, st => {
             st.actions = (st.actions || []).concat([{ id: this.newId(), text: text, done: false, assignee: assignee || '', due: due || '' }]);
+            startOnActivity(st);
         }, 'action item');
     }
 

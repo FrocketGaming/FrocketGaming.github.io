@@ -209,6 +209,13 @@ function applyGate(def, st, i, checked) {
   return null;
 }
 
+/* Adding an action item or a decision means work has begun, so a phase that has not started moves to in progress. */
+function startOnActivity(st) {
+  if (st.status !== 'not_started') return;
+  st.status = 'in_progress';
+  st.log = (st.log || []).concat([{ at: today(), text: 'Started' }]).slice(-12);
+}
+
 /* ---- renderers ---- */
 function railHTML(tpl, proj, o) {
   o = o || {};
