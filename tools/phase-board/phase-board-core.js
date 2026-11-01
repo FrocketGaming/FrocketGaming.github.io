@@ -305,12 +305,16 @@ function priorityBadge(p) {
   const k = priorityOf(p);
   return k && !isComplete(p) ? '<span class="prio prio-' + k + '">' + PRIORITY[k] + ' priority</span>' : '';
 }
-/* The order projects in progress are worked in: priority, then the soonest target date (none last), then the earlier
-   start, then name. Only things set on purpose count, so a project does not move just because it was edited.
-   Finished projects, which have no such order, go by latest change. */
+/* The order projects in progress are worked in. A project moved by hand has an `order` number (1, 2, 3 ...) and those come
+   first, by that number. Projects never moved (new ones) follow: priority, then the soonest target date (none last), then
+   the earlier start, then name. Only things set on purpose count, so a project does not move just because it was
+   edited. Finished projects, which have no such order, go by latest change. */
+function hasOrder(p) { return typeof (p && p.order) === 'number' && isFinite(p.order); }
 function byPriority(a, b) {
   const done = isComplete(a.p), doneB = isComplete(b.p);
   if (done || doneB) return (done - doneB) || ((b.p.updatedAt || 0) - (a.p.updatedAt || 0));
+  if (hasOrder(a.p) && hasOrder(b.p) && a.p.order !== b.p.order) return a.p.order - b.p.order;
+  if (hasOrder(a.p) !== hasOrder(b.p)) return hasOrder(a.p) ? -1 : 1;
   const order = ['high', 'medium', 'low', ''];
   const date = v => DATE_RE.test(v || '') ? v : '9999-99-99';
   const name = x => String(x.p.name || '').toLowerCase();
@@ -320,11 +324,32 @@ function byPriority(a, b) {
     || name(a).localeCompare(name(b))
     || String(a.id || '').localeCompare(String(b.id || ''));
 }
+/* Ids of the projects in progress (not finished, not archived), in work order. */
+function activeOrder(projects) {
+  return Object.keys(projects || {}).map(id => ({ id: id, p: projects[id] })).filter(i => !isComplete(i.p) && !isArchived(i.p)).sort(byPriority).map(i => i.id);
+}
+/* Move one id next to another (before it, or after it) in a list of ids. */
+function moveInOrder(ids, id, targetId, after) {
+  if (id === targetId || ids.indexOf(id) < 0 || ids.indexOf(targetId) < 0) return ids.slice();
+  const rest = ids.filter(x => x !== id);
+  rest.splice(rest.indexOf(targetId) + (after ? 1 : 0), 0, id);
+  return rest;
+}
+/* The updates that give each listed project its place number (1, 2, 3 ...); projects already right are skipped. */
+function orderWrites(projects, ids) {
+  const out = [];
+  ids.forEach((id, k) => { if (projects[id] && projects[id].order !== k + 1) out.push({ id: id, order: k + 1 }); });
+  return out;
+}
+/* Which side of a card a drag is over, and along which axis, from the pointer and the card's box. */
+function dropPlace(rect, x, y) {
+  const dx = (x - (rect.left + rect.width / 2)) / (rect.width || 1), dy = (y - (rect.top + rect.height / 2)) / (rect.height || 1);
+  return Math.abs(dx) >= Math.abs(dy) ? { axis: 'x', after: dx > 0 } : { axis: 'y', after: dy > 0 };
+}
 /* Where each project in progress stands in that order: {id: {n: 1, of: 4}}. Archived and finished projects are left out. */
 function rankMap(projects) {
-  const list = Object.keys(projects || {}).map(id => ({ id: id, p: projects[id] })).filter(i => !isComplete(i.p) && !isArchived(i.p)).sort(byPriority);
-  const out = {};
-  list.forEach((i, k) => { out[i.id] = { n: k + 1, of: list.length }; });
+  const ids = activeOrder(projects), out = {};
+  ids.forEach((id, k) => { out[id] = { n: k + 1, of: ids.length }; });
   return out;
 }
 function rankBadge(r) {
@@ -337,7 +362,7 @@ function openActionsChip(tpl, p) {
   return '<span class="acts' + (late ? ' is-late' : '') + '">' + open + ' open action' + (open === 1 ? '' : 's') + (late ? ' / ' + late + ' overdue' : '') + '</span>';
 }
 /* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
-function cardHTML(id, p, when, hues, rank) {
+function cardHTML(id, p, when, hues, rank, drag) {
   if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
   const cur = s.current, curSt = cur ? phaseState(p, cur) : null;
@@ -345,7 +370,7 @@ function cardHTML(id, p, when, hues, rank) {
     const st = phaseState(p, d), prev = i ? phaseState(p, tpl.phases[i - 1]) : null;
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
-  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '">' + rankBadge(rank) +
+  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' + rankBadge(rank) +
     '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
@@ -871,15 +896,16 @@ function bulletsHTML(text, max) {
 /* The project cards, grouped: in progress first, then a collapsible Completed section. shown is [{id, p}] already
    filtered. o: {when(p) -> text, completedOpen}. The Archived and Needs attention views stay a single grid. */
 function portfolioBodyHTML(shown, filter, o) {
-  const card = i => cardHTML(i.id, i.p, o.when(i.p), o.hues, o.ranks && o.ranks[i.id]);
+  const card = i => cardHTML(i.id, i.p, o.when(i.p), o.hues, o.ranks && o.ranks[i.id], o.drag);
   const grid = items => '<div class="grid">' + items.map(card).join('') + '</div>';
   if (filter === 'archived' || filter === 'attention') return grid(shown);
   const doing = shown.filter(i => !isComplete(i.p)), done = shown.filter(i => isComplete(i.p));
-  if (!done.length) return grid(doing);
+  const hint = o.drag && doing.length > 1 ? '<p class="msg">The number on a card is the order to work in. Drag a card to change it, or focus a card and press Alt with the up or down arrow.</p>' : '';
+  if (!done.length) return hint + grid(doing);
   const open = o.completedOpen || filter === 'done';
   const section = '<details class="sec" id="pbDoneSec"' + (open ? ' open' : '') + '><summary><h2 class="sec-h">Completed</h2><span class="sec-count">' + done.length + '</span></summary>' + grid(done) + '</details>';
   if (!doing.length) return section;
-  return '<div class="sec-head"><h2 class="sec-h">In progress</h2><span class="sec-count">' + doing.length + '</span></div>' + grid(doing) + section;
+  return '<div class="sec-head"><h2 class="sec-h">In progress</h2><span class="sec-count">' + doing.length + '</span></div>' + hint + grid(doing) + section;
 }
 
 /* Who is accountable and who does the work, on the project card. The hover text explains each role. */

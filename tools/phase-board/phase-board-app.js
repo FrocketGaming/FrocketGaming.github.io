@@ -189,6 +189,45 @@ class PhaseBoardApp {
         return '<p class="msg' + (this.noteErr ? ' err' : '') + '" role="status">' + esc(this.note) + '</p>';
     }
 
+    // Give the projects in progress the order they now have (1, 2, 3 ...), after one was moved.
+    async moveProject(id, targetId, after) {
+        const next = moveInOrder(activeOrder(this.projects), id, targetId, after);
+        const writes = orderWrites(this.projects, next);
+        if (!writes.length) return false;
+        writes.forEach(w => { this.projects[w.id] = Object.assign({}, this.projects[w.id], { order: w.order }); });
+        this.render();
+        try {
+            for (let i = 0; i < writes.length; i += 400) {
+                const batch = this.db.batch();
+                writes.slice(i, i + 400).forEach(w => batch.update(this.projectsRef().doc(w.id), { order: w.order }));
+                await batch.commit();
+            }
+            return true;
+        } catch (err) {
+            console.error('Phase Board:', err);
+            this.setNote('The new order was not saved. Check your connection and try again.', true);
+            return false;
+        }
+    }
+
+    async nudgeProject(id, step) {
+        const ids = activeOrder(this.projects), i = ids.indexOf(id), j = i + step;
+        if (i < 0 || j < 0 || j >= ids.length) return;
+        if (await this.moveProject(id, ids[j], step > 0)) this.setNote('Moved to number ' + (j + 1) + ' of ' + ids.length + '.', false);
+        const el = document.querySelector && document.querySelector('[data-drag="' + id + '"]');
+        if (el) el.focus();
+    }
+
+    markDrop(card, place) {
+        this.clearDrop();
+        card.classList.add(place.axis === 'x' ? (place.after ? 'drop-r' : 'drop-l') : (place.after ? 'drop-b' : 'drop-t'));
+    }
+
+    clearDrop() {
+        const page = document.getElementById('pbPage');
+        (page && page.querySelectorAll ? Array.from(page.querySelectorAll('.drop-l, .drop-r, .drop-t, .drop-b, .is-dragging')) : []).forEach(el => el.classList.remove('drop-l', 'drop-r', 'drop-t', 'drop-b', 'is-dragging'));
+    }
+
     sortedProjects() {
         return Object.keys(this.projects)
             .map(id => ({ id: id, p: this.projects[id] }))
@@ -215,7 +254,7 @@ class PhaseBoardApp {
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
         else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p><button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
-        else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects) });
+        else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects), drag: true });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
             this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') + body;
     }
@@ -1029,7 +1068,39 @@ class PhaseBoardApp {
             this.openDiagrams = el.open ? this.openDiagrams.filter(x => x !== id).concat([id]) : this.openDiagrams.filter(x => x !== id);
         }, true);
 
+        // Reordering the projects in progress by dragging a card onto another.
+        const cardOf = e => (e.target && e.target.closest) ? e.target.closest('[data-drag]') : null;
+        page.addEventListener('dragstart', e => {
+            const card = cardOf(e);
+            if (!card) return;
+            this.dragId = card.getAttribute('data-drag');
+            if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', this.dragId); }
+            card.classList.add('is-dragging');
+        });
+        page.addEventListener('dragover', e => {
+            const card = cardOf(e);
+            if (!this.dragId || !card || card.getAttribute('data-drag') === this.dragId) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+            this.markDrop(card, dropPlace(card.getBoundingClientRect(), e.clientX, e.clientY));
+        });
+        page.addEventListener('drop', e => {
+            const card = cardOf(e);
+            if (!this.dragId || !card) return;
+            e.preventDefault();
+            const id = this.dragId, targetId = card.getAttribute('data-drag'), place = dropPlace(card.getBoundingClientRect(), e.clientX, e.clientY);
+            this.dragId = null;
+            this.clearDrop();
+            if (targetId !== id) this.moveProject(id, targetId, place.after);
+        });
+        page.addEventListener('dragend', () => { this.dragId = null; this.clearDrop(); });
+
         page.addEventListener('keydown', e => {
+            if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                const card = cardOf(e);
+                if (card) { e.preventDefault(); this.nudgeProject(card.getAttribute('data-drag'), e.key === 'ArrowUp' ? -1 : 1); }
+                return;
+            }
             if (e.key !== 'Escape' || !e.target.matches) return;
             if (e.target.matches('[data-crit-input]')) this.cancelCritEdit();
             else if (e.target.matches('[data-note-input]')) this.cancelNoteEdit();
