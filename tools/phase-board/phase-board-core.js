@@ -305,13 +305,32 @@ function priorityBadge(p) {
   const k = priorityOf(p);
   return k && !isComplete(p) ? '<span class="prio prio-' + k + '">' + PRIORITY[k] + ' priority</span>' : '';
 }
-/* Most urgent first among projects still in progress; ties, and finished projects, go by latest change. */
+/* The order projects in progress are worked in: priority, then the soonest target date (none last), then the earlier
+   start, then name. Only things set on purpose count, so a project does not move just because it was edited.
+   Finished projects, which have no such order, go by latest change. */
 function byPriority(a, b) {
+  const done = isComplete(a.p), doneB = isComplete(b.p);
+  if (done || doneB) return (done - doneB) || ((b.p.updatedAt || 0) - (a.p.updatedAt || 0));
   const order = ['high', 'medium', 'low', ''];
-  const rank = x => isComplete(x.p) ? 0 : order.indexOf(priorityOf(x.p));
-  return (rank(a) - rank(b)) || ((b.p.updatedAt || 0) - (a.p.updatedAt || 0));
+  const date = v => DATE_RE.test(v || '') ? v : '9999-99-99';
+  const name = x => String(x.p.name || '').toLowerCase();
+  return (order.indexOf(priorityOf(a.p)) - order.indexOf(priorityOf(b.p)))
+    || date(a.p.target).localeCompare(date(b.p.target))
+    || date(a.p.started).localeCompare(date(b.p.started))
+    || name(a).localeCompare(name(b))
+    || String(a.id || '').localeCompare(String(b.id || ''));
 }
-function cardHTML(id, p, when, hues) {
+/* Where each project in progress stands in that order: {id: {n: 1, of: 4}}. Archived and finished projects are left out. */
+function rankMap(projects) {
+  const list = Object.keys(projects || {}).map(id => ({ id: id, p: projects[id] })).filter(i => !isComplete(i.p) && !isArchived(i.p)).sort(byPriority);
+  const out = {};
+  list.forEach((i, k) => { out[i.id] = { n: k + 1, of: list.length }; });
+  return out;
+}
+function rankBadge(r) {
+  return r ? '<span class="rank" title="Work order: ' + r.n + ' of ' + r.of + ' active projects" aria-label="Work order ' + r.n + ' of ' + r.of + '">#' + r.n + '</span>' : '';
+}
+function cardHTML(id, p, when, hues, rank) {
   if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
   const cur = s.current, curSt = cur ? phaseState(p, cur) : null;
@@ -319,11 +338,11 @@ function cardHTML(id, p, when, hues) {
     const st = phaseState(p, d), prev = i ? phaseState(p, tpl.phases[i - 1]) : null;
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
-  return '<button class="card" type="button" data-open="' + esc(id) + '">' +
+  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '">' + rankBadge(rank) +
     '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + priorityBadge(p) + archivedTag(p) + '</div>' +
+    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
+    cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span class="foot-r"><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span>' + priorityBadge(p) + '</span></div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -845,7 +864,7 @@ function bulletsHTML(text, max) {
 /* The project cards, grouped: in progress first, then a collapsible Completed section. shown is [{id, p}] already
    filtered. o: {when(p) -> text, completedOpen}. The Archived and Needs attention views stay a single grid. */
 function portfolioBodyHTML(shown, filter, o) {
-  const card = i => cardHTML(i.id, i.p, o.when(i.p), o.hues);
+  const card = i => cardHTML(i.id, i.p, o.when(i.p), o.hues, o.ranks && o.ranks[i.id]);
   const grid = items => '<div class="grid">' + items.map(card).join('') + '</div>';
   if (filter === 'archived' || filter === 'attention') return grid(shown);
   const doing = shown.filter(i => !isComplete(i.p)), done = shown.filter(i => isComplete(i.p));

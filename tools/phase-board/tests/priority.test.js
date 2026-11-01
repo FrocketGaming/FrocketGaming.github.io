@@ -30,21 +30,22 @@ const finished = extra => {
 
   // ---- cards ----
   ok(K.cardHTML('p', live('Urgent one', { priority: 'high' }), 'now').includes('High priority') && !K.cardHTML('p', live('Plain'), 'now').includes('priority'), 'the in-progress card carries the badge only when set');
+  const hc = K.cardHTML('p', live('Urgent one', { priority: 'high' }), 'now');
+  ok(hc.indexOf('class="prio') > hc.indexOf('class="foot"') && hc.indexOf('class="prio') > hc.indexOf('now'), 'the badge sits in the footer, at the bottom corner, not beside the phase status');
   ok(!K.cardHTML('p', finished({ priority: 'high' }), 'now').includes('priority'), 'the finished card does not');
 
   // ---- sorting ----
-  const items = [
-    { id: 'none-new', p: live('none-new', { updatedAt: 90 }) },
-    { id: 'low', p: live('low', { priority: 'low', updatedAt: 80 }) },
-    { id: 'high-old', p: live('high-old', { priority: 'high', updatedAt: 10 }) },
-    { id: 'med', p: live('med', { priority: 'medium', updatedAt: 50 }) },
-    { id: 'high-new', p: live('high-new', { priority: 'high', updatedAt: 60 }) },
-    { id: 'none-old', p: live('none-old', { updatedAt: 20 }) }];
-  ok(items.slice().sort(K.byPriority).map(i => i.id).join() === 'high-new,high-old,med,low,none-new,none-old', 'high first, then medium, low, unset; newest change first within each');
+  const at = (name, extra) => ({ id: name, p: live(name, Object.assign({ started: '2026-01-01' }, extra)) });
+  const items = [at('none-early', { target: '2026-02-01' }), at('low', { priority: 'low' }), at('high-late', { priority: 'high', target: '2026-09-01' }), at('med', { priority: 'medium' }), at('high-soon', { priority: 'high', target: '2026-03-01' }), at('none-nodate')];
+  ok(items.slice().sort(K.byPriority).map(i => i.id).join() === 'high-soon,high-late,med,low,none-early,none-nodate', 'high first, then medium, low, unset; inside a level the soonest target date first, no date last');
+  const same = [at('b-proj', { priority: 'high', started: '2026-02-01' }), at('a-proj', { priority: 'high', started: '2026-02-01' }), at('early', { priority: 'high', started: '2026-01-05' })];
+  ok(same.slice().sort(K.byPriority).map(i => i.id).join() === 'early,a-proj,b-proj', 'then the earlier start, then the name');
+  const touched = items.map(i => ({ id: i.id, p: Object.assign({}, i.p, { updatedAt: i.id === 'none-nodate' ? 9999 : 1 }) }));
+  ok(touched.sort(K.byPriority).map(i => i.id).join() === items.slice().sort(K.byPriority).map(i => i.id).join(), 'editing a project does not move it');
   const mixed = [{ id: 'fin-old', p: finished({ priority: 'high', updatedAt: 5 }) }, { id: 'fin-new', p: finished({ updatedAt: 99 }) }];
   ok(mixed.slice().sort(K.byPriority).map(i => i.id).join() === 'fin-new,fin-old', 'finished projects ignore priority and go by latest change');
   const app = new K.PhaseBoardApp();
-  app.projects = { a: items[0].p, b: items[2].p, c: items[3].p };
+  app.projects = { a: items[5].p, b: items[2].p, c: items[3].p };
   ok(app.sortedProjects().map(i => i.id).join() === 'b,c,a', 'the portfolio list uses that order');
 
   // ---- editing ----

@@ -5,7 +5,7 @@
     try {
     const DATA = JSON.parse(document.getElementById('board-data').textContent);
     const root = document.getElementById('root');
-    const ids = Object.keys(DATA.projects).sort((a, b) => byPriority({ p: DATA.projects[a] }, { p: DATA.projects[b] }));
+    const ids = Object.keys(DATA.projects).sort((a, b) => byPriority({ id: a, p: DATA.projects[a] }, { id: b, p: DATA.projects[b] }));
     let view = 'portfolio', sel = null, filter = 'all', doneOpen = true;
 
     function updated(p) {
@@ -17,7 +17,7 @@
         const shown = filterProjects(list, filter);
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, filter) + '</div></div>' +
             (shown.length
-                ? portfolioBodyHTML(shown, filter, { when: updated, completedOpen: doneOpen, hues: tagHues(DATA.projects) })
+                ? portfolioBodyHTML(shown, filter, { when: updated, completedOpen: doneOpen, hues: tagHues(DATA.projects), ranks: rankMap(DATA.projects) })
                 : '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>');
     }
 
