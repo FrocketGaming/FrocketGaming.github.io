@@ -424,3 +424,17 @@
 .pb .ptag { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin-bottom: 6px; padding: 1px 10px 1px 8px; border-radius: 999px; border: 1px solid var(--tc); background: var(--surface-2); color: var(--fg); font-size: 12px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 .pb .ptag::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 999px; background: var(--tc); }
 .pb h1 + .ptag { margin: 6px 0 0; }
+
+/* Artifacts: links on a phase. The + sits in the phase header; the list only exists once a link does. */
+.pb .art-plus { width: 24px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; color: var(--fg-2); font-size: 16px; line-height: 1; cursor: pointer; }
+.pb .art-plus:hover, .pb .art-plus[aria-expanded="true"] { color: var(--fg); border-color: var(--accent-secondary); }
+.pb .arts { display: grid; gap: 2px; }
+.pb .art { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+.pb .art-name { font-size: 13px; font-weight: 600; color: var(--accent-secondary); overflow-wrap: anywhere; text-decoration: none; }
+.pb .art-name:hover { text-decoration: underline; }
+.pb .art-meta { font-size: 12px; color: var(--fg-2); }
+.pb .art .x { margin-left: auto; }
+.pb .art-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pb .art-form .field { flex: 1 1 180px; width: auto; }
+.pb .art-form .msg { flex: 1 1 100%; margin: 0; }
+.pb .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

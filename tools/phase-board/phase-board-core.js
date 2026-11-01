@@ -282,10 +282,11 @@ function phaseHTML(def, st, idx, o) {
   const loop = st.reopened > 0 ? '<p class="loop">' + icon('reopened', 16) + 'Reopened ' + st.reopened + (st.reopened === 1 ? ' time' : ' times') + '</p>' : '';
   return '<article class="phase ' + meta.cls + '" id="' + idp + 'ph-' + def.id + '">' +
     '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) + (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
-    '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span></div>' +
+    '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span>' +
+    (edit ? '<button type="button" class="art-plus" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '" aria-label="Add a link to ' + esc(def.name) + '" title="Add a link">+</button>' : '') + '</div>' +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p>' + (def.gates.length ? '<ul class="gates">' + gates + '</ul>' : '<p class="note">' + (edit ? 'No exit criteria yet. Add at least one below to track this phase. It cannot be completed until it has criteria.' : 'No exit criteria set.') + '</p>') + critAdd + '</div>' + actBlock + '</div>' +
-    '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' + diagramsHTML(def, st, o) +
+    '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' + diagramsHTML(def, st, o) + artifactsHTML(def, st, o) +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
     (o.extra || '') + '</article>';
 }
@@ -466,7 +467,7 @@ function phaseHasProgress(proj, phaseId) {
   const st = proj.phases && proj.phases[phaseId];
   if (!st) return false;
   const g = Array.isArray(st.gates) ? st.gates : Object.keys(st.gates || {}).map(k => st.gates[k]);
-  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes || (st.diagrams || []).length > 0;
+  return g.some(Boolean) || (st.decisions || []).length > 0 || (st.actions || []).length > 0 || !!st.notes || (st.diagrams || []).length > 0 || (st.artifacts || []).length > 0;
 }
 /* Trims a draft and returns {errors, flow}. Empty criteria are dropped; short labels fall back to the name. */
 function cleanFlow(d) {
@@ -864,6 +865,37 @@ function diagramsHTML(def, st, o) {
   return '<div><p class="sub">Diagrams</p>' + (items ? '<div class="dgs">' + items + '</div>' : '<p class="note">None attached.</p>') + attach + '</div>';
 }
 
+/* ---- artifacts: links attached to a phase, {id, kind:'link', title, url, addedAt} ---- */
+const ARTIFACT_MAX_PER_PHASE = 12;
+/* An http(s) URL (https:// is assumed when no scheme is typed), or '' when unusable. */
+function cleanArtifactUrl(raw) {
+  let t = String(raw || '').trim();
+  if (!t || /\s/.test(t)) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(t)) t = 'https://' + t;
+  try { const u = new URL(t); return /^https?:$/.test(u.protocol) && u.hostname.indexOf('.') > 0 ? u.href : ''; } catch (e) { return ''; }
+}
+function artifactHost(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+function makeArtifactLink(url, title, id, st) {
+  const clean = cleanArtifactUrl(url);
+  if (!clean) return { error: 'That does not look like a web address. Use a link that starts with http:// or https://.' };
+  if ((st.artifacts || []).length >= ARTIFACT_MAX_PER_PHASE) return { error: 'A phase can hold up to ' + ARTIFACT_MAX_PER_PHASE + ' artifacts.' };
+  return { artifact: { id: id, kind: 'link', title: String(title || '').trim().slice(0, 120) || artifactHost(clean), url: clean, addedAt: today() } };
+}
+/* o: {mode, artForm, artNote}. Nothing is drawn for a phase without artifacts unless the add form is open. */
+function artifactsHTML(def, st, o) {
+  const list = (Array.isArray(st.artifacts) ? st.artifacts : []).filter(a => a && cleanArtifactUrl(a.url)), edit = o.mode === 'edit', pid = def.id;
+  const formOpen = edit && o.artForm === pid;
+  if (!list.length && !formOpen) return '';
+  const rows = list.map(a => '<li class="art"><a class="art-name" href="' + esc(cleanArtifactUrl(a.url)) + '" target="_blank" rel="noopener noreferrer">' + esc(a.title) + '<span class="sr-only"> (opens in a new tab)</span></a>' +
+    '<span class="art-meta">' + esc(artifactHost(a.url)) + ' / ' + esc(a.addedAt || '') + '</span>' +
+    (edit ? '<button type="button" class="x" data-art-del="' + esc(a.id) + '" data-phase="' + pid + '" aria-label="Remove link: ' + esc(a.title) + '">&times;</button>' : '') + '</li>').join('');
+  const form = !formOpen ? '' : '<form class="art-form" data-art-form="' + pid + '"><input class="field" id="artUrl-' + pid + '" type="text" inputmode="url" autocomplete="off" placeholder="Paste a link" aria-label="Link address">' +
+    '<input class="field" id="artTitle-' + pid + '" type="text" maxlength="120" autocomplete="off" placeholder="Title (optional)" aria-label="Link title"><button class="btn small primary" type="submit">Add link</button>' +
+    '<button class="btn small" type="button" data-art-toggle="' + pid + '">Close</button>' +
+    (o.artNote ? '<p class="msg err" role="status">' + esc(o.artNote) + '</p>' : '') + '</form>';
+  return '<div><p class="sub">Artifacts <span class="cnt">' + list.length + '</span></p>' + (rows ? '<ul class="arts">' + rows + '</ul>' : '') + form + '</div>';
+}
+
 /* Plain text with light structure: a line starting with *, - or a bullet dot becomes a list item; other lines
    keep their line breaks; a blank line ends a paragraph or list. Everything is escaped. */
 function richItems(text) {
@@ -976,7 +1008,7 @@ function unsafeIdIn(doc, isFlow) {
       const st = doc.phases[k] || {};
       Object.keys(st.gates && !Array.isArray(st.gates) ? st.gates : {}).forEach(g => ids.push(g));
       Object.keys(st.evidence || {}).forEach(g => ids.push(g));
-      ['actions', 'diagrams'].forEach(list => (Array.isArray(st[list]) ? st[list] : []).forEach(x => ids.push(x && x.id)));
+      ['actions', 'diagrams', 'artifacts'].forEach(list => (Array.isArray(st[list]) ? st[list] : []).forEach(x => ids.push(x && x.id)));
     });
     (Array.isArray(doc.risks) ? doc.risks : []).forEach(r => ids.push(r && r.id));
     (Array.isArray((doc.outcomes || {}).metrics) ? doc.outcomes.metrics : []).forEach(m => ids.push(m && m.id));

@@ -32,6 +32,8 @@ class PhaseBoardApp {
         this.picker = null;
         this.svgs = {};
         this.openDiagrams = [];
+        this.artForm = null;
+        this.artNote = '';
         this.openSuggestions = [];
         this.confirmDiagram = null;
         this.flowStaticPromise = null;
@@ -275,7 +277,7 @@ class PhaseBoardApp {
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram });
+            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram, artForm: this.artForm, artNote: this.artNote });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -498,6 +500,29 @@ class PhaseBoardApp {
             st.diagrams = (st.diagrams || []).map(x => x.id === did ? Object.assign({}, x, { title: item.title, canvas: item.content, cards: item.cards, links: item.links, savedAt: today() }) : x);
         }, 'diagram');
         this.setNote('Diagram updated from Snippets.', false);
+    }
+
+    toggleArtifactForm(pid) {
+        this.artForm = this.artForm === pid ? null : pid;
+        this.artNote = '';
+        this.render();
+        if (this.artForm) document.getElementById('artUrl-' + pid)?.focus();
+    }
+
+    addArtifact(pid, url, title) {
+        const p = this.projects[this.view];
+        if (!p) return;
+        const def = tplOf(p).phases.find(d => d.id === pid);
+        const made = makeArtifactLink(url, title, this.newId(), phaseState(p, def));
+        if (made.error) { this.artNote = made.error; this.render(); document.getElementById('artUrl-' + pid)?.focus(); return; }
+        this.artNote = '';
+        this.mutatePhase(pid, st => { st.artifacts = (st.artifacts || []).concat([made.artifact]); }, 'link');
+        this.render();
+        document.getElementById('artUrl-' + pid)?.focus();
+    }
+
+    removeArtifact(pid, aid) {
+        this.mutatePhase(pid, st => { st.artifacts = (st.artifacts || []).filter(x => x.id !== aid); }, 'removal');
     }
 
     removeDiagram(pid, did) {
@@ -955,6 +980,10 @@ class PhaseBoardApp {
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
             const sg = e.target.closest('[data-crit-suggest]');
             if (sg) return this.addCriterion(sg.getAttribute('data-crit-suggest'), sg.getAttribute('data-text'));
+            const artT = e.target.closest('[data-art-toggle]');
+            if (artT) return this.toggleArtifactForm(artT.getAttribute('data-art-toggle'));
+            const artD = e.target.closest('[data-art-del]');
+            if (artD) return this.removeArtifact(artD.getAttribute('data-phase'), artD.getAttribute('data-art-del'));
             const dgAttach = e.target.closest('[data-dg-attach]');
             if (dgAttach) return this.openPicker(dgAttach.getAttribute('data-dg-attach'));
             if (e.target.closest('[data-dg-cancel]')) return this.closePicker();
@@ -1141,6 +1170,9 @@ class PhaseBoardApp {
                 if (name) {
                     this.patchProject(p => ({ outcomes: Object.assign({}, p.outcomes, { metrics: ((p.outcomes || {}).metrics || []).concat([{ id: this.newId(), name: name, before: before, after: after }]) }) }), 'metric');
                 }
+            } else if (f.hasAttribute('data-art-form')) {
+                const pid = f.getAttribute('data-art-form');
+                this.addArtifact(pid, document.getElementById('artUrl-' + pid).value, document.getElementById('artTitle-' + pid).value);
             } else if (f.hasAttribute('data-dec') || f.hasAttribute('data-addaction')) {
                 const input = f.querySelector('input');
                 const text = input.value.trim();
