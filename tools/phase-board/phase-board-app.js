@@ -202,6 +202,9 @@ class PhaseBoardApp {
             '<label for="npTag">Tag (optional)<input class="field" id="npTag" maxlength="' + TAG_MAX + '" list="pb-tags-new" autocomplete="off" placeholder="e.g. NHOP"><datalist id="pb-tags-new">' + tagsOf(this.projects).map(t => '<option value="' + esc(t) + '">').join('') + '</datalist></label>' +
             '<label for="npTpl">Flow<select class="field" id="npTpl">' + this.allFlows().map(f =>
                 '<option value="' + esc(f.key) + '">' + esc(f.name) + ' (' + f.phases.length + ' phases)</option>').join('') + '</select></label>' +
+            '<fieldset class="np-phases"><legend>Phases to include</legend><div id="npPhases">' + phasePickHTML((this.allFlows()[0] || { phases: [] }).phases) + '</div>' +
+            '<label class="np-ph"><input type="checkbox" id="npStarter"><span>Start each empty phase with the starter exit criteria (standard phases)</span></label>' +
+            '<p class="msg">Untick the phases this project does not need. You can still add or remove phases later from the project page.</p></fieldset>' +
             '<button class="btn primary" type="submit">Create project</button><button class="btn" type="button" id="pbNewCancel">Cancel</button></form>';
     }
 
@@ -636,11 +639,13 @@ class PhaseBoardApp {
         this.patchProject(() => ({ [field]: value }), 'project detail');
     }
 
-    async createProject(name, flowKey, owner, lead, tag) {
+    async createProject(name, flowKey, owner, lead, tag, pick) {
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'project';
         const id = slug + '-' + this.newId();
         try {
-            await this.projectsRef().doc(id).set(Object.assign(blankProject(name, this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases }, owner || '', lead || ''), cleanTag(tag) ? { tag: cleanTag(tag) } : {}));
+            const base = this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases };
+            const flow = pick ? pickPhases(base, pick.phases, pick.starter) : base;
+            await this.projectsRef().doc(id).set(Object.assign(blankProject(name, flow, owner || '', lead || ''), cleanTag(tag) ? { tag: cleanTag(tag) } : {}));
             this.showNew = false;
             this.openProject(id);
         } catch (err) {
@@ -997,6 +1002,7 @@ class PhaseBoardApp {
             const t = e.target;
             if (!t.matches) return;
             if (t.matches('[data-review-year]')) { this.reviewYear = t.value; this.render(); }
+            else if (t.matches('#npTpl')) { const f = this.findFlow(t.value); document.getElementById('npPhases').innerHTML = phasePickHTML(f ? f.phases : []); }
             else if (t.matches('input[data-gate]')) this.toggleGate(t.getAttribute('data-phase'), +t.getAttribute('data-gate'), t.checked);
             else if (t.matches('[data-ov]')) this.saveOverview(t.getAttribute('data-ov'), t.value);
             else if (t.matches('[data-risk-status]')) {
@@ -1050,7 +1056,9 @@ class PhaseBoardApp {
             const f = e.target;
             if (f.id === 'pbNewForm') {
                 const name = document.getElementById('npName').value.trim();
-                if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim(), document.getElementById('npTag').value);
+                const chosen = Array.from(document.querySelectorAll('#npPhases input[data-np-phase]')).filter(i => i.checked).map(i => i.getAttribute('data-np-phase'));
+                if (name && !chosen.length) this.setNote('Choose at least one phase for the project.', true);
+                else if (name) this.createProject(name, document.getElementById('npTpl').value, document.getElementById('npOwner').value.trim(), document.getElementById('npLead').value.trim(), document.getElementById('npTag').value, { phases: chosen, starter: !!document.getElementById('npStarter').checked });
             } else if (f.hasAttribute('data-note-form')) {
                 this.saveNote(f.getAttribute('data-phase'), f.getAttribute('data-note-form'), f.querySelector('textarea').value);
             } else if (f.hasAttribute('data-crit-form')) {

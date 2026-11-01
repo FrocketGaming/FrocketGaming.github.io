@@ -157,6 +157,21 @@ function blankPhase(def) {
 function openActions(tpl, proj) {
   return tpl.phases.reduce((n, d) => n + (phaseState(proj, d).actions || []).filter(a => !a.done).length, 0);
 }
+/* A one-off choice of phases when a project is created: keep only the chosen phases of a flow, optionally pre-filling
+   empty phases with the starter criteria. The result is an ordinary flow that the project then owns. */
+function pickPhases(flow, ids, starter) {
+  const keep = flow.phases.filter(d => ids.indexOf(d.id) >= 0).map(d => {
+    const copy = clone(d);
+    if (starter && !copy.gates.length && STARTER_CRITERIA[copy.id]) copy.gates = G(STARTER_CRITERIA[copy.id]);
+    return copy;
+  });
+  const all = keep.length === flow.phases.length;
+  return { key: all ? flow.key : 'custom', name: all ? flow.name : flow.name + ' - ' + keep.map(d => d.short || d.name).join(', '), phases: keep };
+}
+/* The phase checkboxes on the New project form, for the chosen flow. All start ticked. */
+function phasePickHTML(phases) {
+  return phases.map(d => '<label class="np-ph"><input type="checkbox" data-np-phase="' + esc(d.id) + '" checked><span>' + esc(d.name) + '</span></label>').join('');
+}
 function blankProject(name, flow, owner, lead) {
   const copy = clone({ name: flow.name, phases: flow.phases });
   const phases = {};

@@ -215,6 +215,12 @@
 .pb .metric-add { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
 
 .pb .newform { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 16px 18px; }
+.pb .np-phases { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; border: 1px solid var(--line); border-radius: 5px; padding: 10px 14px 12px; margin: 0; min-width: 0; }
+.pb .np-phases legend { font-size: 12px; font-weight: 600; color: var(--fg-2); padding: 0 6px; }
+.pb .np-phases #npPhases { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.pb .np-phases .msg { flex: 1 1 100%; margin: 0; }
+.pb .newform .np-ph { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; font-size: 14px; font-weight: 400; color: var(--fg); cursor: pointer; }
+.pb .newform .np-ph input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--accent-primary); }
 .pb .newform label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--fg-2); flex: 1 1 220px; }
 .pb .danger-zone { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; }
 
