@@ -5,7 +5,7 @@
     try {
     const DATA = JSON.parse(document.getElementById('board-data').textContent);
     const root = document.getElementById('root');
-    const ids = Object.keys(DATA.projects).sort((a, b) => (DATA.projects[b].updatedAt || 0) - (DATA.projects[a].updatedAt || 0));
+    const ids = Object.keys(DATA.projects).sort((a, b) => byPriority({ p: DATA.projects[a] }, { p: DATA.projects[b] }));
     let view = 'portfolio', sel = null, filter = 'all', doneOpen = true;
 
     function updated(p) {

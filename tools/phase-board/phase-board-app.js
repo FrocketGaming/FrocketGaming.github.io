@@ -192,7 +192,7 @@ class PhaseBoardApp {
     sortedProjects() {
         return Object.keys(this.projects)
             .map(id => ({ id: id, p: this.projects[id] }))
-            .sort((a, b) => (b.p.updatedAt || 0) - (a.p.updatedAt || 0));
+            .sort(byPriority);
     }
 
     newFormHTML() {
@@ -625,7 +625,7 @@ class PhaseBoardApp {
     }
 
     saveOverview(field, raw) {
-        const value = field === 'tag' ? cleanTag(raw) : (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead' || field === 'completedOn' || field === 'started') ? raw.trim() : parseList(raw);
+        const value = field === 'priority' ? (Object.prototype.hasOwnProperty.call(PRIORITY, raw) ? raw : '') : field === 'tag' ? cleanTag(raw) : (field === 'target' || field === 'summary' || field === 'owner' || field === 'lead' || field === 'completedOn' || field === 'started') ? raw.trim() : parseList(raw);
         if (field === 'completedOn' || field === 'started') {
             const p = this.projects[this.view];
             if (value && !DATE_RE.test(value)) { this.render(); return; }

@@ -298,6 +298,18 @@ function ago(ts) {
   if (s < 86400) return Math.round(s / 3600) + ' h ago';
   return Math.round(s / 86400) + ' d ago';
 }
+/* ---- priority: a label on projects still in progress, used to sort the portfolio ---- */
+const PRIORITY = { high: 'High', medium: 'Medium', low: 'Low' };
+function priorityOf(p) { return Object.prototype.hasOwnProperty.call(PRIORITY, p && p.priority) ? p.priority : ''; }
+function priorityBadge(p) {
+  const k = priorityOf(p);
+  return k && !isComplete(p) ? '<span class="prio prio-' + k + '">' + PRIORITY[k] + ' priority</span>' : '';
+}
+/* Most urgent first among projects still in progress; ties, and finished projects, go by latest change. */
+function byPriority(a, b) {
+  const rank = x => isComplete(x.p) ? 0 : ({ high: 0, medium: 1, low: 2 })[priorityOf(x.p)] === undefined ? 3 : ({ high: 0, medium: 1, low: 2 })[priorityOf(x.p)];
+  return (rank(a) - rank(b)) || ((b.p.updatedAt || 0) - (a.p.updatedAt || 0));
+}
 function cardHTML(id, p, when, hues) {
   if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
@@ -308,7 +320,7 @@ function cardHTML(id, p, when, hues) {
   }).join('');
   return '<button class="card" type="button" data-open="' + esc(id) + '">' +
     '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
+    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) : pill('done') + '<span>All phases complete</span>') + priorityBadge(p) + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
     cardMeta(p) + '<div class="foot"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + (open ? ' / ' + open + ' open action' + (open === 1 ? '' : 's') : '') + '</span><span>' + esc(projectCompletedOn(p) ? 'Completed ' + projectCompletedOn(p) : (when || '')) + '</span></div></button>';
 }
@@ -328,12 +340,14 @@ function overviewHTML(p, edit, o) {
       '<div class="ov"><label class="sub" for="ov-stakeholders">Stakeholders</label><input class="field" id="ov-stakeholders" data-ov="stakeholders" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.stakeholders).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-smes">SMEs</label><input class="field" id="ov-smes" data-ov="smes" autocomplete="off" placeholder="Names, separated by commas" value="' + esc(listOf(p.smes).join(', ')) + '"></div>' +
       '<div class="ov"><label class="sub" for="ov-target">Target date</label><input class="field" type="date" id="ov-target" data-ov="target" value="' + esc(p.target || '') + '">' + (late ? '<p class="late">Past the target date</p>' : '') + '</div>' +
+      (isComplete(p) ? '' : '<div class="ov"><label class="sub" for="ov-priority">Priority</label><select class="field" id="ov-priority" data-ov="priority"><option value="">Not set</option>' + Object.keys(PRIORITY).map(k => '<option value="' + k + '"' + (priorityOf(p) === k ? ' selected' : '') + '>' + PRIORITY[k] + '</option>').join('') + '</select><p class="msg">High priority projects are listed first.</p></div>') +
       '<div class="ov"><label class="sub" for="ov-started">Started</label><input class="field" type="date" id="ov-started" data-ov="started" value="' + esc(DATE_RE.test(p.started || '') ? p.started : '') + '"></div>' +
       (isComplete(p) ? '<div class="ov"><label class="sub" for="ov-completedOn">Completed on</label><input class="field" type="date" id="ov-completedOn" data-ov="completedOn" value="' + esc(projectCompletedOn(p)) + '"><p class="msg">' + (!DATE_RE.test(p.completedOn || '') && !hasPhaseDates(p) ? 'Not recorded for this project. Set it so it appears in your year in review.' : 'Taken from when the last phase finished. Change it for a project from the past.') + '</p></div>' : '') + '</div></section>';
   }
   return '<section class="overview" aria-label="Project overview">' + summaryHTML(p, false) + '<div class="ov-grid">' +
     '<div class="ov"><p class="sub">Owner</p><p>' + (p.owner ? esc(p.owner) : '<span class="none">Not set</span>') + '</p><p class="msg">Accountable for the outcome</p></div>' +
     '<div class="ov"><p class="sub">Lead</p><p>' + (p.lead ? esc(p.lead) : '<span class="none">Not set</span>') + '</p><p class="msg">Runs the work day to day</p></div>' +
+    (priorityOf(p) && !isComplete(p) ? '<div class="ov"><p class="sub">Priority</p><p>' + PRIORITY[priorityOf(p)] + '</p></div>' : '') +
     '<div class="ov"><p class="sub">Stakeholders</p>' + chips(listOf(p.stakeholders)) + '</div>' +
     '<div class="ov"><p class="sub">SMEs</p>' + chips(listOf(p.smes)) + '</div>' +
     '<div class="ov"><p class="sub">Target date</p><p>' + (p.target ? '<span class="mono">' + esc(p.target) + '</span>' : '<span class="none">Not set</span>') + '</p>' + (late ? '<p class="late">Past the target date</p>' : '') + '</div></div></section>';

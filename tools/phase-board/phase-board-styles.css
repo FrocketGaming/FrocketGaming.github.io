@@ -206,6 +206,9 @@
 .pb .act-add select.field { flex: 1 1 140px; min-width: 0; width: auto; }
 .pb .act-add input[type="date"] { flex: 1 1 160px; min-width: 0; width: auto; }
 .pb .act-add .btn { flex: none; }
+.pb .prio { flex: none; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 1px 8px; border-radius: 4px; color: var(--fg-2); background: var(--surface-2); border: 1px solid var(--line); }
+.pb .prio-high { color: var(--crit); background: color-mix(in srgb, var(--crit) 14%, var(--surface)); border-color: color-mix(in srgb, var(--crit) 40%, var(--surface)); }
+.pb .prio-medium { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, var(--surface)); }
 .pb .kind { flex: none; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 1px 8px; border-radius: 4px; min-width: 88px; text-align: center; }
 .pb .k-risk { color: var(--crit); background: color-mix(in srgb, var(--crit) 14%, var(--surface)); }
 .pb .k-constraint { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
