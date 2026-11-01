@@ -984,12 +984,36 @@ const TAG_MAX = 24;
 const TAG_SAT = 70, TAG_LIGHT = 75;   // light enough to reach 3:1 against every theme's surfaces, whatever the hue
 function cleanTag(t) { return String(t == null ? '' : t).trim().replace(/\s+/g, ' ').slice(0, TAG_MAX).trim(); }
 function tagKey(t) { return cleanTag(t).toLowerCase(); }
-/* The same tag always gives the same hue, whatever its capitals or spacing, on every device. */
-function tagHue(t) {
+/* The same text always gives the same hue, whatever its capitals or spacing, on every device. */
+function hueOf(key) {
   let h = 2166136261;
-  const s = tagKey(t);
+  const s = String(key);
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0) % 360;
+}
+function tagHue(t) { return hueOf(tagKey(t)); }
+/* One hue per key (a tag, or a person). Each starts at its own hash. If that is within 30 degrees of a key before it
+   (alphabetically), it takes the hue with the most room instead, so two never look alike; with many keys the room
+   shrinks but stays as wide as the wheel allows. A color only changes if an earlier key is added, renamed or removed. */
+function spreadHues(keys) {
+  keys = keys.slice().sort();
+  const apart = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+  const out = {}, used = [];
+  const room = h => used.length ? Math.min.apply(null, used.map(u => apart(u, h))) : 360;
+  keys.forEach(k => {
+    const want = hueOf(k);
+    let h = want;
+    if (room(h) < 30) {
+      let best = -1;
+      for (let x = 0; x < 360; x++) {
+        const r = room(x);
+        if (r > best || (r === best && apart(x, want) < apart(h, want))) { best = r; h = x; }
+      }
+    }
+    out[k] = h;
+    used.push(h);
+  });
+  return out;
 }
 function tagChip(p, hues) {
   const t = cleanTag(p && p.tag);
@@ -1003,28 +1027,37 @@ function tagsOf(projects) {
   return out.sort((a, b) => a.localeCompare(b));
 }
 
-/* One hue per tag in use. Each starts at its own hash. If that is within 30 degrees of a tag before it (alphabetically),
-   it takes the hue with the most room instead, so tags never look alike; with many tags the room shrinks but stays as
-   wide as the wheel allows. A tag's color only changes if an earlier tag is added, renamed or removed. */
 function tagHues(projects) {
   const keys = [];
   Object.keys(projects || {}).forEach(id => { const k = tagKey((projects[id] || {}).tag); if (k && keys.indexOf(k) < 0) keys.push(k); });
-  keys.sort();
-  const apart = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
-  const out = {}, used = [];
-  const room = h => used.length ? Math.min.apply(null, used.map(u => apart(u, h))) : 360;
-  keys.forEach(k => {
-    const want = tagHue(k);
-    let h = want;
-    if (room(h) < 30) {
-      let best = -1;
-      for (let c = 0; c < 360; c++) {
-        const r = room(c);
-        if (r > best || (r === best && apart(c, want) < apart(h, want))) { best = r; h = c; }
-      }
-    }
-    out[k] = h;
-    used.push(h);
-  });
-  return out;
+  return spreadHues(keys);
+}
+
+/* ---- people on action items: a color per assignee, and the open items grouped by who has them ---- */
+function personKey(n) { return String(n == null ? '' : n).trim().replace(/\s+/g, ' ').toLowerCase(); }
+/* Every assignee in the project, finished items included, so a person keeps their color as their items are completed. */
+function assigneeHues(p) {
+  const keys = [];
+  tplOf(p).phases.forEach(d => (phaseState(p, d).actions || []).forEach(a => { const k = personKey(a.assignee); if (k && keys.indexOf(k) < 0) keys.push(k); }));
+  return spreadHues(keys);
+}
+function personColor(key, hues) { return 'hsl(' + (hues && hues[key] !== undefined ? hues[key] : hueOf(key)) + ' ' + TAG_SAT + '% ' + TAG_LIGHT + '%)'; }
+/* Open action items, grouped by assignee (A to Z, unassigned last); inside a group, the soonest due date first. */
+function openActionGroups(p) {
+  const rows = [];
+  tplOf(p).phases.forEach(d => (phaseState(p, d).actions || []).forEach(a => { if (!a.done) rows.push({ a: a, d: d, i: rows.length }); }));
+  const by = {};
+  rows.forEach(r => { const k = personKey(r.a.assignee); (by[k] = by[k] || { key: k, name: k ? String(r.a.assignee).trim().replace(/\s+/g, ' ') : '', items: [] }).items.push(r); });
+  const dueKey = r => r.a.due || '9999-99-99';
+  return Object.keys(by).map(k => by[k])
+    .sort((x, y) => (x.key === '') - (y.key === '') || x.name.toLowerCase().localeCompare(y.name.toLowerCase()))
+    .map(g => { g.items.sort((x, y) => dueKey(x).localeCompare(dueKey(y)) || x.i - y.i); return g; });
+}
+function openActionsHTML(p) {
+  const groups = openActionGroups(p), hues = assigneeHues(p);
+  if (!groups.length) return '<p class="msg">No open action items.</p>';
+  return groups.map(g => '<div class="who-grp' + (g.key ? '' : ' is-none') + '"' + (g.key ? ' style="--tc:' + personColor(g.key, hues) + '"' : '') + '>' +
+    '<p class="who">' + esc(g.key ? g.name : 'Unassigned') + '<span class="cnt">' + g.items.length + '</span></p><ul>' + g.items.map(r =>
+      '<li>' + esc(r.a.text) + '<small><a class="pj" href="#ph-' + esc(r.d.id) + '">' + esc(r.d.short) + '</a>' +
+      (r.a.due ? ' / due <span class="mono' + (r.a.due < today() ? ' late' : '') + '">' + esc(r.a.due) + '</span>' : '') + '</small></li>').join('') + '</ul></div>').join('');
 }

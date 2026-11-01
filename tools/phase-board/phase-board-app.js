@@ -229,18 +229,6 @@ class PhaseBoardApp {
             this.statusLine() + reviewHTML(reviewData(this.projects, this.reviewYear));
     }
 
-    openActionsHTML(p) {
-        const groups = tplOf(p).phases.map(d => {
-            const items = (phaseState(p, d).actions || []).filter(a => !a.done);
-            return items.length
-                ? '<div><a class="pj" href="#ph-' + d.id + '">' + esc(d.short) + '</a><ul>' + items.map(a =>
-                    '<li>' + esc(a.text) + '<small>' + (a.assignee ? esc(a.assignee) : 'Unassigned') +
-                    (a.due ? ' / due <span class="mono' + (a.due < today() ? ' late' : '') + '">' + esc(a.due) + '</span>' : '') + '</small></li>').join('') + '</ul></div>'
-                : '';
-        }).join('');
-        return groups || '<p class="msg">No open action items.</p>';
-    }
-
     detailHTML() {
         const p = this.projects[this.view];
         if (!p) return '<button class="back" type="button" data-act="back">Back to projects</button><div class="empty"><h2>Project not found</h2><p>It may have been removed.</p></div>';
@@ -260,7 +248,7 @@ class PhaseBoardApp {
             '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(this.projects)) + '</div>' +
             this.statusLine() + overviewHTML(p, true, { tags: tagsOf(this.projects) }) + risksHTML(p, true) +
             '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
-            '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + this.openActionsHTML(p) + '</aside></div>' +
+            '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + openActionsHTML(p) + '</aside></div>' +
             outcomesHTML(p, true) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
     }
 

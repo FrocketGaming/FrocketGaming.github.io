@@ -152,6 +152,11 @@
 .pb .feed { display: grid; gap: 12px; }
 .pb .feed ul { display: grid; gap: 8px; }
 .pb .feed li small { display: block; color: var(--fg-2); font-size: 12px; }
+.pb .who-grp { border-left: 3px solid var(--tc, var(--line)); padding-left: 12px; display: grid; gap: 6px; }
+.pb .who { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; color: var(--fg); }
+.pb .who::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 999px; background: var(--tc, var(--fg-2)); }
+.pb .who-grp.is-none .who { color: var(--fg-2); }
+.pb .who .cnt { font-weight: 400; }
 .pb .feed .pj { font-weight: 600; color: var(--accent-secondary); text-decoration: none; }
 .pb .feed .pj:hover { text-decoration: underline; }
 .pb .sticky { position: sticky; top: 140px; }
