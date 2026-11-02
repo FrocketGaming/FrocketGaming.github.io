@@ -32,6 +32,6 @@ ok(html.includes('>#4<') && html.includes('>#1<') && !html.includes('>#2<'), 'a 
 // the card no longer shows when it was last updated
 ok(!K.cardHTML('b', projects.b, '6 min ago', {}, r.b).includes('6 min ago') && !K.cardHTML('d', projects.d, '6 min ago', {}).includes('6 min ago'), 'neither card shows when the project was last updated');
 const foot = K.cardHTML('b', projects.c, 'x', {}, r.c).split('class="foot"')[1];
-ok(foot.includes('</span><span class="prio prio-high">High priority</span></div></button>'), 'the priority badge is the last thing in the footer, on the same line as the criteria count');
+ok(!foot.includes('class="prio') && foot.includes('High priority') === false, 'the priority badge stays out of the footer, so a long actions chip cannot wrap it onto a second line');
 console.log(fails ? fails + ' FAILED' : 'ALL PASSED');
 process.exit(fails ? 1 : 0);

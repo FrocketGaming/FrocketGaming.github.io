@@ -31,7 +31,7 @@ const finished = extra => {
   // ---- cards ----
   ok(K.cardHTML('p', live('Urgent one', { priority: 'high' }), 'now').includes('High priority') && !K.cardHTML('p', live('Plain'), 'now').includes('priority'), 'the in-progress card carries the badge only when set');
   const hc = K.cardHTML('p', live('Urgent one', { priority: 'high' }), 'now');
-  ok(hc.indexOf('class="prio') > hc.indexOf('class="foot"') && hc.indexOf('class="prio') > hc.indexOf('now'), 'the badge sits in the footer, at the bottom corner, not beside the phase status');
+  ok(hc.indexOf('class="card-flags"') < hc.indexOf('class="prio') && hc.indexOf('class="prio') < hc.indexOf('<h2>') && !hc.split('class="foot"')[1].includes('class="prio'), 'the badge sits above the project name, not in the footer and not beside the phase status');
   ok(!K.cardHTML('p', finished({ priority: 'high' }), 'now').includes('priority'), 'the finished card does not');
 
   // ---- sorting ----

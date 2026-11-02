@@ -384,11 +384,13 @@ function cardHTML(id, p, when, hues, rank, drag) {
     const st = phaseState(p, d), prev = i ? phaseState(p, tpl.phases[i - 1]) : null;
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
+  /* Tag and priority share a row above the name, so the footer holds only the criteria count and actions and stays on one line. */
+  const flags = tagChip(p, hues) + priorityBadge(p);
   return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' + rankBadge(rank) +
-    '<div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div>' + (flags ? '<div class="card-flags">' + flags + '</div>' : '') + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) + dueFlag(tpl, p) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span>' + priorityBadge(p) + '</div></button>';
+    cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span></div></button>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
