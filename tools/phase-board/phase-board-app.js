@@ -13,6 +13,7 @@ class PhaseBoardApp {
         this.projects = {};
         this.view = 'portfolio';
         this.filter = 'all';
+        this.justDone = {};
         this.showNew = false;
         this.confirmDelete = false;
         this.loaded = false;
@@ -258,7 +259,8 @@ class PhaseBoardApp {
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
         else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects), drag: true });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
-            this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') + body;
+            this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') +
+            (this.loaded && (this.filter === 'all' || this.filter === 'attention') ? dueItemsHTML(this.projects, rankMap(this.projects), this.justDone) : '') + body;
     }
 
     reviewPageHTML() {
@@ -341,8 +343,9 @@ class PhaseBoardApp {
         this.setNote('The ' + what + ' was not saved. Check your connection and try again.', true);
     }
 
-    mutatePhase(pid, fn, what) {
-        const id = this.view;
+    // projectId is for edits made away from the project's own page (the portfolio's due list); otherwise it is the open project.
+    mutatePhase(pid, fn, what, projectId) {
+        const id = projectId || this.view;
         this.queue(id, async () => {
             const p = this.projects[id];
             if (!p) return;
@@ -384,10 +387,10 @@ class PhaseBoardApp {
         }, 'action item');
     }
 
-    editAction(pid, aid, patch) {
+    editAction(pid, aid, patch, projectId) {
         this.mutatePhase(pid, st => {
             st.actions = (st.actions || []).map(a => a.id === aid ? Object.assign({}, a, patch) : a);
-        }, 'action item');
+        }, 'action item', projectId);
     }
 
     // ─── Inline exit-criteria editing ─────────────────────────
@@ -895,6 +898,7 @@ class PhaseBoardApp {
     }
 
     openProject(id) {
+        this.justDone = {};
         this.picker = null;
         this.confirmDiagram = null;
         this.editingNote = null;
@@ -1074,8 +1078,9 @@ class PhaseBoardApp {
             } else if (t.matches('[data-act-assignee]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-assignee'), { assignee: t.value });
             else if (t.matches('[data-act-due]')) this.editAction(t.getAttribute('data-phase'), t.getAttribute('data-act-due'), { due: t.value });
             else if (t.matches('input[data-action]')) {
-                const aid = t.getAttribute('data-action'), done = t.checked;
-                this.editAction(t.getAttribute('data-phase'), aid, { done: done, doneAt: done ? today() : '' });
+                const aid = t.getAttribute('data-action'), done = t.checked, proj = t.getAttribute('data-project');
+                if (proj) { if (done) this.justDone[proj + '/' + aid] = true; else delete this.justDone[proj + '/' + aid]; }
+                this.editAction(t.getAttribute('data-phase'), aid, { done: done, doneAt: done ? today() : '' }, proj);
             }
         });
 

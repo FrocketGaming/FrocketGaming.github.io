@@ -384,9 +384,9 @@ function cardHTML(id, p, when, hues, rank, drag) {
     const st = phaseState(p, d), prev = i ? phaseState(p, tpl.phases[i - 1]) : null;
     return (i ? '<i class="' + (prev.status === 'done' ? 'd' : '') + '"></i>' : '') + '<span class="' + STATUS[st.status].cls + '" title="' + esc(d.name + ': ' + STATUS[st.status].label) + '">' + icon(st.status, 18) + '</span>';
   }).join('');
-  /* Tag and priority share a row above the name, so the footer holds only the criteria count and actions and stays on one line. */
-  const flags = tagChip(p, hues) + priorityBadge(p);
-  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' + rankBadge(rank) +
+  /* Tag, priority and work-order number share a row above the name, so the footer holds only the criteria count and actions and stays on one line. */
+  const flags = tagChip(p, hues) + priorityBadge(p) + rankBadge(rank);
+  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' +
     '<div>' + (flags ? '<div class="card-flags">' + flags + '</div>' : '') + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) + dueFlag(tpl, p) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
@@ -476,16 +476,51 @@ function overdueActions(tpl, proj) {
 
 /* Open actions due today, and due in the next DUE_SOON_DAYS days (counted apart from "today"). */
 const DUE_SOON_DAYS = 3;
-function dueActions(tpl, proj) {
+function dueBucket(due) {
+  if (!due) return '';
   const t = today(), d = new Date();
   d.setDate(d.getDate() + DUE_SOON_DAYS);
   const pad = n => String(n).padStart(2, '0'), limit = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  return due < t ? 'late' : due === t ? 'today' : due <= limit ? 'soon' : '';
+}
+function dueActions(tpl, proj) {
   const out = { today: 0, soon: 0 };
   tpl.phases.forEach(ph => (phaseState(proj, ph).actions || []).forEach(a => {
-    if (a.done || !a.due) return;
-    if (a.due === t) out.today++; else if (a.due > t && a.due <= limit) out.soon++;
+    if (a.done) return;
+    const b = dueBucket(a.due);
+    if (b === 'today') out.today++; else if (b === 'soon') out.soon++;
   }));
   return out;
+}
+
+/* Open actions across every live project that are overdue, due today or due soon. Each group runs soonest date first,
+   then in work order. keep holds 'project/action' keys just checked off here, which stay listed (ticked) so a misclick can be undone. */
+function dueItems(projects, ranks, keep) {
+  const out = { late: [], today: [], soon: [] };
+  Object.keys(projects || {}).forEach(id => {
+    const p = projects[id];
+    if (p.archived || isComplete(p)) return;
+    tplOf(p).phases.forEach(d => (phaseState(p, d).actions || []).forEach(a => {
+      if (a.done && !(keep && keep[id + '/' + a.id])) return;
+      const b = dueBucket(a.due);
+      if (b) out[b].push({ id: id, p: p, d: d, a: a, n: ranks && ranks[id] ? ranks[id].n : Infinity });
+    }));
+  });
+  Object.keys(out).forEach(b => out[b].sort((x, y) => x.a.due.localeCompare(y.a.due) || x.n - y.n));
+  return out;
+}
+function dueItemsHTML(projects, ranks, keep) {
+  const items = dueItems(projects, ranks, keep);
+  const row = r => {
+    const box = 'due-' + esc(r.id) + '-' + esc(r.a.id), who = String(r.a.assignee || '').trim();
+    return '<li class="due-row' + (r.a.done ? ' is-done' : '') + '"><label class="gate" for="' + box + '"><input type="checkbox" id="' + box + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '" data-project="' + esc(r.id) + '"' + (r.a.done ? ' checked' : '') + '><span>' + esc(r.a.text) + '</span></label>' +
+      '<small><button class="due-proj" type="button" data-open="' + esc(r.id) + '">' + esc(r.p.name) + '</button> / ' + esc(r.d.short) + (who ? ' / ' + esc(who) : '') + (dueBucket(r.a.due) === 'today' ? '' : ' / <span class="mono">' + esc(r.a.due) + '</span>') + '</small></li>';
+  };
+  const groups = [['late', 'Overdue'], ['today', 'Due today'], ['soon', 'Due soon']].filter(g => items[g[0]].length);
+  if (!groups.length) return '';
+  const open = groups.reduce((n, g) => n + items[g[0]].filter(r => !r.a.done).length, 0);
+  return '<section class="due-panel" aria-label="Action items due"><div class="sec-head"><h2 class="sec-h">Action items due</h2><span class="sec-count">' + open + '</span></div><div class="due-cols">' +
+    groups.map(g => '<div class="due-' + g[0] + '"><h3 class="due-h">' + g[1] + '</h3><ul>' + items[g[0]].map(row).join('') + '</ul></div>').join('') + '</div></section>';
 }
 
 /* ---- flow editing: pure helpers shared by the app and its checks ---- */
