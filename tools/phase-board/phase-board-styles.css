@@ -17,7 +17,7 @@
     --idle: var(--text-secondary);
 
     width: 100%;
-    max-width: 1180px;
+    max-width: 2200px;
     padding: 20px 20px 48px;
     box-sizing: border-box;
     color: var(--fg);
