@@ -509,18 +509,55 @@ function dueItems(projects, ranks, keep) {
   Object.keys(out).forEach(b => out[b].sort((x, y) => x.a.due.localeCompare(y.a.due) || x.n - y.n));
   return out;
 }
-function dueItemsHTML(projects, ranks, keep) {
+/* How an action's due date reads in the due panel: "3d late", "Today", or the weekday and day ("Thu 5"). */
+function dueLabel(due) {
+  if (!due) return '';
+  const at = s => { const p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
+  const n = Math.round((at(today()) - at(due)) / 86400000);
+  if (n > 0) return n + 'd late';
+  if (n === 0) return 'Today';
+  const d = at(due);
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate();
+}
+const DUE_GROUPS = [['late', 'overdue'], ['today', 'today'], ['soon', 'next ' + DUE_SOON_DAYS + ' days']];
+/* The due panel. A one-line pulse bar (proportion meter, counts, Show/Hide) heads it; open, it holds one small card per
+   project, the most urgent project first. ui.open shows the cards; ui.only ('late' | 'today' | 'soon') narrows them to one group. */
+function dueItemsHTML(projects, ranks, keep, ui) {
+  ui = ui || {};
   const items = dueItems(projects, ranks, keep);
+  const rows = [].concat(items.late, items.today, items.soon);
+  if (!rows.length) return '';
+  const count = {};
+  DUE_GROUPS.forEach(g => { count[g[0]] = items[g[0]].filter(r => !r.a.done).length; });
+  const open = count.late + count.today + count.soon;
+  const only = ui.open && count[ui.only] ? ui.only : '';
+  const meter = '<div class="due-meter" role="img" aria-label="' + DUE_GROUPS.map(g => count[g[0]] + ' ' + g[1]).join(', ') + '">' +
+    DUE_GROUPS.map(g => count[g[0]] ? '<i class="ds-' + g[0] + '" style="flex:' + count[g[0]] + '"></i>' : '').join('') + '</div>';
+  const segs = DUE_GROUPS.filter(g => count[g[0]]).map(g => '<button type="button" class="due-seg ds-' + g[0] + '" id="pbDueOnly-' + g[0] + '" data-due-only="' + g[0] + '" aria-pressed="' + (only === g[0]) + '"><i></i><b>' + count[g[0]] + '</b>' + g[1] + '</button>').join('');
+  const bar = '<div class="due-bar"><h2 class="sec-h">' + (open ? plural(open, 'action', 'actions') + ' due' : 'All due actions done') + '</h2>' + meter + segs +
+    '<button type="button" class="due-toggle" id="pbDueToggle" data-due-toggle aria-expanded="' + !!ui.open + '" aria-controls="pbDueBody">' + (ui.open ? 'Hide' : 'Show') + '</button></div>';
+  if (!ui.open) return '<section class="due-panel" aria-label="Action items due">' + bar + '</section>';
+
+  const rank = { late: 0, today: 1, soon: 2 }, byProj = {}, order = [];
+  rows.filter(r => !only || dueBucket(r.a.due) === only).forEach(r => {
+    if (!byProj[r.id]) { byProj[r.id] = { id: r.id, p: r.p, n: r.n, rows: [], worst: 3, first: r.a.due }; order.push(byProj[r.id]); }
+    const g = byProj[r.id];
+    g.rows.push(r);
+    if (!r.a.done) g.worst = Math.min(g.worst, rank[dueBucket(r.a.due)]);
+    if (r.a.due < g.first) g.first = r.a.due;
+  });
+  order.forEach(g => g.rows.sort((x, y) => x.a.due.localeCompare(y.a.due)));
+  order.sort((x, y) => x.worst - y.worst || x.first.localeCompare(y.first) || x.n - y.n);
   const row = r => {
-    const box = 'due-' + esc(r.id) + '-' + esc(r.a.id), who = String(r.a.assignee || '').trim();
-    return '<li class="due-row' + (r.a.done ? ' is-done' : '') + '"><label class="gate" for="' + box + '"><input type="checkbox" id="' + box + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '" data-project="' + esc(r.id) + '"' + (r.a.done ? ' checked' : '') + '><span>' + esc(r.a.text) + '</span></label>' +
-      '<small><button class="due-proj" type="button" data-open="' + esc(r.id) + '">' + esc(r.p.name) + '</button> / ' + esc(r.d.short) + (who ? ' / ' + esc(who) : '') + (dueBucket(r.a.due) === 'today' ? '' : ' / <span class="mono">' + esc(r.a.due) + '</span>') + '</small></li>';
+    const box = 'due-' + esc(r.id) + '-' + esc(r.a.id), who = String(r.a.assignee || '').trim(), b = dueBucket(r.a.due);
+    return '<li class="due-row ds-' + b + (r.a.done ? ' is-done' : '') + '"><input type="checkbox" id="' + box + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '" data-project="' + esc(r.id) + '"' + (r.a.done ? ' checked' : '') + '>' +
+      '<label for="' + box + '">' + esc(r.a.text) + '</label><span class="due-when mono" title="Due ' + esc(r.a.due) + '">' + dueLabel(r.a.due) + '</span>' +
+      '<small>' + esc(r.d.short) + (who ? ' &middot; ' + esc(who) : '') + '</small></li>';
   };
-  const groups = [['late', 'Overdue'], ['today', 'Due today'], ['soon', 'Due soon']].filter(g => items[g[0]].length);
-  if (!groups.length) return '';
-  const open = groups.reduce((n, g) => n + items[g[0]].filter(r => !r.a.done).length, 0);
-  return '<section class="due-panel" aria-label="Action items due"><div class="sec-head"><h2 class="sec-h">Action items due</h2><span class="sec-count">' + open + '</span></div><div class="due-cols">' +
-    groups.map(g => '<div class="due-' + g[0] + '"><h3 class="due-h">' + g[1] + '</h3><ul>' + items[g[0]].map(row).join('') + '</ul></div>').join('') + '</div></section>';
+  const worst = ['due-worst-late', 'due-worst-today', '', ''];
+  return '<section class="due-panel is-open" aria-label="Action items due">' + bar + '<div class="due-grid" id="pbDueBody">' +
+    order.map(g => '<div class="due-proj-card ' + worst[g.worst] + '"><div class="due-proj-h"><button class="due-proj" type="button" data-open="' + esc(g.id) + '">' + esc(g.p.name) + '</button>' +
+      (isFinite(g.n) ? '<span class="rank">#' + g.n + '</span>' : '') + '</div><ul>' + g.rows.map(row).join('') + '</ul></div>').join('') + '</div></section>';
 }
 
 /* ---- flow editing: pure helpers shared by the app and its checks ---- */

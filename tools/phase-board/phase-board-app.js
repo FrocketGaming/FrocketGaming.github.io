@@ -42,6 +42,10 @@ class PhaseBoardApp {
         this.completedOpen = true;
         this.restore = null;
         try { if (localStorage.getItem('pb-completed-open') === '0') this.completedOpen = false; } catch (e) { /* storage unavailable: the section stays open */ }
+        // The due panel is open unless it was last left collapsed in this browser; dueOnly narrows it to one group for this visit.
+        this.dueOpen = true;
+        this.dueOnly = '';
+        try { if (localStorage.getItem('pb-due-open') === '0') this.dueOpen = false; } catch (e) { /* storage unavailable: the panel stays open */ }
     }
 
     init() {
@@ -260,7 +264,7 @@ class PhaseBoardApp {
         else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects), drag: true });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
             this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') +
-            (this.loaded && (this.filter === 'all' || this.filter === 'attention') ? dueItemsHTML(this.projects, rankMap(this.projects), this.justDone) : '') + body;
+            (this.loaded && (this.filter === 'all' || this.filter === 'attention') ? dueItemsHTML(this.projects, rankMap(this.projects), this.justDone, { open: this.dueOpen, only: this.dueOnly }) : '') + body;
     }
 
     reviewPageHTML() {
@@ -957,6 +961,14 @@ class PhaseBoardApp {
         }
     }
 
+    // Collapsing the due panel to its pulse bar is remembered in this browser; collapsing also clears a count filter.
+    setDueOpen(open) {
+        this.dueOpen = open;
+        if (!open) this.dueOnly = '';
+        try { localStorage.setItem('pb-due-open', open ? '1' : '0'); } catch (e) { /* the choice lasts for this visit */ }
+        this.render();
+    }
+
     // ─── Events ───────────────────────────────────────────────
 
     bindEvents() {
@@ -979,6 +991,9 @@ class PhaseBoardApp {
         page.addEventListener('click', e => {
             const open = e.target.closest('[data-open]');
             if (open) return this.openProject(open.getAttribute('data-open'));
+            if (e.target.closest('[data-due-toggle]')) return this.setDueOpen(!this.dueOpen);
+            const dueOnly = e.target.closest('[data-due-only]');
+            if (dueOnly) { const g = dueOnly.getAttribute('data-due-only'); this.dueOnly = this.dueOpen && this.dueOnly === g ? '' : g; return this.setDueOpen(true); }
             const filter = e.target.closest('[data-filter]');
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
             const delAct = e.target.closest('[data-del-action]');

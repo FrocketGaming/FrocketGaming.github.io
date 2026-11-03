@@ -9,10 +9,11 @@ const css = fs.readFileSync(dir + 'phase-board-styles.css', 'utf8');
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console.log('ok  ', m); };
 const els = {};
+const store = {};
 const stub = id => els[id] || (els[id] = { id, innerHTML: '', textContent: '', value: '', style: {}, hidden: false, addEventListener(t, f) { (this.h = this.h || {})[t] = f; }, matches() { return false; }, closest() { return null; }, focus() {} });
 const doc = { getElementById: stub, activeElement: null, addEventListener() {}, body: { appendChild() {} } };
 const K = new Function('document', 'window', 'firebase', 'firebaseConfig', 'localStorage', core + '\n' + appSrc +
-  '\nreturn {PhaseBoardApp, dueBucket, dueActions, dueItems, dueItemsHTML, cardHTML, rankMap, blankProject, TEMPLATES, tplOf};')(doc, { scrollTo() {} }, undefined, undefined, { getItem: () => null, setItem() {} });
+  '\nreturn {PhaseBoardApp, dueLabel, dueBucket, dueActions, dueItems, dueItemsHTML, cardHTML, rankMap, blankProject, TEMPLATES, tplOf};')(doc, { scrollTo() {} }, undefined, undefined, { getItem: k => store[k] === undefined ? null : store[k], setItem: (k, v) => { store[k] = v; } });
 const wait = () => new Promise(r => setTimeout(r, 20));
 
 const pad = n => String(n).padStart(2, '0');
@@ -55,10 +56,27 @@ const finished = (name, actions) => {
   ok(!/x-arch|x-fin/.test(all), 'archived and finished projects stay out');
   ok(K.dueItemsHTML({ a: live('Alpha', [act('far', day(30))]) }) === '', 'with nothing due there is no panel at all');
 
-  const html = K.dueItemsHTML({ p1: live('<b>Name</b>', [act('z', day(0), { text: '<img src=x>', assignee: 'Sam' })]) });
+  const html = K.dueItemsHTML({ p1: live('<b>Name</b>', [act('z', day(0), { text: '<img src=x>', assignee: 'Sam' })]) }, null, null, { open: true });
   ok(!html.includes('<img') && !html.includes('<b>Name') && html.includes('&lt;img') && html.includes('Sam'), 'action text and project names are escaped');
   ok(html.includes('data-action="z"') && html.includes('data-phase="' + first + '"') && html.includes('data-project="p1"') && html.includes('data-open="p1"'), 'each row says which project and phase its checkbox belongs to, and links to the project');
-  ok(html.indexOf('<label') < html.indexOf('data-open') && html.indexOf('</label>') < html.indexOf('data-open'), 'the project link sits outside the checkbox label');
+  ok(html.indexOf('data-open') < html.indexOf('<label') && !/<label[^>]*>[^<]*<button/.test(html), 'the project link sits outside the checkbox label');
+
+  // ---- the pulse bar and the project cards ----
+  ok(K.dueLabel(day(-3)) === '3d late' && K.dueLabel(day(0)) === 'Today' && /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d{1,2}$/.test(K.dueLabel(day(2))), 'due dates read as days late, Today, or a weekday and day');
+  const shut = K.dueItemsHTML(projects, null, null, { open: false });
+  ok(shut.includes('data-due-toggle') && shut.includes('aria-expanded="false"') && !shut.includes('data-action='), 'collapsed, the panel is just the pulse bar');
+  ok(shut.includes('5 actions due') && shut.includes('<b>1</b>overdue') && shut.includes('<b>2</b>today') && shut.includes('<b>2</b>next 3 days'), 'the bar counts each group');
+  ok(!K.dueItemsHTML({ a: live('Only today', [act('t', day(0))]) }, null, null, {}).includes('data-due-only="late"'), 'a group with nothing in it has no count');
+  const opened = K.dueItemsHTML(projects, { a: { n: 2 }, b: { n: 1 } }, null, { open: true });
+  ok(opened.includes('aria-expanded="true"') && (opened.match(/class="due-proj-card/g) || []).length === 2, 'open, there is one card per project');
+  ok(opened.indexOf('data-open="b"') < opened.indexOf('data-open="a"') && opened.includes('due-proj-card due-worst-late'), 'the project with an overdue item comes first and is marked');
+  ok(opened.includes('<span class="rank">#1</span>'), 'each card shows the work-order number');
+  const bravo = opened.split('data-open="b"')[1].split('data-open="a"')[0];
+  const pos = ['b-late', 'b-today', 'b-soon1', 'b-soon2'].map(x => bravo.indexOf('data-action="' + x + '"'));
+  ok(pos.every((v, i) => v > 0 && (!i || v > pos[i - 1])), 'inside a card, the soonest date comes first');
+  const onlyLate = K.dueItemsHTML(projects, null, null, { open: true, only: 'late' });
+  ok(onlyLate.includes('data-action="b-late"') && !onlyLate.includes('data-open="a"') && /data-due-only="late" aria-pressed="true"/.test(onlyLate), 'a count narrows the cards to that group');
+  ok(!/aria-pressed="true"/.test(K.dueItemsHTML(projects, null, null, { open: false, only: 'late' })), 'a collapsed panel shows no count as selected');
 
   // ---- the card row ----
   const card = K.cardHTML('p', live('Card', [], { priority: 'high', tag: 'NHOP' }), 'x', {}, { n: 2, of: 4 });
@@ -79,7 +97,18 @@ const finished = (name, actions) => {
   a.projectsRef = () => ({ doc: id => ({ update: async d => { wrote.push({ id, d }); Object.keys(d).forEach(k => { if (k.indexOf('phases.') === 0) a.projects[id].phases[k.slice(7)] = d[k]; else a.projects[id][k] = d[k]; }); } }) });
   a.bindEvents();
   const tick = (aid, proj, checked) => els.pbPage.h.change({ target: { checked, matches: s => s === 'input[data-action]', getAttribute: n => ({ 'data-action': aid, 'data-phase': first, 'data-project': proj })[n] === undefined ? null : ({ 'data-action': aid, 'data-phase': first, 'data-project': proj })[n] } });
-  ok(a.portfolioHTML().includes('due-panel'), 'the portfolio shows the panel');
+  ok(a.portfolioHTML().includes('due-panel') && a.portfolioHTML().includes('data-action="tick"'), 'the portfolio shows the panel, open by default');
+  const click = (attr, val) => els.pbPage.h.click({ target: { closest: s => s === '[' + attr + ']' ? { getAttribute: () => val } : null } });
+  click('data-due-toggle');
+  ok(a.dueOpen === false && store['pb-due-open'] === '0' && !a.portfolioHTML().includes('data-action="tick"'), 'Hide collapses it to the bar, and that is remembered');
+  ok(new K.PhaseBoardApp().dueOpen === false, 'so the next visit starts collapsed');
+  click('data-due-only', 'today');
+  ok(a.dueOpen === true && a.dueOnly === 'today' && store['pb-due-open'] === '1', 'clicking a count opens the panel on that group');
+  click('data-due-only', 'today');
+  ok(a.dueOnly === '' && a.dueOpen === true, 'clicking it again shows every group');
+  click('data-due-only', 'today'); click('data-due-toggle');
+  ok(a.dueOpen === false && a.dueOnly === '', 'collapsing clears the group');
+  click('data-due-toggle');
 
   tick('tick', 'p2', true); await wait();
   ok(wrote.length === 1 && wrote[0].id === 'p2', 'the write goes to the project the row belongs to, not to the open view');
@@ -89,8 +118,8 @@ const finished = (name, actions) => {
   ok(a.view === 'portfolio', 'checking one off stays on the portfolio');
 
   let page = a.portfolioHTML();
-  ok(/data-action="tick"[^>]*checked/.test(page) && page.includes('due-row is-done'), 'a row just checked stays listed and ticked, so a misclick can be undone');
-  ok(page.includes('<span class="sec-count">2</span></div><div class="due-cols">'), 'and no longer counts as open');
+  ok(/data-action="tick"[^>]*checked/.test(page) && /class="due-row [^"]*is-done/.test(page), 'a row just checked stays listed and ticked, so a misclick can be undone');
+  ok(page.includes('2 actions due'), 'and no longer counts as open');
 
   tick('tick', 'p2', false); await wait();
   ok(a.projects.p2.phases[first].actions.find(x => x.id === 'tick').done === false, 'unticking reopens it');
