@@ -18,8 +18,8 @@
 
 .cron-input-section label {
     display: block;
-    color: var(--accent-secondary);
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
     margin-bottom: 8px;
     font-weight: 500;
 }
@@ -42,7 +42,49 @@
 
 #cronExpression:focus {
     border-color: var(--accent-secondary);
-    box-shadow: 0 0 10px var(--accent-primary);
+    box-shadow: none;
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 1px;
+}
+
+/* Expression + copy affordance */
+.cron-expression-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+#cronExpression {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
+.cron-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    flex-shrink: 0;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.cron-copy-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--accent-primary);
+}
+
+.cron-copy-btn:focus-visible {
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 1px;
 }
 
 .cron-description {
@@ -65,7 +107,7 @@
 }
 
 .cron-presets h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0 0 15px 0;
     text-align: left;
@@ -115,7 +157,7 @@
 }
 
 .cron-field-card h4 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0;
     text-align: center;
@@ -214,10 +256,23 @@
 }
 
 .cron-next-runs h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
-    margin: 0 0 15px 0;
+    margin: 0;
     text-align: left;
+}
+
+.cron-next-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.cron-next-tz {
+    color: var(--text-secondary);
+    font-size: 12px;
 }
 
 .cron-next-runs ul {
@@ -230,6 +285,10 @@
 }
 
 .cron-next-runs li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
     padding: 10px 14px;
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
@@ -237,6 +296,13 @@
     color: var(--text-primary);
     font-family: Consolas, Monaco, monospace;
     font-size: 0.9rem;
+}
+
+.run-relative {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: "Raleway", sans-serif;
+    white-space: nowrap;
 }
 
 /* Responsive */

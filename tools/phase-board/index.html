@@ -22,7 +22,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
         <link rel="stylesheet" href="../../src/stylesheet.css" />
         <link rel="stylesheet" href="../../src/firebase-sync.css" />
-        <link rel="stylesheet" href="phase-board-styles.css?v=ff391773" />
+        <link rel="stylesheet" href="phase-board-styles.css?v=9b85daff" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
@@ -53,21 +53,17 @@
             </div>
         </div>
 
-        <!-- Sign-in screen (unauthenticated) -->
-        <div id="pbSignIn" class="pb-signin" style="display:none">
+        <!-- Boot screen: shown until local storage loads. -->
+        <div id="pbBoot" class="pb-signin" role="status">
             <div class="pb-signin-card">
                 <i class="fa-solid fa-bars-progress pb-signin-icon"></i>
                 <h1>Phase Board</h1>
-                <p>Sign in with Google to track your projects from discovery to deploy, on every device.</p>
-                <p id="pbSignInError" class="pb-signin-error" role="alert" hidden></p>
-                <button id="pbSignInBtn" class="sign-in-btn">
-                    <i class="fa-brands fa-google"></i>
-                    <span>Sign in with Google</span>
-                </button>
+                <p>Loading your board…</p>
             </div>
         </div>
 
-        <!-- Main app (authenticated) -->
+        <!-- Main app. Local-first: usable before sign-in and offline; signing in
+             merges the local board with the cloud copy. -->
         <main id="pbApp" class="pb" style="display:none">
             <div class="pb-bar">
                 <button id="pbNewBtn" class="format-btn" style="margin-top:0"><i class="fa-solid fa-plus"></i> New project</button>
@@ -79,21 +75,22 @@
                 <input id="pbRestoreFile" type="file" accept="application/json,.json" hidden aria-label="Backup file to restore">
                 <span class="spacer"></span>
                 <div class="pb-user">
+                    <span id="pbModeBadge" class="pb-mode-badge" hidden title="Saved in this browser only">Local only</span>
+                    <button id="pbLocalSignInBtn" class="btn pb-signin-inline" hidden title="Sign in to sync this board across devices"><i class="fa-brands fa-google"></i> Sign in to sync</button>
                     <img id="pbAvatar" alt="" hidden />
                     <span id="pbUserName"></span>
-                    <button id="pbSignOutBtn" title="Sign out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    <button id="pbSignOutBtn" title="Sign out" aria-label="Sign out" hidden><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
             </div>
             <div id="pbPage" class="page"></div>
         </main>
 
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
         <script src="../../src/theme-manager.js"></script>
-        <script src="../../src/firebase-config.js"></script>
+        <script src="../../src/firebase-loader.js"></script>
         <script src="../../src/storage-manager.js"></script>
-        <script src="phase-board-core.js?v=ff391773"></script>
-        <script src="phase-board-app.js?v=ff391773"></script>
+        <script src="phase-board-core.js?v=9b85daff"></script>
+        <script src="phase-board-local.js?v=9b85daff"></script>
+        <script src="phase-board-app.js?v=9b85daff"></script>
+        <script src="../../src/site-chrome.js"></script>
     </body>
 </html>

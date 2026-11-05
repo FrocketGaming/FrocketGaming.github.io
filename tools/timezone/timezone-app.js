@@ -187,14 +187,14 @@ class TimezoneApp {
 
     // --- Custom Timezone Picker ---
 
-    buildTzPicker(defaultValue, onChange) {
+    buildTzPicker(defaultValue, onChange, placeholder) {
         const wrapper = document.createElement('div');
         wrapper.className = 'tz-picker';
 
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'tz-picker-input';
-        input.placeholder = 'Search timezone...';
+        input.placeholder = placeholder || 'Search timezone...';
         input.autocomplete = 'off';
         input.spellcheck = false;
 
@@ -351,11 +351,12 @@ class TimezoneApp {
         const addRow = document.createElement('div');
         addRow.className = 'tz-section-add';
 
-        const picker = this.buildTzPicker('', () => {});
+        const picker = this.buildTzPicker('', () => {}, 'Search a target zone…');
 
         const addBtn = document.createElement('button');
         addBtn.className = 'format-btn';
         addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add target';
+        addBtn.title = 'Add a conversion row for this timezone';
         addBtn.addEventListener('click', () => {
             const tz = picker.getValue();
             if (tz && !this.converterTargets.includes(tz)) {
@@ -442,11 +443,12 @@ class TimezoneApp {
 
     setupTimelineAddRow() {
         const addRow = document.getElementById('tlAddRow');
-        const picker = this.buildTzPicker('', () => {});
+        const picker = this.buildTzPicker('', () => {}, 'Search a city for the timeline…');
 
         const addBtn = document.createElement('button');
         addBtn.className = 'format-btn';
         addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add city';
+        addBtn.title = 'Add a row to the 24-hour timeline below';
         addBtn.addEventListener('click', () => {
             const tz = picker.getValue();
             if (tz && tz !== this.localTimezone && !this.timelineZones.includes(tz)) {

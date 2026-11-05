@@ -86,6 +86,8 @@ class RegexTester {
 
     init() {
         this.setupEventListeners();
+        // Global matching is what almost every test wants; presets set it too.
+        this.updateFlagsFromInput('g');
         this.renderPatterns();
     }
 
@@ -106,6 +108,15 @@ class RegexTester {
 
         // Replace button
         document.getElementById('replaceBtn').addEventListener('click', () => this.testReplace());
+
+        const tryExampleBtn = document.getElementById('tryExampleBtn');
+        if (tryExampleBtn) {
+            tryExampleBtn.addEventListener('click', () => {
+                const example = this.patterns.web.find(p => p.name === 'Email');
+                if (example) this.applyPreset(example);
+                document.getElementById('regexPattern').focus();
+            });
+        }
 
         // Category tabs
         document.querySelectorAll('.category-tab').forEach(tab => {
@@ -132,8 +143,6 @@ class RegexTester {
             return;
         }
 
-        console.log('Rendering', patterns.length, 'patterns for category:', this.currentCategory);
-
         // Clear container first
         container.innerHTML = '';
 
@@ -147,17 +156,11 @@ class RegexTester {
             btn.dataset.test = p.test;
 
             btn.addEventListener('click', () => {
-                console.log('Pattern button clicked:', p.name);
-                document.getElementById('regexPattern').value = p.pattern;
-                document.getElementById('testString').value = p.test;
-                this.updateFlagsFromInput(p.flags);
-                this.updateRegex();
+                this.applyPreset(p);
             });
 
             container.appendChild(btn);
         });
-
-        console.log('Buttons rendered:', container.children.length);
     }
 
     updateFlagsFromInput(flagString) {
@@ -170,6 +173,12 @@ class RegexTester {
         });
 
         this.updateRegex();
+    }
+
+    applyPreset(preset) {
+        document.getElementById('regexPattern').value = preset.pattern;
+        document.getElementById('testString').value = preset.test;
+        this.updateFlagsFromInput(preset.flags);
     }
 
     updateFlagsFromCheckboxes() {

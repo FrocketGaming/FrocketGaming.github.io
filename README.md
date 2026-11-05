@@ -39,10 +39,16 @@ Add multiple timezones and compare times across them at a glance. Includes a mee
 Compare two blocks of text and see exactly what changed — additions, deletions, and modified lines with word-level highlighting. Unchanged lines are collapsed by default so the output stays focused on the differences. Supports unified and side-by-side views, with optional labels for each side.
 
 ### Notes
-A Markdown note-taking tool with Firebase sync. Linked from the main nav and the landing page (`/tools/notes/`). Supports tags, pinning, archiving, split editor/preview, zen mode, a command palette, wiki-links, bulk actions, version history, image paste, Mermaid diagrams, and keyboard shortcuts. Requires Google sign-in.
+A Markdown note-taking tool with Firebase sync. Linked from the main nav and the landing page (`/tools/notes/`). Supports tags, pinning, archiving, split editor/preview, zen mode, a command palette, wiki-links, bulk actions, version history, image paste, Mermaid diagrams, and keyboard shortcuts. Works locally in this browser without an account; sign in with Google to sync across devices. Version history and image uploads need sign-in.
+
+The local-first merge has a Node test:
+
+```nu
+node tools/notes/tests/local.test.js
+```
 
 ### Phase Board
-Track projects from discovery to deploy. Each project moves through Discovery, Research, Build, Test and Deploy, with exit criteria you define per phase (the Standard and Lite flows start with none; "Standard flow with starter criteria" is a worked example you can use or duplicate, or save your own template; every phase also offers suggested criteria you can add with a click; when creating a project you can untick the phases it does not need; projects in progress can be given a High, Medium or Low priority, and the portfolio lists the most urgent first; each card in progress shows its place in the work order, which you change by dragging a card, or with Alt and the up or down arrow on a focused card), action items with an assignee and due date, decisions, risks (open, monitoring, mitigated or occurred) and constraints, and a closing outcomes section for the value added: before and after metrics, and amounts saved (hours, cost) that the year in review totals. Value added and Lessons learned (written once a project is complete) accept bullet points: start a line with * or -. Finished projects show their value on the project card, grouped in a collapsible Completed section below the projects in progress. A phase can hold up to three diagrams drawn in the Flow tool and saved to Snippets; they show collapsed, and the HTML export carries them as pictures. A portfolio view shows every project at a glance, and lists the open action items that are overdue, due today or due in the next three days, grouped by project with the most urgent first, which you can check off from there (the list collapses to a one-line summary, and clicking a count shows only that group). "Export HTML" saves a read-only snapshot you can send to stakeholders. Finished phases, action items and projects are stamped with a completion date (a project's start and completed dates can be changed by hand, so projects from the past can be added and found in the right year), finished or abandoned projects can be archived, and a Year in review page lists what you completed in a chosen year with the value added, metrics and decisions behind it (and exports as its own read-only file). Flows are editable: the Flows page keeps a library of the phases and exit criteria a project follows (reorder, rename, add or remove phases and criteria), and each project can adjust its own phases after it starts. A project can carry a Tag (for example NHOP) that groups related projects: the tag shows as a colored chip on its card, and the same tag always has the same color. Back up downloads every project and your own flows as one JSON file, and Restore adds them back (new items only, or replacing what is already there). Requires Google sign-in.
+Track projects from discovery to deploy. Each project moves through Discovery, Research, Build, Test and Deploy, with exit criteria you define per phase (the Standard and Lite flows start with none; "Standard flow with starter criteria" is a worked example you can use or duplicate, or save your own template; every phase also offers suggested criteria you can add with a click; when creating a project you can untick the phases it does not need; projects in progress can be given a High, Medium or Low priority, and the portfolio lists the most urgent first; each card in progress shows its place in the work order, which you change by dragging a card, or with Alt and the up or down arrow on a focused card), action items with an assignee and due date, decisions, risks (open, monitoring, mitigated or occurred) and constraints, and a closing outcomes section for the value added: before and after metrics, and amounts saved (hours, cost) that the year in review totals. Value added and Lessons learned (written once a project is complete) accept bullet points: start a line with * or -. Finished projects show their value on the project card, grouped in a collapsible Completed section below the projects in progress. A phase can hold up to three diagrams drawn in the Flow tool and saved to Snippets; they show collapsed, and the HTML export carries them as pictures. A portfolio view shows every project at a glance, and lists the open action items that are overdue, due today or due in the next three days, grouped by project with the most urgent first, which you can check off from there (the list collapses to a one-line summary, and clicking a count shows only that group). "Export HTML" saves a read-only snapshot you can send to stakeholders. Finished phases, action items and projects are stamped with a completion date (a project's start and completed dates can be changed by hand, so projects from the past can be added and found in the right year), finished or abandoned projects can be archived, and a Year in review page lists what you completed in a chosen year with the value added, metrics and decisions behind it (and exports as its own read-only file). Flows are editable: the Flows page keeps a library of the phases and exit criteria a project follows (reorder, rename, add or remove phases and criteria), and each project can adjust its own phases after it starts. A project can carry a Tag (for example NHOP) that groups related projects: the tag shows as a colored chip on its card, and the same tag always has the same color. Back up downloads every project and your own flows as one JSON file, and Restore adds them back (new items only, or replacing what is already there). Works locally in this browser without an account (projects are saved in IndexedDB); sign in with Google to sync the board across devices, and local work merges into the cloud board on sign-in.
 
 The tool has its own tests, which need only Node:
 
@@ -80,12 +86,22 @@ npx serve .
 
 ---
 
+## Backup
+
+`/backup/` collects every local store — snippets, tasks, notes, Phase Board projects and flows — plus UI settings (theme, recents, panel state) into one JSON file. Restore reads that file and replaces the matching stores in the browser after a confirmation and a size/format check. Nothing is uploaded.
+
+Notes images and version history live in Firebase and are not part of the backup; the page says so.
+
+---
+
 ## Architecture
 
 - **Static site** hosted on GitHub Pages — no server, no build step
 - **Local persistence** via IndexedDB (`QoLToolsDB`) using a shared `StorageManager` wrapper
-- **Cloud sync** (Snippets, Notes) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners
+- **Cloud sync** (Snippets, Notes, Phase Board) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners; all three work locally first, and Notes and Phase Board merge local work with the cloud on sign-in. Notes and Phase Board load the Firebase SDKs only when sync is enabled, so a local-only visit makes no Firebase requests.
 - **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>` with no flash on load
+- **Shared site chrome** — `src/site-chrome.js`/`.css` add the command palette (`Ctrl/⌘+K`, `Ctrl/⌘+Shift+P` on Notes), which searches tools, actions and local notes/tasks/snippets/projects and deep-links to the record; native tooltips and `aria-current` on the nav rail; and a skip link plus a visually hidden page heading.
+- **One-file backup** — `/backup/` exports every local store (snippets, tasks, notes, projects, flows) plus UI settings to one JSON file and restores it.
 - No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK)
 
 ---
@@ -102,7 +118,7 @@ npx serve .
 
 The newsletter fetches its issues with `fetch`, which browsers block on `file://` pages, so serve the site over http to view it locally.
 
-Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.js` pointing to your own Firebase project for cloud sync to work. Local-only features work without it.
+Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/firebase-config.js` for cloud sync. Snippets, Notes and Phase Board all work locally without any configuration; Notes' version history and image uploads, and Phase Board's cross-device sync, need Firebase.
 
 ---
 
@@ -114,10 +130,17 @@ Firebase-dependent tools (Snippets, Notes) require a valid `src/firebase-config.
 ├── landing-styles.css
 ├── src/                    Shared modules loaded by all tools
 │   ├── stylesheet.css      Global CSS variables and base styles
+│   ├── site-chrome.css     Command palette, skip link and shared shell styles
+│   ├── site-chrome.js      Palette (tools, actions, local records), nav polish, headings
 │   ├── theme-manager.js    Theme switching
 │   ├── storage-manager.js  IndexedDB wrapper
+│   ├── firebase-loader.js  Loads the Firebase SDKs on demand
 │   ├── firebase-config.js  Firebase project config
 │   └── firebase-sync.js    Firestore sync service
+├── backup/                 One-file export/restore of every local store
+│   ├── index.html
+│   ├── backup-app.js
+│   └── backup-styles.css
 ├── newsletter/             Snake Charmer newsletter
 │   ├── index.html
 │   ├── newsletter-app.js

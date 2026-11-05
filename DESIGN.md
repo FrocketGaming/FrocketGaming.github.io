@@ -131,7 +131,7 @@ Each theme swaps one primary/secondary accent pair and one neutral ramp; the pal
 | Nord | `#88c0d0` → `#81a1c1` (frost → blue) | Coolest, lowest-contrast palette; two blues instead of a hue jump |
 | Solarized Dark | `#268bd2` → `#2aa198` (blue → cyan) | The most muted ground (`#002b36`) of any theme |
 | SynthWave '84 | `#ff7edb` → `#36f9f6` (pink → cyan) | The one theme where the *neutrals* break "everything else quiet" too — secondary text and syntax colors stay saturated instead of settling into gray |
-| Canary | `#ffd43b` → `#a594db` (yellow → indigo) | The Snake Charmer newsletter's own palette on a warm near-black ground (`#0c0b09`; every neutral, text and border included, carries a slight warm tint so the yellow reads as native). Syntax colors come from the theme's own hues (violet keywords, mint strings and additions, muted-gold functions, orange numbers, cyan types, indigo variables, magenta tags) instead of a borrowed palette, and `--info-color` is cyan so it stays distinct from the indigo accent. The only theme that overrides `--band-3` and `--band-4`, and the default for `/newsletter/` when a visitor has no saved theme |
+| Canary | `#ffd43b` → `#a594db` (yellow → indigo) | The Snake Charmer newsletter's own palette on a warm near-black ground (`#0c0b09`; every neutral, text and border included, carries a slight warm tint so the yellow reads as native). Syntax colors come from the theme's own hues (violet keywords, mint strings and additions, muted-gold functions, orange numbers, cyan types, indigo variables, magenta tags) instead of a borrowed palette, and `--info-color` is cyan so it stays distinct from the indigo accent. The only theme that overrides `--band-3` and `--band-4`, and the site-wide default when a visitor has no saved theme (set in `src/theme-manager.js`; pages can override with `data-default-theme`) |
 
 A new theme should pick an accent pair with a clear identity of its own — not a hue that's already close to one of the eight above — and follow the existing "one accent color carries all signal" rule below regardless of hue choice.
 
@@ -208,17 +208,17 @@ A handful of literal colors exist outside the token list above, each for a speci
 
 ## Layout
 
-Fixed-position header (logo + theme selector + tool nav) with `body { padding-top: 140px }` to clear it; `body` uses `display:flex; flex-direction:column; align-items:center`, so page containers must set `width: 100%` to fill available space. The landing page is a centered hero (max-width 700px) above a responsive card grid (`repeat(auto-fill, minmax(270px, 1fr))`). Tool pages generally use a two-panel or three-panel row layout (`.columns-row`, `.box` at `height: 50vh`) that collapses to a single column under 992px.
+Fixed-position header (logo + theme selector + tool nav) with `body { padding-top: 140px }` to clear it; `body` uses `display:flex; flex-direction:column; align-items:center`, so page containers must set `width: 100%` to fill available space. The landing page is a centered hero (max-width 700px) above a numbered tool ledger (max-width 900px), with a filter field and `1`–`9` shortcuts above the rows. Tool pages generally use a two-panel or three-panel row layout (`.columns-row`, `.box` at `height: 50vh`) that collapses to a single column under 992px.
 
 ## Elevation & Depth
 
-Flat by default. Resting panels (`.box`) carry a faint ambient glow (`box-shadow: 0 0 4px var(--shadow-color)`), not a directional drop shadow implying a light source — it reads as "distinct surface," not "lifted object." The one exception is the landing page's `.tool-card`, which does use a real directional shadow at rest (`0 2px 8px rgba(0,0,0,0.15)`) plus a colored glow + lift on hover — worth flagging as an inconsistency with the rest of the flat system rather than a deliberate second material.
+Flat by default. Resting panels (`.box`) carry a faint ambient glow (`box-shadow: 0 0 4px var(--shadow-color)`), not a directional drop shadow implying a light source — it reads as "distinct surface," not "lifted object." The landing ledger is flat too: rows separate with hairline borders and a left accent edge on hover, with no lift or directional shadow.
 
 Floating overlays (tooltips, modal panels) are a distinct, legitimate second case: they use plain black directional shadows at varying opacity (e.g. Snippets' `.shortcuts-tooltip` at `rgba(0,0,0,0.4)`) to separate themselves from page content behind them. That's a real depth need — a themed accent glow doesn't read as "floating above" the way a neutral shadow does. Treat this as a second, narrower pattern (scrim/overlay separation), not a violation of the Ambient-Glow Rule, which governs in-flow component elevation.
 
 ### Shadow Vocabulary
 - **Ambient panel glow** (`box-shadow: 0 0 4px var(--shadow-color)`): resting state for `.box` containers.
-- **Focus ring** (`outline: 2px solid var(--accent-secondary); outline-offset: 1px` plus `border-color: var(--accent-secondary)`): the focus treatment for inputs, textareas, and select controls. No glow. Phase Board uses it now; the older `0 0 15px var(--accent-primary)` focus glow remains on `.box:focus-within` and the theme select until they are moved over.
+- **Focus ring** (`outline: 2px solid var(--accent-secondary); outline-offset: 1px` plus `border-color: var(--accent-secondary)`): the focus treatment for inputs, textareas, select controls, checkboxes, and `.box:focus-within`. No glow. The old `0 0 15px var(--accent-primary)` focus glow is gone from the shared panels and tool fields.
 - **Interactive hover glow** (`box-shadow: 0 0 10px var(--accent-primary)`): nav-link and button hover.
 - **Overlay separation shadow** (`box-shadow: [offsets] rgba(0,0,0,0.3-0.8)`): floating tooltips/modals lifting off page content; neutral black, not theme-colored.
 
@@ -242,19 +242,19 @@ The two steps beyond the original six were already in wide use and are now docum
 - **Hover:** background shifts to `--accent-secondary`, text flips to `--bg-primary`.
 - **Ghost/Secondary:** `.clear-bnt` — background `--bg-tertiary`, text `--text-primary`; hover shifts to `--error-color` (it's used for destructive/clear actions specifically).
 
-### Cards (landing page)
-- **Corner Style:** 10px radius.
-- **Background:** `--bg-secondary`.
-- **Shadow Strategy:** real drop shadow at rest + colored glow/lift on hover (see Elevation exception above).
-- **Border:** 1px `--border-color`, shifts to `--accent-primary` on hover.
-- **Internal Padding:** `28px 22px 24px`.
+### Tool Ledger (landing page)
+- **Structure:** one row per tool in a `48px 32px 1fr auto` grid — index, icon, name + description, chevron.
+- **Interaction:** hairline bottom border; hover tints the row with `--bg-hover` and adds a 3px `--accent-primary` left edge (no lift, no shadow).
+- **Filter:** a 38px search field above the rows. `/` focuses it, `1`–`9` open the nth visible row, Enter opens the first match, Esc clears the filter.
 
 ### Inputs / Fields
 - **Style:** `--bg-secondary`/`--bg-tertiary` background, 1px `--border-color` border, 4-5px radius, no native outline.
-- **Focus:** border shifts to `--accent-secondary` plus a solid 2px `--accent-secondary` ring (see Shadow Vocabulary, Focus ring). Phase Board fields use it; remaining legacy glows are being moved over.
+- **Focus:** border shifts to `--accent-secondary` plus a solid 2px `--accent-secondary` ring (see Shadow Vocabulary, Focus ring). Used by shared inputs, `.box:focus-within`, and checkboxes; the old focus glows are gone.
 
 ### Navigation
-- Fixed header, centered uppercase logo (3px letter-spacing), right-aligned theme `<select>`. Nav links (`.tool-btn`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background.
+- Fixed header, centered uppercase logo (3px letter-spacing), right-aligned theme `<select>`. Nav links (`.nav-pill-item`): `--bg-secondary` background at rest, invert to `--accent-primary` background + `--bg-primary` text + glow + `translateY(-2px)` lift on hover; the current page's link uses `--accent-secondary` as a static "active" background and gets `aria-current="page"` from `src/site-chrome.js`.
+- Command palette (`.site-palette-*`, `src/site-chrome.js`): `Ctrl/⌘+K` (`Ctrl/⌘+Shift+P` on Notes, which already owns `Ctrl+K`) opens a centered dialog with actions (new note/task/snippet/project, backup), fuzzy tool search, and — once at least two characters are typed — matches from local notes, tasks, snippets and projects. Results are grouped, arrow/Enter/Esc driven, with a Recent group from `localStorage`. Selection is a tinted accent row with a 1px accent border — never a filled primary control.
+- Skip link (`.skip-link`, `src/site-chrome.js`): the first focusable element on every page, visually hidden until focused; it jumps to the page's main region (marked with `data-skip-target`). The stylesheet is loaded before the link is revealed, so it never flashes into the first paint.
 - Newsletter link (`.newsletter-link`): pinned to the far left of the fixed header on every page, out of flow so it never widens the centered icon row, and deliberately not part of the tool rail. An outlined pill in `--accent-primary` that fills on hover, focus, and on the newsletter page itself (`.active`). Shows `Newsletter` above 1100px. At 1100px and below it collapses to an icon that expands to its name on hover or focus with the same mechanism, timing, and glow as the rail's pills (it reuses the `.nav-pill-label` markup, and stays expanded when it is the current page until 1000px). From 641px to 1100px the link, the rail, and the theme selector share one flow row so they cannot overlap: the "Theme:" label and the current page's expanded label are dropped up to 1000px, spacing tightens up to 800px, and below about 720px the rail wraps to a second row and the page gets the phone layout's extra top padding. At 640px and below, line one holds the newsletter icon (left) and the theme selector (right), the rail wraps below them across the full width, and pages reserve 172px at the top (the header is at most two rail rows tall); on phones 340px and narrower the current page's pill also stays icon-only.
 - Newsletter section navigation (`.nl-jump`, `newsletter/` only): a fixed rail in the free space right of the 800px column at 1320px and up, up to 264px wide, and a floating accent-primary "Sections" pill button that opens the same list in a panel below that width. Both are visible from the moment the issue renders, so navigation is available before any scrolling. Top-level `###` sub-headings nest under their section as smaller indented links. Flat like the rest of the page (hairline border, no shadow); the section in view is marked with a `--band` colored outline (`aria-current="true"`), deliberately not a side stripe.
 - Newsletter back-to-top (`.nl-to-top`, `newsletter/` only): a 40px circular (`999px` pill step) accent-primary icon button fixed bottom-left, mirroring the "Sections" pill at bottom-right. It fades in once the reader is about three quarters of a screen down and scrolls to the top using the page's existing smooth-scroll rule, which reduced-motion users opt out of.

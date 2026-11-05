@@ -42,3 +42,91 @@
         flex-wrap: wrap;
     }
 }
+
+/* Labelled panes: Input / Output, with the result actions living beside the
+   result instead of in the global toolbar. */
+.pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.pane-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 24px;
+    padding: 0 2px 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pane-label {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pane-note {
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pane-note i {
+    margin-right: 3px;
+    font-size: 10px;
+}
+
+.pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.pane-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.pane-btn:hover:not(:disabled),
+.pane-btn:focus-visible {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    outline: none;
+}
+
+.pane-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pane textarea {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+}
+
+@media (max-width: 768px) {
+    .pane-note {
+        display: none;
+    }
+}

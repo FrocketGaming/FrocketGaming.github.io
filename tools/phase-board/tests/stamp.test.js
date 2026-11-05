@@ -23,10 +23,11 @@ fs.writeFileSync(page, fs.readFileSync(page, 'utf8').replace(/\?v=[0-9a-f]+/g, '
 const stale = run('--check', '--dir', tmp);
 ok(stale.status === 1 && /OUT OF DATE/.test(stale.stdout) && stampOf().every(v => v === 'deadbeef'), '--check reports a stale stamp, exits 1, and does not write');
 
-// A normal run fixes it on the three tags, and a second run changes nothing.
+// A normal run fixes every tag, and a second run changes nothing.
+const expectedTags = [...fs.readFileSync(page, 'utf8').matchAll(/phase-board-[a-z-]+\.(?:js|css)/g)].length;
 const fix = run('--dir', tmp);
 const v1 = stampOf();
-ok(fix.status === 0 && v1.length === 3 && new Set(v1).size === 1 && v1[0] !== 'deadbeef', 'a normal run stamps all three tags with one version');
+ok(fix.status === 0 && v1.length === expectedTags && new Set(v1).size === 1 && v1[0] !== 'deadbeef', 'a normal run stamps every tag with one version');
 const before = fs.readFileSync(page, 'utf8');
 const again = run('--dir', tmp);
 ok(again.status === 0 && /already current/.test(again.stdout) && fs.readFileSync(page, 'utf8') === before, 'running it again changes nothing');

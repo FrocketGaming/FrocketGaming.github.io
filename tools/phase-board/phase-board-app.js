@@ -9,6 +9,10 @@ class PhaseBoardApp {
         this.auth = null;
         this.db = null;
         this.user = null;
+        this.mode = 'local';
+        this.localStore = (typeof LocalBoardStore !== 'undefined') ? new LocalBoardStore() : null;
+        this.localReady = null;
+        this.deepLinkApplied = false;
         this.unsub = null;
         this.projects = {};
         this.view = 'portfolio';
@@ -50,16 +54,229 @@ class PhaseBoardApp {
 
     init() {
         attachBackToTop(document, window);
+        this.localLoad = this.localStore ? this.localStore.load() : Promise.resolve();
+        this.localReady = this.localStore
+            ? Promise.race([
+                this.localLoad,
+                new Promise(resolve => setTimeout(resolve, 5000))
+            ])
+            : Promise.resolve();
         this.bindEvents();
-        this.initFirebase();
+        // Show the board immediately from local storage; a signed-in visitor's
+        // cloud copy replaces it as soon as auth and the first snapshot arrive.
+        this.localReady.then(() => {
+            if (this.mode !== 'cloud') this.startLocalMode();
+        });
+        try {
+            if (this.syncRequested()) this.connectFirebase().catch(() => {});
+        } catch (err) {
+            console.error('Phase Board: Firebase init failed', err);
+            this.localReady.then(() => this.startLocalMode('Sign-in is unavailable. You are working locally; projects stay in this browser.'));
+        }
+        setTimeout(() => {
+            const boot = document.getElementById('pbBoot');
+            if (boot && boot.style.display !== 'none') {
+                this.startLocalMode('Starting local storage is slow. Reload if the board stays empty.');
+            }
+        }, 10000);
+    }
+
+    hideBootScreen() {
+        const boot = document.getElementById('pbBoot');
+        if (boot) boot.style.display = 'none';
+    }
+
+    showApp() {
+        this.hideBootScreen();
+        const gate = document.getElementById('pbSignIn');
+        if (gate) gate.style.display = 'none';
+        const app = document.getElementById('pbApp');
+        if (app) app.style.display = 'block';
+    }
+
+    updateAccountUI() {
+        const local = this.mode === 'local';
+        const user = this.user;
+        const badge = document.getElementById('pbModeBadge');
+        const signIn = document.getElementById('pbLocalSignInBtn');
+        const avatar = document.getElementById('pbAvatar');
+        const name = document.getElementById('pbUserName');
+        const signOut = document.getElementById('pbSignOutBtn');
+        if (badge) badge.hidden = !local;
+        if (signIn) signIn.hidden = !!user;
+        if (avatar) {
+            avatar.hidden = !user || !user.photoURL;
+            if (user && user.photoURL) avatar.src = user.photoURL;
+        }
+        if (name) name.textContent = user ? (user.displayName || user.email || '') : '';
+        if (signOut) signOut.hidden = !user;
+    }
+
+    async startLocalMode(message) {
+        if (this.localReady) await this.localReady;
+        if (this.mode === 'cloud') return;
+        this.mode = 'local';
+        this.showApp();
+        this.updateAccountUI();
+        if (!this.unsub) this.startLocalSync();
+        if (this.localStore && this.localStore.error) {
+            this.setNote(this.localStore.error, true, 0);
+        } else if (message) {
+            this.setNote(message, false, 0);
+        }
+    }
+
+    startLocalSync() {
+        this.stopSync();
+        this.loaded = false;
+        this.render();
+        this.unsub = this.projectsRef().onSnapshot(snap => {
+            this.projects = this.mapSnapshot(snap);
+            this.loaded = true;
+            this.render();
+            this.applyDeepLink();
+        });
+        this.unsubFlows = this.flowsRef().onSnapshot(snap => {
+            this.flows = this.mapSnapshot(snap);
+            this.render();
+        });
+    }
+
+    mapSnapshot(snap) {
+        const next = {};
+        snap.docs.forEach(d => { next[d.id] = d.data(); });
+        return next;
+    }
+
+    applyDeepLink() {
+        if (this.deepLinkApplied || !this.loaded) return;
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('project');
+        const isNew = params.get('new') === '1';
+        if (!id && !isNew) {
+            this.deepLinkApplied = true;
+            return;
+        }
+        if (isNew) {
+            this.deepLinkApplied = true;
+            history.replaceState({}, '', window.location.pathname);
+            this.showNew = true;
+            this.view = 'portfolio';
+            this.render();
+            document.getElementById('npName')?.focus();
+            return;
+        }
+        if (!this.projects[id]) return; // wait for the first snapshot
+        this.deepLinkApplied = true;
+        history.replaceState({}, '', window.location.pathname);
+        this.openProject(id);
+    }
+
+    // Push projects and flows edited while signed out into the cloud board.
+    // A document only replaces a cloud copy when its updatedAt is newer; local
+    // deletions only remove a cloud document that has not changed since.
+    async mergeLocalIntoCloud() {
+        const local = this.localStore;
+        if (!local) return { ok: true, pushed: 0 };
+        if (this.localLoad) await this.localLoad;
+        const projects = local.projects;
+        const flows = local.flows;
+        const tombstones = local.tombstones.slice();
+        if (!Object.keys(projects).length && !Object.keys(flows).length && !tombstones.length) {
+            return { ok: true, pushed: 0 };
+        }
+        try {
+            const remoteProjects = this.mapSnapshot(await this.cloudProjectsRef().get());
+            const remoteFlows = this.mapSnapshot(await this.cloudFlowsRef().get());
+            let pushed = 0;
+
+            for (const stone of tombstones) {
+                const isProject = stone.kind === 'projects';
+                const remote = (isProject ? remoteProjects : remoteFlows)[stone.id];
+                if (!remote) continue;
+                if ((remote.updatedAt || 0) <= stone.at) {
+                    await (isProject ? this.cloudProjectsRef() : this.cloudFlowsRef()).doc(stone.id).delete();
+                    pushed++;
+                }
+            }
+
+            const knownProjects = (local.known && local.known.projects) || {};
+            const knownFlows = (local.known && local.known.flows) || {};
+            const syncedAt = local.syncedAt || 0;
+
+            for (const [id, data] of Object.entries(projects)) {
+                const remote = remoteProjects[id];
+                if (!remote) {
+                    // Known to the cloud but gone now: deleted on another device.
+                    // Keep it only if it was edited after the last cloud mirror.
+                    if (knownProjects[id] && !((data.updatedAt || 0) > syncedAt)) {
+                        await local.drop('projects', id);
+                    } else {
+                        await this.cloudProjectsRef().doc(id).set(data);
+                        pushed++;
+                    }
+                    continue;
+                }
+                if ((data.updatedAt || 0) > (remote.updatedAt || 0)) {
+                    await this.cloudProjectsRef().doc(id).set(data);
+                    pushed++;
+                }
+            }
+
+            for (const [id, data] of Object.entries(flows)) {
+                const remote = remoteFlows[id];
+                if (!remote) {
+                    if (knownFlows[id] && !((data.updatedAt || 0) > syncedAt)) {
+                        await local.drop('flows', id);
+                    } else {
+                        await this.cloudFlowsRef().doc(id).set(data);
+                        pushed++;
+                    }
+                    continue;
+                }
+                if ((data.updatedAt || 0) > (remote.updatedAt || 0)) {
+                    await this.cloudFlowsRef().doc(id).set(data);
+                    pushed++;
+                }
+            }
+
+            await local.clearTombstones();
+            return { ok: true, pushed };
+        } catch (err) {
+            console.error('Phase Board: could not merge local projects', err);
+            return { ok: false, pushed: 0 };
+        }
     }
 
     // ─── Firebase ─────────────────────────────────────────────
 
+    syncRequested() {
+        try {
+            if (localStorage.getItem('qol-phase-board-sync') === '1') return true;
+        } catch (e) { /* storage unavailable */ }
+        return new URLSearchParams(window.location.search).get('signin') === '1';
+    }
+
+    async connectFirebase() {
+        if (this.auth) return true;
+        if (typeof window.loadFirebase !== 'function') {
+            this.setNote('The sync service is unavailable. You are working locally.', true, 0);
+            return false;
+        }
+        const loaded = await window.loadFirebase();
+        if (!loaded) {
+            this.setNote('Could not load the sync service. You are working locally.', true, 0);
+            return false;
+        }
+        this.initFirebase();
+        return !!this.auth;
+    }
+
     initFirebase() {
+        if (this.auth) return;
         if (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined') {
             console.warn('Phase Board: Firebase SDK or config not available');
-            document.getElementById('pbSignIn').style.display = 'flex';
+            this.localReady.then(() => this.startLocalMode('Sign-in is unavailable. You are working locally; projects stay in this browser.'));
             return;
         }
         if (!firebase.apps.length) {
@@ -77,30 +294,50 @@ class PhaseBoardApp {
         this.auth.onAuthStateChanged(user => this.onAuthChange(user));
     }
 
-    onAuthChange(user) {
+    async onAuthChange(user) {
+        this.hideBootScreen();
+        if (this.localReady) await this.localReady;
         this.user = user;
+        try {
+            if (user) localStorage.setItem('qol-phase-board-sync', '1');
+            else localStorage.removeItem('qol-phase-board-sync');
+        } catch (e) { /* storage unavailable */ }
         if (user) {
-            document.getElementById('pbSignIn').style.display = 'none';
-            document.getElementById('pbApp').style.display = 'block';
-            const avatar = document.getElementById('pbAvatar');
-            if (user.photoURL) avatar.src = user.photoURL;
-            avatar.hidden = !user.photoURL;
-            document.getElementById('pbUserName').textContent = user.displayName || user.email || '';
+            this.showApp();
+            this.updateAccountUI();
+            const merged = await this.mergeLocalIntoCloud();
+            if (!merged.ok) {
+                this.mode = 'local';
+                this.updateAccountUI();
+                this.startLocalMode();
+                this.setNote('Signed in, but local projects could not be merged. They are still in this browser; reload to retry.', true, 0);
+                return;
+            }
+            this.mode = 'cloud';
+            this.updateAccountUI();
             this.startSync();
+            if (merged.pushed) {
+                this.setNote('Merged ' + merged.pushed + ' local change' + (merged.pushed === 1 ? '' : 's') + ' into your cloud board.', false);
+            }
         } else {
-            document.getElementById('pbSignIn').style.display = 'flex';
-            document.getElementById('pbApp').style.display = 'none';
-            this.stopSync();
-            this.projects = {};
-            this.flows = {};
-            this.editor = null;
-            this.view = 'portfolio';
-            this.loaded = false;
+            this.mode = 'local';
+            this.updateAccountUI();
+            this.startLocalMode();
         }
     }
 
     projectsRef() {
+        if (this.mode === 'local' && this.localStore) return this.localStore.collection('projects');
+        return this.cloudProjectsRef();
+    }
+
+    cloudProjectsRef() {
         return this.db.collection('users').doc(this.user.uid).collection('projects');
+    }
+
+    batch() {
+        if (this.mode === 'local' && this.localStore) return this.localStore.batch();
+        return this.db.batch();
     }
 
     startSync() {
@@ -111,21 +348,24 @@ class PhaseBoardApp {
         // Offline or blocked networks can leave the listener silent, so say so after 10 s.
         this.slowTimer = setTimeout(() => { this.setNote('Still trying to reach your projects. What you see may be out of date.', false, 0); }, 10000);
         this.unsubFlows = this.flowsRef().onSnapshot(snap => {
-            const next = {};
-            snap.docs.forEach(d => { next[d.id] = d.data(); });
+            const next = this.mapSnapshot(snap);
             this.flows = next;
+            if (this.localStore) this.localStore.replace('flows', next);
             this.render();
         }, err => console.error('Phase Board: Flow sync error:', err));
         this.unsub = this.projectsRef().onSnapshot(snap => {
-            const next = {};
-            snap.docs.forEach(d => { next[d.id] = d.data(); });
+            const next = this.mapSnapshot(snap);
             this.projects = next;
             this.loaded = true;
+            // Keep a local copy of the last cloud state so the board still opens
+            // instantly, and offline, on the next visit.
+            if (this.localStore) this.localStore.replace('projects', next);
             if (!snap.metadata.fromCache) {
                 clearTimeout(this.slowTimer);
                 if (this.note.startsWith('Still trying')) this.note = '';
             }
             this.render();
+            this.applyDeepLink();
         }, err => {
             console.error('Phase Board: Sync error:', err);
             clearTimeout(this.slowTimer);
@@ -142,19 +382,13 @@ class PhaseBoardApp {
 
     // ─── Auth ─────────────────────────────────────────────────
 
-    showSignInError(message) {
-        const el = document.getElementById('pbSignInError');
-        if (!el) return;
-        el.textContent = message;
-        el.hidden = !message;
-    }
-
     async signIn() {
-        this.showSignInError('');
         if (!this.auth) {
-            this.showSignInError('Sign-in is unavailable because Firebase did not load. Check your connection and reload.');
-            return;
+            this.setNote('Connecting to Google…', false);
+            const connected = await this.connectFirebase();
+            if (!connected || !this.auth) return;
         }
+        if (this.auth.currentUser) return; // an existing session restored; onAuthChange will sync it
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             await this.auth.signInWithPopup(provider);
@@ -164,11 +398,11 @@ class PhaseBoardApp {
                     await this.auth.signInWithRedirect(provider);
                 } catch (e) {
                     console.error('Phase Board: Sign-in failed:', e);
-                    this.showSignInError('Sign-in failed. Allow pop-ups for this site and try again.');
+                    this.setNote('Sign-in failed. Allow pop-ups for this site and try again.', true, 0);
                 }
             } else {
                 console.error('Phase Board: Sign-in failed:', err);
-                this.showSignInError('Sign-in failed. Try again in a moment.');
+                this.setNote('Sign-in failed. Try again in a moment.', true, 0);
             }
         }
     }
@@ -201,12 +435,13 @@ class PhaseBoardApp {
         const next = moveInOrder(activeOrder(this.projects), id, targetId, after);
         const writes = orderWrites(this.projects, next);
         if (!writes.length) return false;
-        writes.forEach(w => { this.projects[w.id] = Object.assign({}, this.projects[w.id], { order: w.order }); });
+        const updatedAt = Date.now();
+        writes.forEach(w => { this.projects[w.id] = Object.assign({}, this.projects[w.id], { order: w.order, updatedAt: updatedAt }); });
         this.render();
         try {
             for (let i = 0; i < writes.length; i += 400) {
-                const batch = this.db.batch();
-                writes.slice(i, i + 400).forEach(w => batch.update(this.projectsRef().doc(w.id), { order: w.order }));
+                const batch = this.batch();
+                writes.slice(i, i + 400).forEach(w => batch.update(this.projectsRef().doc(w.id), { order: w.order, updatedAt: updatedAt }));
                 await batch.commit();
             }
             return true;
@@ -259,7 +494,7 @@ class PhaseBoardApp {
         const shown = filterProjects(list, this.filter);
         let body;
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
-        else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p><button class="btn primary" type="button" data-act="new">New project</button></div>';
+        else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p>' + (this.mode === 'local' ? '<p class="pb-local-hint">Projects are saved in this browser. Sign in from the toolbar to sync them across devices.</p>' : '') + '<button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
         else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects), drag: true });
         return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
@@ -314,7 +549,7 @@ class PhaseBoardApp {
     }
 
     render() {
-        if (!this.user) return;
+        if (!this.user && this.mode !== 'local') return;
         this.keepFocus(() => {
             const page = document.getElementById('pbPage');
             page.innerHTML = this.view === 'portfolio' ? this.portfolioHTML()
@@ -454,8 +689,8 @@ class PhaseBoardApp {
 
     // Saved charts from the cloud (when signed in) and from this browser, merged.
     async loadCharts() {
-        const remote = this.db
-            ? this.projectsRef().firestore.collection('users').doc(this.user.uid).collection('snippets').where('extension', '==', 'canvas').get()
+        const remote = (this.db && this.user)
+            ? this.cloudProjectsRef().firestore.collection('users').doc(this.user.uid).collection('snippets').where('extension', '==', 'canvas').get()
                 .then(snap => snap.docs.map(d => d.data())).catch(() => [])
             : Promise.resolve([]);
         const local = (typeof StorageManager !== 'undefined')
@@ -601,7 +836,7 @@ class PhaseBoardApp {
         this.render();
         try {
             for (let i = 0; i < plan.writes.length; i += 400) {
-                const batch = this.db.batch();
+                const batch = this.batch();
                 plan.writes.slice(i, i + 400).forEach(w => batch.set((w.kind === 'projects' ? this.projectsRef() : this.flowsRef()).doc(w.id), w.data));
                 await batch.commit();
             }
@@ -705,7 +940,7 @@ class PhaseBoardApp {
         try {
             const base = this.findFlow(flowKey) || { key: 'standard', name: TEMPLATES.standard.name, phases: TEMPLATES.standard.phases };
             const flow = pick ? pickPhases(base, pick.phases, pick.starter) : base;
-            await this.projectsRef().doc(id).set(Object.assign(blankProject(name, flow, owner || '', lead || ''), cleanTag(tag) ? { tag: cleanTag(tag) } : {}));
+            await this.projectsRef().doc(id).set(Object.assign(blankProject(name, flow, owner || '', lead || ''), { updatedAt: Date.now() }, cleanTag(tag) ? { tag: cleanTag(tag) } : {}));
             this.showNew = false;
             this.openProject(id);
         } catch (err) {
@@ -730,6 +965,11 @@ class PhaseBoardApp {
     // ─── Flows ────────────────────────────────────────────────
 
     flowsRef() {
+        if (this.mode === 'local' && this.localStore) return this.localStore.collection('flows');
+        return this.cloudFlowsRef();
+    }
+
+    cloudFlowsRef() {
         return this.db.collection('users').doc(this.user.uid).collection('flows');
     }
 
@@ -972,7 +1212,7 @@ class PhaseBoardApp {
     // ─── Events ───────────────────────────────────────────────
 
     bindEvents() {
-        document.getElementById('pbSignInBtn')?.addEventListener('click', () => this.signIn());
+        document.getElementById('pbLocalSignInBtn')?.addEventListener('click', () => this.signIn());
         document.getElementById('pbSignOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('pbExportBtn')?.addEventListener('click', () => this.exportSnapshot());
         document.getElementById('pbReviewBtn')?.addEventListener('click', () => { this.view = '__review'; this.editor = null; this.render(); window.scrollTo(0, 0); });

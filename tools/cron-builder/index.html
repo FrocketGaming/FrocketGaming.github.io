@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -77,8 +77,13 @@
 
         <div class="cron-input-section">
             <label for="cronExpression">Cron Expression:</label>
-            <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
-            <div class="cron-description" id="cronDescription">Every minute</div>
+            <div class="cron-expression-row">
+                <input type="text" id="cronExpression" placeholder="* * * * *" value="* * * * *" spellcheck="false">
+                <button type="button" class="cron-copy-btn" id="copyCronBtn" title="Copy the cron expression">
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i> Copy
+                </button>
+            </div>
+            <div class="cron-description" id="cronDescription" aria-live="polite">Every minute</div>
         </div>
 
         <div class="cron-builder" id="cronBuilder">
@@ -219,7 +224,10 @@
         </div>
 
         <div class="cron-next-runs">
-            <h3>Next 5 Runs</h3>
+            <div class="cron-next-header">
+                <h3>Next 5 Runs</h3>
+                <span class="cron-next-tz" id="nextRunsTz"></span>
+            </div>
             <ul id="nextRunsList">
                 <li>-</li>
             </ul>
@@ -229,6 +237,7 @@
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="cron-builder-app.js"></script>
+        <script src="../../src/site-chrome.js"></script>
 </body>
 
 </html>

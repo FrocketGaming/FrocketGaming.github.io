@@ -902,9 +902,31 @@ class SnippetsApp {
 
         // Check for shared snippet in URL
         this.checkShareParam();
+        this.applyDeepLink();
       }
     } catch (error) {
       console.error("Failed to initialize Snippets App:", error);
+    }
+  }
+
+  applyDeepLink() {
+    if (this.deepLinkApplied) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("snippet");
+    const isNew = params.get("new") === "1";
+    if (id) {
+      const snippet = this.snippets.find((s) => String(s.id) === id);
+      if (snippet) {
+        this.deepLinkApplied = true;
+        history.replaceState({}, "", window.location.pathname);
+        this.viewSnippet(snippet.id);
+      }
+    } else if (isNew) {
+      this.deepLinkApplied = true;
+      history.replaceState({}, "", window.location.pathname);
+      this.openNewSnippetModal();
+    } else {
+      this.deepLinkApplied = true;
     }
   }
 
@@ -918,6 +940,14 @@ class SnippetsApp {
     document
       .getElementById("newSnippetBtn")
       .addEventListener("click", () => this.openNewSnippetModal());
+
+    document
+      .getElementById("emptyNewSnippetBtn")
+      ?.addEventListener("click", () => this.openNewSnippetModal());
+
+    document
+      .getElementById("emptyImportBtn")
+      ?.addEventListener("click", () => document.getElementById("importBtn").click());
 
     // Templates
     document
@@ -3842,6 +3872,7 @@ class SnippetsApp {
           document.getElementById("emptyState").style.display = "flex";
         }
       }
+      this.applyDeepLink();
     }
   }
 

@@ -6,6 +6,10 @@ class NotesApp {
         this.db = null;
         this.auth = null;
         this.storage = null;
+        this.mode = 'local';
+        this.localStore = (typeof LocalNotesStore !== 'undefined') ? new LocalNotesStore() : null;
+        this.localLoad = null;
+        this.localReady = null;
         this.unsub = null;
         this.saveTimer = null;
         this.previewMode = false;
@@ -35,10 +39,31 @@ class NotesApp {
         this.tagSuggestionIndex = 0;
 
         this.previewRenderToken = 0;
+        this.deepLinkApplied = false;
     }
 
     init() {
-        this.initFirebase();
+        this.localLoad = this.localStore ? this.localStore.load() : Promise.resolve();
+        this.localReady = this.localStore
+            ? Promise.race([this.localLoad, new Promise(resolve => setTimeout(resolve, 5000))])
+            : Promise.resolve();
+        // Open notes from this browser immediately; a signed-in visitor's cloud
+        // copy replaces it as soon as auth and the first snapshot arrive.
+        this.localReady.then(() => {
+            if (this.mode !== 'cloud') this.startLocalMode();
+        });
+        try {
+            if (this.syncRequested()) this.connectFirebase().catch(() => {});
+        } catch (err) {
+            console.error('Notes: Firebase init failed', err);
+            this.localReady.then(() => this.startLocalMode('Sign-in is unavailable. Notes are saved in this browser.'));
+        }
+        setTimeout(() => {
+            const boot = document.getElementById('notesBoot');
+            if (boot && boot.style.display !== 'none') {
+                this.startLocalMode('Starting local storage is slow. Reload if your notes do not appear.');
+            }
+        }, 10000);
         if (typeof mermaid !== 'undefined') {
             try { mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' }); }
             catch (err) { console.warn('Notes: Mermaid init failed:', err); }
@@ -46,6 +71,39 @@ class NotesApp {
         this.bindEvents();
         this.updateHeaderOffset();
         window.addEventListener('resize', () => this.updateHeaderOffset());
+    }
+
+    hideBootScreen() {
+        const boot = document.getElementById('notesBoot');
+        if (boot) boot.style.display = 'none';
+    }
+
+    showApp() {
+        this.hideBootScreen();
+        const gate = document.getElementById('signInScreen');
+        if (gate) gate.style.display = 'none';
+        const app = document.getElementById('notesApp');
+        if (app) app.style.display = 'flex';
+        this.updateHeaderOffset();
+    }
+
+    updateAccountUI() {
+        const user = this.user;
+        const local = this.mode === 'local';
+        const badge = document.getElementById('notesModeBadge');
+        const signIn = document.getElementById('notesLocalSignInBtn');
+        const userInfo = document.getElementById('userInfo');
+        const sync = document.getElementById('syncStatus');
+        const avatar = document.getElementById('userAvatar');
+        const name = document.getElementById('userName');
+        if (badge) badge.hidden = !local;
+        if (signIn) signIn.hidden = !!user;
+        if (userInfo) userInfo.style.display = user ? 'flex' : 'none';
+        if (sync) sync.style.display = user ? 'flex' : 'none';
+        if (user) {
+            if (avatar && user.photoURL) avatar.src = user.photoURL;
+            if (name) name.textContent = user.displayName || user.email || '';
+        }
     }
 
     // ─── Layout ───────────────────────────────────────────────
@@ -64,12 +122,173 @@ class NotesApp {
         }
     }
 
+    async startLocalMode(message) {
+        if (this.localReady) await this.localReady;
+        if (this.mode === 'cloud') return;
+        this.mode = 'local';
+        this.showApp();
+        this.updateAccountUI();
+        if (!this.unsub) this.startLocalSync();
+        if (this.localStore && this.localStore.error) this.showNotice(this.localStore.error);
+        else if (message) this.showNotice(message);
+    }
+
+    startLocalSync() {
+        this.stopSync();
+        this.setSyncStatus('local');
+        this.unsub = this.notesRef().onSnapshot(snapshot => this.onNotesSnapshot(snapshot));
+    }
+
+    onNotesSnapshot(snapshot) {
+        this.notes = [];
+        snapshot.forEach(doc => {
+            this.notes.push({ ...doc.data(), _firestoreId: doc.id });
+        });
+
+        if (this.mode === 'cloud' && this.localStore) {
+            const map = {};
+            this.notes.forEach(note => {
+                const { _firestoreId, ...data } = note;
+                map[note.id] = data;
+            });
+            this.localStore.replace(map);
+        }
+
+        this.refresh();
+        this.setSyncStatus(this.mode === 'local' ? 'local' : 'synced');
+
+        if (this.currentNoteId) {
+            const exists = this.notes.find(n => n.id === this.currentNoteId);
+            if (!exists) {
+                this.currentNoteId = null;
+                this.showEmptyState();
+            } else {
+                this.updateEditorChrome(exists);
+            }
+        }
+        this.applyDeepLink();
+    }
+
+    applyDeepLink() {
+        if (this.deepLinkApplied) return;
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('note');
+        const isNew = params.get('new') === '1';
+        if (!id && !isNew) {
+            this.deepLinkApplied = true;
+            return;
+        }
+        if (isNew) {
+            this.deepLinkApplied = true;
+            history.replaceState({}, '', window.location.pathname);
+            this.newNote();
+            return;
+        }
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return; // the first snapshot may not have arrived yet
+        this.deepLinkApplied = true;
+        history.replaceState({}, '', window.location.pathname);
+        this.handleNoteClick(id);
+    }
+
+    canUseNotes() {
+        return this.mode === 'local' ? !!this.localStore : !!(this.db && this.user);
+    }
+
+    notesRef() {
+        if (this.mode === 'local' && this.localStore) return this.localStore.collection('notes');
+        return this.cloudNotesRef();
+    }
+
+    cloudNotesRef() {
+        return this.db.collection('users').doc(this.user.uid).collection('notes');
+    }
+
+    // Push notes edited or created while signed out into the cloud. A note only
+    // replaces a cloud copy when its updatedAt is newer; a local purge removes a
+    // cloud note only when that note has not changed since.
+    async mergeLocalIntoCloud() {
+        const local = this.localStore;
+        if (!local) return { ok: true, pushed: 0 };
+        if (this.localLoad) await this.localLoad;
+        const notes = local.notes;
+        const tombstones = local.tombstones.slice();
+        if (!Object.keys(notes).length && !tombstones.length) return { ok: true, pushed: 0 };
+
+        try {
+            const remoteSnap = await this.cloudNotesRef().get();
+            const remote = {};
+            remoteSnap.forEach(doc => { remote[doc.id] = doc.data(); });
+            const known = local.known || {};
+            const syncedAt = local.syncedAt || 0;
+            let pushed = 0;
+
+            for (const stone of tombstones) {
+                const cloud = remote[stone.id];
+                if (!cloud) continue;
+                const cloudAt = Date.parse(cloud.updatedAt || '') || 0;
+                if (cloudAt <= stone.at) {
+                    await this.cloudNotesRef().doc(stone.id).delete();
+                    pushed++;
+                }
+            }
+
+            for (const [id, note] of Object.entries(notes)) {
+                const cloud = remote[id];
+                const localAt = Date.parse(note.updatedAt || '') || 0;
+                if (!cloud) {
+                    if (known[id] && localAt <= syncedAt) {
+                        await local.drop(id);
+                    } else {
+                        await this.cloudNotesRef().doc(id).set(note);
+                        pushed++;
+                    }
+                    continue;
+                }
+                const cloudAt = Date.parse(cloud.updatedAt || '') || 0;
+                if (localAt > cloudAt) {
+                    await this.cloudNotesRef().doc(id).set(note);
+                    pushed++;
+                }
+            }
+
+            await local.clearTombstones();
+            return { ok: true, pushed };
+        } catch (err) {
+            console.error('Notes: could not merge local notes', err);
+            return { ok: false, pushed: 0 };
+        }
+    }
+
     // ─── Firebase ─────────────────────────────────────────────
 
+    syncRequested() {
+        try {
+            if (localStorage.getItem('qol-notes-sync') === '1') return true;
+        } catch (e) { /* storage unavailable */ }
+        return new URLSearchParams(window.location.search).get('signin') === '1';
+    }
+
+    async connectFirebase() {
+        if (this.auth) return true;
+        if (typeof window.loadFirebase !== 'function') {
+            this.showNotice('The sync service is unavailable. Notes are saved in this browser.');
+            return false;
+        }
+        const loaded = await window.loadFirebase({ storage: true });
+        if (!loaded) {
+            this.showNotice('Could not load the sync service. Notes are saved in this browser.');
+            return false;
+        }
+        this.initFirebase();
+        return !!this.auth;
+    }
+
     initFirebase() {
+        if (this.auth) return;
         if (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined') {
             console.warn('Notes: Firebase SDK or config not available');
-            document.getElementById('signInScreen').style.display = 'flex';
+            this.localReady.then(() => this.startLocalMode('Sign-in is unavailable. Notes are saved in this browser.'));
             return;
         }
 
@@ -98,28 +317,38 @@ class NotesApp {
         this.auth.onAuthStateChanged(user => this.onAuthChange(user));
     }
 
-    onAuthChange(user) {
+    async onAuthChange(user) {
+        this.hideBootScreen();
+        if (this.localReady) await this.localReady;
+        // Save any pending keystrokes before the storage backend can change.
+        await this.flushPendingSave().catch(() => {});
         this.user = user;
+        try {
+            if (user) localStorage.setItem('qol-notes-sync', '1');
+            else localStorage.removeItem('qol-notes-sync');
+        } catch (e) { /* storage unavailable */ }
 
         if (user) {
-            document.getElementById('signInScreen').style.display = 'none';
-            document.getElementById('notesApp').style.display = 'flex';
-
-            const userInfo = document.getElementById('userInfo');
-            const avatar = document.getElementById('userAvatar');
-            const name = document.getElementById('userName');
-
-            userInfo.style.display = 'flex';
-            if (user.photoURL) avatar.src = user.photoURL;
-            name.textContent = user.displayName || user.email;
-
+            this.showApp();
+            this.updateAccountUI();
+            const merged = await this.mergeLocalIntoCloud();
+            if (!merged.ok) {
+                this.mode = 'local';
+                this.updateAccountUI();
+                this.startLocalMode();
+                this.showNotice('Signed in, but local notes could not be merged. They are still in this browser; reload to retry.');
+                return;
+            }
+            this.mode = 'cloud';
+            this.updateAccountUI();
             this.startSync();
+            if (merged.pushed) {
+                this.showNotice('Merged ' + merged.pushed + ' local note' + (merged.pushed === 1 ? '' : 's') + ' into your cloud notes.');
+            }
         } else {
-            document.getElementById('signInScreen').style.display = 'flex';
-            document.getElementById('notesApp').style.display = 'none';
-            this.stopSync();
-            this.notes = [];
-            this.currentNoteId = null;
+            this.mode = 'local';
+            this.updateAccountUI();
+            this.startLocalMode();
         }
     }
 
@@ -128,30 +357,10 @@ class NotesApp {
         this.stopSync();
         this.setSyncStatus('syncing');
 
-        this.unsub = this.db
-            .collection('users').doc(this.user.uid)
-            .collection('notes')
+        this.unsub = this.cloudNotesRef()
             .orderBy('updatedAt', 'desc')
             .onSnapshot(
-                snapshot => {
-                    this.notes = [];
-                    snapshot.forEach(doc => {
-                        this.notes.push({ ...doc.data(), _firestoreId: doc.id });
-                    });
-
-                    this.refresh();
-                    this.setSyncStatus('synced');
-
-                    if (this.currentNoteId) {
-                        const exists = this.notes.find(n => n.id === this.currentNoteId);
-                        if (!exists) {
-                            this.currentNoteId = null;
-                            this.showEmptyState();
-                        } else {
-                            this.updateEditorChrome(exists);
-                        }
-                    }
-                },
+                snapshot => this.onNotesSnapshot(snapshot),
                 error => {
                     console.error('Notes: Firestore listener error:', error);
                     this.setSyncStatus('error');
@@ -179,6 +388,7 @@ class NotesApp {
 
         if (status === 'syncing') { dot.classList.add('syncing'); label.textContent = 'Syncing...'; }
         else if (status === 'synced') { dot.classList.add('synced'); label.textContent = 'Synced'; }
+        else if (status === 'local') { dot.classList.add('synced'); label.textContent = 'Saved locally'; }
         else if (status === 'error') { dot.classList.add('error'); label.textContent = 'Sync error'; }
     }
 
@@ -553,7 +763,7 @@ class NotesApp {
     // ─── CRUD ─────────────────────────────────────────────────
 
     async newNote() {
-        if (!this.db || !this.user) return;
+        if (!this.canUseNotes()) return;
 
         if (this.activeFilter !== 'all') {
             this.activeFilter = 'all';
@@ -578,7 +788,7 @@ class NotesApp {
         setTimeout(() => document.getElementById('noteTitleInput')?.focus(), 50);
 
         try {
-            await this.db.collection('users').doc(this.user.uid).collection('notes').doc(id).set(note);
+            await this.notesRef().doc(id).set(note);
         } catch (err) {
             console.error('Notes: Failed to create note:', err);
             this.notes = this.notes.filter(n => n.id !== id);
@@ -589,7 +799,7 @@ class NotesApp {
     }
 
     async duplicateNote() {
-        if (!this.currentNoteId || !this.db || !this.user) return;
+        if (!this.currentNoteId || !this.canUseNotes()) return;
         const note = this.notes.find(n => n.id === this.currentNoteId);
         if (!note) return;
 
@@ -606,7 +816,7 @@ class NotesApp {
         this.showEditor(duplicate);
 
         try {
-            await this.db.collection('users').doc(this.user.uid).collection('notes').doc(id).set(duplicate);
+            await this.notesRef().doc(id).set(duplicate);
         } catch (err) {
             console.error('Notes: Failed to duplicate:', err);
             this.notes = this.notes.filter(n => n.id !== id);
@@ -651,8 +861,7 @@ class NotesApp {
         this.versionTimestamps.set(id, now);
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(id)
+            await this.notesRef().doc(id)
                 .collection('versions')
                 .add({ title: prevTitle || '', content: prevContent || '', savedAt: prevSavedAt || new Date().toISOString() });
         } catch (err) {
@@ -661,8 +870,12 @@ class NotesApp {
     }
 
     async openVersionHistory() {
-        if (!this.currentNoteId || !this.db || !this.user) return;
+        if (!this.currentNoteId) return;
         this.closeMoreMenu();
+        if (this.mode === 'local' || !this.db || !this.user) {
+            this.showNotice('Version history needs sign-in. Locally saved notes are still safe.');
+            return;
+        }
 
         const modal = document.getElementById('versionHistoryModal');
         const list = document.getElementById('versionHistoryList');
@@ -674,8 +887,7 @@ class NotesApp {
         modal.querySelector('.modal-close')?.focus();
 
         try {
-            const snap = await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(this.currentNoteId)
+            const snap = await this.notesRef().doc(this.currentNoteId)
                 .collection('versions')
                 .orderBy('savedAt', 'desc')
                 .limit(50)
@@ -749,7 +961,7 @@ class NotesApp {
         const hadPending = !!this.saveTimer;
         this.saveTimer = null;
         if (hadPending) this.renderNotesList();
-        if (!this.currentNoteId || !this.db || !this.user) return;
+        if (!this.currentNoteId || !this.canUseNotes()) return;
 
         const titleEl = document.getElementById('noteTitleInput');
         const contentEl = document.getElementById('noteContentInput');
@@ -770,8 +982,7 @@ class NotesApp {
         if (idx !== -1) this.notes[idx] = { ...this.notes[idx], title, content, updatedAt };
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(this.currentNoteId)
+            await this.notesRef().doc(this.currentNoteId)
                 .update({ title, content, updatedAt });
 
             // Re-look-up by id rather than reusing idx — a listener update
@@ -802,7 +1013,7 @@ class NotesApp {
     // ─── Archive / Trash lifecycle ──────────────────────────────
 
     async setNoteFlags(id, flags) {
-        if (!this.db || !this.user) return;
+        if (!this.canUseNotes()) return;
         const idx = this.notes.findIndex(n => n.id === id);
         if (idx === -1) return;
 
@@ -814,8 +1025,7 @@ class NotesApp {
         this.refresh();
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(id)
+            await this.notesRef().doc(id)
                 .update({ ...flags, updatedAt });
         } catch (err) {
             console.error('Notes: Failed to update note:', err);
@@ -869,7 +1079,7 @@ class NotesApp {
     }
 
     async confirmDelete() {
-        if (!this.currentNoteId || !this.db || !this.user || this.pendingAction !== 'purge') return;
+        if (!this.currentNoteId || !this.canUseNotes() || this.pendingAction !== 'purge') return;
         const id = this.currentNoteId;
         this.closeDeleteModal();
 
@@ -881,8 +1091,7 @@ class NotesApp {
         this.refresh();
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(id)
+            await this.notesRef().doc(id)
                 .delete();
         } catch (err) {
             console.error('Notes: Failed to permanently delete:', err);
@@ -989,7 +1198,7 @@ class NotesApp {
     }
 
     async bulkAddTag(tag) {
-        if (!tag || !this.db || !this.user) return;
+        if (!tag || !this.canUseNotes()) return;
         const ids = [...this.selectedIds];
 
         for (const id of ids) {
@@ -1002,8 +1211,7 @@ class NotesApp {
             this.notes[idx] = { ...this.notes[idx], tags: newTags };
 
             try {
-                await this.db.collection('users').doc(this.user.uid)
-                    .collection('notes').doc(id)
+                await this.notesRef().doc(id)
                     .update({ tags: newTags, updatedAt: new Date().toISOString() });
             } catch (err) {
                 console.error('Notes: Bulk tag failed:', err);
@@ -1233,7 +1441,7 @@ class NotesApp {
     }
 
     async updateNoteTags(tags) {
-        if (!this.currentNoteId || !this.db || !this.user) return;
+        if (!this.currentNoteId || !this.canUseNotes()) return;
 
         const idx = this.notes.findIndex(n => n.id === this.currentNoteId);
         if (idx !== -1) this.notes[idx] = { ...this.notes[idx], tags };
@@ -1241,8 +1449,7 @@ class NotesApp {
         this.renderNavPanel();
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(this.currentNoteId)
+            await this.notesRef().doc(this.currentNoteId)
                 .update({ tags, updatedAt: new Date().toISOString() });
         } catch (err) {
             console.error('Notes: Failed to update tags:', err);
@@ -1253,7 +1460,7 @@ class NotesApp {
 
     async togglePin() {
         const note = this.notes.find(n => n.id === this.currentNoteId);
-        if (!note || !this.db || !this.user || note.trashed) return;
+        if (!note || !this.canUseNotes() || note.trashed) return;
 
         const pinned = !note.pinned;
         const idx = this.notes.findIndex(n => n.id === this.currentNoteId);
@@ -1268,8 +1475,7 @@ class NotesApp {
         this.renderNotesList();
 
         try {
-            await this.db.collection('users').doc(this.user.uid)
-                .collection('notes').doc(this.currentNoteId)
+            await this.notesRef().doc(this.currentNoteId)
                 .update({ pinned, updatedAt: new Date().toISOString() });
         } catch (err) {
             console.error('Notes: Failed to toggle pin:', err);
@@ -1453,7 +1659,7 @@ class NotesApp {
     }
 
     showNotice(message) {
-        const el = document.getElementById('autoSaveStatus');
+        const el = document.getElementById('notesNotice') || document.getElementById('autoSaveStatus');
         if (!el) return;
         el.textContent = message;
         clearTimeout(this.noticeTimer);
@@ -1464,6 +1670,10 @@ class NotesApp {
         const ta = document.getElementById('noteContentInput');
         if (!ta || ta.disabled) return;
 
+        if (this.mode === 'local') {
+            this.showNotice('Image uploads need sign-in. You can keep writing locally.');
+            return;
+        }
         if (!this.storage) {
             this.showNotice('Image uploads are not available right now.');
             return;
@@ -2060,18 +2270,16 @@ class NotesApp {
     // ─── Auth ─────────────────────────────────────────────────
 
     showSignInError(message) {
-        const el = document.getElementById('signInError');
-        if (!el) return;
-        el.textContent = message;
-        el.hidden = !message;
+        if (message) this.showNotice(message);
     }
 
     async signIn() {
-        this.showSignInError('');
         if (!this.auth) {
-            this.showSignInError('Sign-in is unavailable because Firebase did not load. Check your connection and reload.');
-            return;
+            this.showNotice('Connecting to Google…');
+            const connected = await this.connectFirebase();
+            if (!connected || !this.auth) return;
         }
+        if (this.auth.currentUser) return; // an existing session restored; onAuthChange will sync it
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             await this.auth.signInWithPopup(provider);
@@ -2081,11 +2289,11 @@ class NotesApp {
                     await this.auth.signInWithRedirect(provider);
                 } catch (e) {
                     console.error('Notes: Sign-in failed:', e);
-                    this.showSignInError('Sign-in failed. Allow pop-ups for this site and try again.');
+                    this.showNotice('Sign-in failed. Allow pop-ups for this site and try again.');
                 }
             } else {
                 console.error('Notes: Sign-in failed:', err);
-                this.showSignInError('Sign-in failed. Try again in a moment.');
+                this.showNotice('Sign-in failed. Try again in a moment.');
             }
         }
     }
@@ -2120,6 +2328,7 @@ class NotesApp {
 
     bindEvents() {
         document.getElementById('signInBtn')?.addEventListener('click', () => this.signIn());
+        document.getElementById('notesLocalSignInBtn')?.addEventListener('click', () => this.signIn());
         document.getElementById('signOutBtn')?.addEventListener('click', () => this.signOut());
         document.getElementById('newNoteBtn')?.addEventListener('click', () => this.newNote());
         document.getElementById('emptyStateNewBtn')?.addEventListener('click', () => this.newNote());

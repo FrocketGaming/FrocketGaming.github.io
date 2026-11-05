@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Backup - QoL Tools</title>
+        <script>
+            (function() {
+                var theme = document.documentElement.getAttribute('data-default-theme') || 'canary';
+                try { theme = localStorage.getItem('qol-tools-theme') || theme; } catch (e) {}
+                if (theme === 'dunder') { theme = 'canary'; }
+                if (theme && theme !== 'default') document.documentElement.setAttribute('data-theme', theme);
+            })();
+        </script>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+        <link rel="stylesheet" href="../src/stylesheet.css" />
+        <link rel="stylesheet" href="backup-styles.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+        <script>
+            // The header is fixed; keep the page clear of it at every width.
+            document.addEventListener('DOMContentLoaded', function () {
+                var header = document.querySelector('.header');
+                function sync() { document.body.style.paddingTop = header.offsetHeight + 'px'; }
+                sync();
+                new ResizeObserver(sync).observe(header);
+            });
+        </script>
+    </head>
+
+    <body class="raleway-fnt">
+        <div class="header">
+            <div class="backup-header-row">
+                <a class="backup-brand" href="../">QoL Tools</a>
+                <span class="backup-crumb">Backup</span>
+                <div class="theme-selector">
+                    <label for="themeSelect">Theme:</label>
+                    <select id="themeSelect" class="theme-select"></select>
+                </div>
+            </div>
+        </div>
+
+        <main class="backup-main">
+            <p class="backup-eyebrow">LOCAL DATA</p>
+            <h1>Back up your tools</h1>
+            <p class="backup-intro">
+                Everything in QoL Tools is stored in this browser. Download one file containing your
+                notes, tasks, snippets, projects and flows, then restore it here or in another browser.
+                Nothing is uploaded.
+            </p>
+
+            <section class="backup-stats" id="stats" aria-label="What is stored locally"></section>
+
+            <div class="backup-actions">
+                <button id="downloadBtn" class="format-btn">
+                    <i class="fa-solid fa-download"></i> Download backup
+                </button>
+                <button id="restoreBtn" class="btn-secondary">
+                    <i class="fa-solid fa-upload"></i> Restore from file
+                </button>
+                <input id="restoreFile" type="file" accept=".json,application/json" hidden />
+                <span id="status" class="backup-status" role="status"></span>
+            </div>
+
+            <section id="restorePanel" class="restore-panel" hidden aria-label="Restore confirmation">
+                <h2>Replace local data?</h2>
+                <p id="restoreSummary"></p>
+                <p class="restore-warning">This replaces the matching tools in this browser. Download a backup first if you might need the current copy.</p>
+                <div class="restore-actions">
+                    <button id="confirmRestoreBtn" class="btn-danger">Replace local data</button>
+                    <button id="cancelRestoreBtn" class="btn-secondary">Cancel</button>
+                </div>
+            </section>
+
+            <section class="backup-details" id="details" aria-label="Backup details"></section>
+
+            <p class="backup-footnote">
+                Backups are plain JSON. Keep one somewhere outside the browser — clearing site data removes
+                the local copy. <a href="../">Back to tools</a>
+            </p>
+        </main>
+
+        <script src="../src/theme-manager.js"></script>
+        <script src="backup-app.js"></script>
+        <script src="../src/site-chrome.js"></script>
+    </body>
+</html>

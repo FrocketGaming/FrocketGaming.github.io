@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -68,7 +68,7 @@
                     browser. Sign in with Google to sync across devices.
                 </p>
                 <div class="header-actions">
-                    <button id="exportBtn" class="format-btn">
+                    <button id="exportBtn" class="btn-secondary">
                         <i class="fa-solid fa-download"></i>
                         Export
                     </button>
@@ -78,7 +78,7 @@
                         accept=".json"
                         style="display: none"
                     />
-                    <button id="importBtn" class="format-btn">
+                    <button id="importBtn" class="btn-secondary">
                         <i class="fa-solid fa-upload"></i>
                         Import
                     </button>
@@ -189,11 +189,11 @@
                     </div>
                 </div>
                 <div class="toolbar-spacer"></div>
-                <button id="graphViewBtn" class="format-btn" title="Graph view">
+                <button id="graphViewBtn" class="btn-secondary" title="Graph view">
                     <i class="fa-solid fa-diagram-project"></i>
                     Graph
                 </button>
-                <button id="templatesBtn" class="format-btn" title="Code templates">
+                <button id="templatesBtn" class="btn-secondary" title="Code templates">
                     <i class="fa-solid fa-file-code"></i>
                     Templates
                 </button>
@@ -236,6 +236,10 @@
                     <div class="empty-state" id="emptyState">
                         <i class="fa-solid fa-code"></i>
                         <p><span class="panel-prompt" aria-hidden="true">&gt;</span> Select a snippet or create a new one<span class="blink-cursor" aria-hidden="true">_</span></p>
+                        <div class="empty-state-actions">
+                            <button class="format-btn" id="emptyNewSnippetBtn"><i class="fa-solid fa-plus"></i> New Snippet</button>
+                            <button class="btn-secondary" id="emptyImportBtn"><i class="fa-solid fa-upload"></i> Import</button>
+                        </div>
                     </div>
 
                     <div
@@ -791,5 +795,6 @@
         <script src="../flow/flow-static.js?v=ce010801"></script>
         <script src="graph-view.js"></script>
         <script src="snippets-app.js"></script>
+        <script src="../../src/site-chrome.js"></script>
     </body>
 </html>

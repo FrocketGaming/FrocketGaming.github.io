@@ -54,22 +54,19 @@
             </div>
         </div>
 
-        <!-- Sign-in screen (unauthenticated) -->
-        <div id="signInScreen" class="sign-in-screen" style="display:none">
+        <!-- Boot screen: visible until Firebase auth resolves, so the page never
+             renders as an empty dark rectangle on a slow connection. -->
+        <div id="notesBoot" class="sign-in-screen" role="status">
             <div class="sign-in-card">
                 <i class="fa-solid fa-note-sticky sign-in-icon"></i>
                 <h1>Notes</h1>
-                <p>Sign in with Google to create and access your notes across all your devices.</p>
-                <p id="signInError" class="sign-in-error" role="alert" hidden></p>
-                <button id="signInBtn" class="sign-in-btn">
-                    <i class="fa-brands fa-google"></i>
-                    <span>Sign in with Google</span>
-                </button>
+                <p>Loading your notes…</p>
             </div>
         </div>
 
-        <!-- Main app (authenticated) -->
+        <!-- Main app (local-first: usable before sign-in; signing in merges with the cloud) -->
         <div id="notesApp" class="notes-app" style="display:none">
+            <h1 class="visually-hidden">Notes</h1>
 
             <!-- Toolbar -->
             <div class="notes-toolbar">
@@ -101,6 +98,12 @@
                 </div>
                 <div class="toolbar-spacer"></div>
                 <div class="auth-section" id="authSection">
+                    <span id="notesModeBadge" class="notes-mode-badge" hidden title="Saved in this browser only">Local only</span>
+                    <button id="notesLocalSignInBtn" class="notes-signin-inline" hidden title="Sign in to sync notes across devices">
+                        <i class="fa-brands fa-google"></i>
+                        <span>Sign in</span>
+                    </button>
+                    <span id="notesNotice" class="notes-notice" role="status"></span>
                     <div id="userInfo" class="user-info" style="display:none">
                         <div class="user-identity" tabindex="0" title="Hover or focus to reveal" aria-label="Signed in account, hover or focus to reveal">
                             <span class="user-identity-hint"><i class="fa-solid fa-user"></i></span>
@@ -333,13 +336,11 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
         <script src="../../src/vendor/purify.min.js"></script>
         <script src="../../src/theme-manager.js"></script>
-        <script src="../../src/firebase-config.js"></script>
-        <script src="notes-app.js?v=5fb277a5"></script>
+        <script src="../../src/firebase-loader.js"></script>
+        <script src="notes-local.js?v=20261105c"></script>
+        <script src="notes-app.js?v=20261105c"></script>
+        <script src="../../src/site-chrome.js"></script>
     </body>
 </html>

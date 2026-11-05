@@ -12,6 +12,7 @@ class CSVViewer {
 
     init() {
         this.setupEventListeners();
+        this.updateEmptyState(false);
     }
 
     setupEventListeners() {
@@ -21,9 +22,21 @@ class CSVViewer {
         document.getElementById('uploadBtn').addEventListener('click', () => {
             document.getElementById('fileInput').click();
         });
+        document.getElementById('browseBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        document.getElementById('sampleBtn').addEventListener('click', () => this.loadSample());
+
+        // The dropzone has its own delimiter control so the choice can be made
+        // before the file is read; keep the loaded view's control in sync.
+        const dropDelimiter = document.getElementById('dropDelimiter');
+        dropDelimiter.addEventListener('change', () => {
+            document.getElementById('delimiter').value = dropDelimiter.value;
+        });
 
         // Handle file upload
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
+        this.setupDropzone();
 
         // Data Profile toggle
         document.getElementById('profileToggleBtn').addEventListener('click', () => this.toggleProfile());
@@ -70,45 +83,102 @@ class CSVViewer {
 
     handleFileUpload(event) {
         const file = event.target.files[0];
-        if (!file) return;
+        if (file) this.loadFile(file);
 
-        // Validate file type
+        // Reset file input so the same file can be uploaded again
+        event.target.value = '';
+    }
+
+    setupDropzone() {
+        const drop = document.getElementById('csvEmpty');
+        const hasFiles = (event) =>
+            event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files');
+
+        ['dragenter', 'dragover'].forEach((type) => {
+            document.addEventListener(type, (event) => {
+                if (!hasFiles(event)) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                drop.classList.add('is-dragover');
+            });
+        });
+
+        document.addEventListener('dragleave', (event) => {
+            if (event.relatedTarget) return;
+            drop.classList.remove('is-dragover');
+        });
+
+        document.addEventListener('drop', (event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            drop.classList.remove('is-dragover');
+            const file = event.dataTransfer.files[0];
+            if (file) this.loadFile(file);
+        });
+    }
+
+    loadFile(file) {
         const validTypes = ['text/csv', 'text/plain', 'application/vnd.ms-excel'];
         const fileName = file.name.toLowerCase();
 
         if (!validTypes.includes(file.type) && !fileName.endsWith('.csv') && !fileName.endsWith('.txt')) {
-            alert('Please upload a CSV or TXT file');
+            this.showDropError('That file is not a CSV or TXT. Choose a .csv file and try again.');
             return;
         }
 
-        // Show loading state
-        this.showEmptyState(`Loading ${file.name}...`);
+        this.showDropError('');
         const uploadBtn = document.getElementById('uploadBtn');
         const originalText = uploadBtn.innerHTML;
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
 
-        // Read file contents
         const reader = new FileReader();
 
-        reader.onload = (e) => {
-            this.parseCSV(e.target.result);
+        reader.onload = (event) => {
+            this.parseCSV(event.target.result);
+            this.updateEmptyState(this.data.length > 0);
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = originalText;
         };
 
         reader.onerror = () => {
-            alert('Error reading file');
-            this.showEmptyState('Error reading file. Please try again.');
-            // Reset button
+            this.showDropError('Could not read that file. Please try again.');
+            this.updateEmptyState(false);
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = originalText;
         };
 
         reader.readAsText(file);
+    }
 
-        // Reset file input so the same file can be uploaded again
-        event.target.value = '';
+    loadSample() {
+        const sample = [
+            'region,product,units,revenue,month',
+            'North,Widget,120,4800,2026-01',
+            'South,Widget,98,3920,2026-01',
+            'East,Gadget,76,6080,2026-01',
+            'West,Gadget,64,5120,2026-01',
+            'North,Gizmo,45,6750,2026-02',
+            'South,Gizmo,52,7800,2026-02',
+            'East,Widget,110,4400,2026-02',
+            'West,Widget,87,3480,2026-02',
+            'North,Gadget,71,5680,2026-03',
+            'South,Gizmo,60,9000,2026-03'
+        ].join('\n');
+        this.parseCSV(sample);
+        this.updateEmptyState(this.data.length > 0);
+    }
+
+    showDropError(message) {
+        const error = document.getElementById('csvDropError');
+        error.textContent = message || '';
+        error.hidden = !message;
+    }
+
+    updateEmptyState(hasData) {
+        document.getElementById('csvEmpty').hidden = hasData;
+        document.getElementById('csvControls').hidden = !hasData;
+        if (hasData) this.showDropError('');
     }
 
     detectDelimiter(text) {
@@ -227,6 +297,7 @@ class CSVViewer {
         this.clearSQL();
         this.clearDataProfile();
         document.getElementById('fileInput').value = '';
+        this.updateEmptyState(false);
     }
 
     showEmptyState(message) {

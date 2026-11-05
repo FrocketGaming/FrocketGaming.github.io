@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -57,21 +57,6 @@
     <p>Test and debug regular expressions in real-time. All processing is done locally in your browser.</p>
 
     <div class="regex-container">
-        <div class="examples-section">
-            <h3>Common Patterns</h3>
-            <div class="category-tabs">
-                <button class="category-tab active" data-category="web">Web</button>
-                <button class="category-tab" data-category="programming">Programming</button>
-                <button class="category-tab" data-category="numbers">Numbers</button>
-                <button class="category-tab" data-category="text">Text</button>
-                <button class="category-tab" data-category="files">Files</button>
-                <button class="category-tab" data-category="validation">Validation</button>
-                <button class="category-tab" data-category="security">Security</button>
-                <button class="category-tab" data-category="dates">Dates</button>
-            </div>
-            <div id="patternsContainer" class="examples-grid"></div>
-        </div>
-
         <div class="pattern-section">
             <div class="pattern-input-wrapper">
                 <label for="regexPattern">Regular Expression:</label>
@@ -87,7 +72,7 @@
                 <label>Flags:</label>
                 <div class="flags-checkboxes">
                     <div class="flag-option">
-                        <input type="checkbox" id="flagG" value="g">
+                        <input type="checkbox" id="flagG" value="g" checked>
                         <label for="flagG">g (global)</label>
                     </div>
                     <div class="flag-option">
@@ -109,7 +94,12 @@
                 </div>
             </div>
 
-            <div class="error-display" id="errorDisplay"></div>
+            <div class="error-display" id="errorDisplay" role="alert"></div>
+
+            <button type="button" class="try-example" id="tryExampleBtn">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                New here? Try an example — find email addresses
+            </button>
         </div>
 
         <div class="regex-main-content">
@@ -124,7 +114,7 @@
                 <div class="results-section">
                     <div class="results-header">
                         <h3>Results</h3>
-                        <span id="matchCount" class="match-count">0 matches</span>
+                        <span id="matchCount" class="match-count" aria-live="polite">0 matches</span>
                     </div>
                     <div id="highlightedText" class="highlighted-text"></div>
                     <div id="matchDetails" class="match-details"></div>
@@ -146,11 +136,27 @@
             </div>
         </div>
 
+        <div class="examples-section">
+            <h3>Common Patterns</h3>
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="web">Web</button>
+                <button class="category-tab" data-category="programming">Programming</button>
+                <button class="category-tab" data-category="numbers">Numbers</button>
+                <button class="category-tab" data-category="text">Text</button>
+                <button class="category-tab" data-category="files">Files</button>
+                <button class="category-tab" data-category="validation">Validation</button>
+                <button class="category-tab" data-category="security">Security</button>
+                <button class="category-tab" data-category="dates">Dates</button>
+            </div>
+            <div id="patternsContainer" class="examples-grid"></div>
+        </div>
+
     </div>
 
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="regex-app.js"></script>
+        <script src="../../src/site-chrome.js"></script>
 </body>
 
 </html>

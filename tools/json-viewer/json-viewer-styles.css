@@ -266,8 +266,9 @@
 }
 
 .json-view-toggle-btn.active {
-    background: var(--accent-primary);
-    color: var(--bg-primary);
+    background: color-mix(in srgb, var(--accent-primary) 15%, var(--bg-tertiary));
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 55%, transparent);
 }
 
 /* ─── Graph View ─────────────────────────────────────────── */
@@ -926,4 +927,20 @@
 .copy-notification.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* Toolbar groups: input actions, tree navigation, output actions. */
+.json-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 10px;
+    border-right: 1px solid var(--border-color);
+}
+
+@media (max-width: 720px) {
+    .json-toolbar-group {
+        padding-right: 0;
+        border-right: 0;
+    }
 }

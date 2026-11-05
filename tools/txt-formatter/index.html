@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -330,23 +330,36 @@
                 </div>
 
                 <div class="toolbar-spacer"></div>
-                <button class="toolbar-btn" onclick="copyToClipboard()">
-                    <i class="fa-solid fa-copy"></i> Copy
-                </button>
-                <button class="toolbar-btn toolbar-btn-clear" onclick="clearOutput()">
-                    Clear
-                </button>
             </div>
 
             <div class="columns-row">
-                <div class="box">
+                <div class="box pane">
+                    <div class="pane-head">
+                        <span class="pane-label">Input</span>
+                        <span class="pane-note" id="inputNote">Editing clears the result</span>
+                    </div>
                     <textarea
                         id="input"
-                        placeholder="Enter text, items, JSON, or SQL..."
+                        placeholder="Paste or type text, a list, or JSON…"
                     ></textarea>
                 </div>
-                <div class="box output-box">
-                    <textarea id="output" readonly></textarea>
+                <div class="box output-box pane">
+                    <div class="pane-head">
+                        <span class="pane-label">Output</span>
+                        <span class="pane-note" id="chainNote" hidden><i class="fa-solid fa-link" aria-hidden="true"></i> Chained from the previous result</span>
+                        <span class="pane-actions">
+                            <button type="button" class="pane-btn" id="undoBtn" disabled title="Undo the last transform">
+                                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Undo
+                            </button>
+                            <button type="button" class="pane-btn" id="copyBtn" disabled onclick="copyToClipboard()" title="Copy the result">
+                                <i class="fa-solid fa-copy" aria-hidden="true"></i> Copy
+                            </button>
+                            <button type="button" class="pane-btn" id="resetBtn" disabled title="Discard the result and start again from the input">
+                                Reset
+                            </button>
+                        </span>
+                    </div>
+                    <textarea id="output" readonly placeholder="The result appears here — choose a transform above."></textarea>
                     <div class="copy-popup">Text copied</div>
                 </div>
             </div>
@@ -361,5 +374,7 @@
         </div>
         <script src="../../src/theme-manager.js"></script>
         <script src="../../src/funcs.js"></script>
+        <script src="txt-formatter-pane.js"></script>
+        <script src="../../src/site-chrome.js"></script>
     </body>
 </html>

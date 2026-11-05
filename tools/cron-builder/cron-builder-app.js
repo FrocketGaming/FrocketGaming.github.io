@@ -12,11 +12,37 @@ class CronBuilderApp {
 
     init() {
         this.setupEventListeners();
+        this.showTimezone();
         this.parseCronExpression();
+    }
+
+    showTimezone() {
+        const label = document.getElementById('nextRunsTz');
+        if (!label) return;
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time';
+        label.textContent = 'in ' + zone;
+        label.title = 'Next runs are calculated in this browser’s timezone (' + zone + ').';
     }
 
     setupEventListeners() {
         this.cronInput.addEventListener('input', () => this.parseCronExpression());
+
+        const copyBtn = document.getElementById('copyCronBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                const value = this.cronInput.value.trim();
+                if (!value) return;
+                try {
+                    await navigator.clipboard.writeText(value);
+                } catch (error) {
+                    this.cronInput.select();
+                    document.execCommand('copy');
+                }
+                const original = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Copied';
+                setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
+            });
+        }
 
         this.fieldCards.forEach(card => {
             const modeSelect = card.querySelector('.field-mode');
@@ -233,7 +259,7 @@ class CronBuilderApp {
             return;
         }
         this.nextRunsList.innerHTML = runs.map(date => {
-            return `<li>${date.toLocaleString(undefined, {
+            const time = date.toLocaleString(undefined, {
                 weekday: 'short',
                 year: 'numeric',
                 month: 'short',
@@ -241,8 +267,19 @@ class CronBuilderApp {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
-            })}</li>`;
+            });
+            return `<li><span class="run-time">${time}</span><span class="run-relative">${this.relativeLabel(date)}</span></li>`;
         }).join('');
+    }
+
+    relativeLabel(date) {
+        const minutes = Math.round((date.getTime() - Date.now()) / 60000);
+        if (minutes <= 1) return 'in a minute';
+        if (minutes < 60) return 'in ' + minutes + ' min';
+        const hours = Math.round(minutes / 60);
+        if (hours < 24) return 'in ' + hours + ' hr';
+        const days = Math.round(hours / 24);
+        return 'in ' + days + (days === 1 ? ' day' : ' days');
     }
 
     calculateNextRuns(parts, count) {

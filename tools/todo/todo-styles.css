@@ -1817,7 +1817,7 @@
 }
 
 .shortcuts-content h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     margin: 0 0 16px 0;
     font-size: 16px;
 }

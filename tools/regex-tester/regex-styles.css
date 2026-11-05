@@ -20,8 +20,8 @@
 .test-input-wrapper label,
 .replace-result-wrapper label {
     display: block;
-    color: var(--accent-secondary);
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
     margin-bottom: 8px;
     font-weight: 500;
 }
@@ -54,7 +54,9 @@
 
 #regexPattern:focus {
     border-color: var(--accent-secondary);
-    box-shadow: 0 0 10px var(--accent-primary);
+    box-shadow: none;
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 1px;
 }
 
 .flags-input {
@@ -72,7 +74,9 @@
 
 .flags-input:focus {
     border-color: var(--accent-secondary);
-    box-shadow: 0 0 10px var(--accent-primary);
+    box-shadow: none;
+    outline: 2px solid var(--accent-secondary);
+    outline-offset: 1px;
 }
 
 .flags-section {
@@ -81,8 +85,8 @@
 
 .flags-section>label {
     display: block;
-    color: var(--accent-secondary);
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
     margin-bottom: 8px;
     font-weight: 500;
 }
@@ -97,23 +101,6 @@
     display: flex;
     align-items: center;
     gap: 5px;
-}
-
-.flag-option input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    border: 1px solid var(--accent-primary);
-    border-radius: 3px;
-    outline: none;
-    transition: background-color 0.3s;
-}
-
-.flag-option input[type="checkbox"]:checked {
-    background-color: var(--accent-secondary);
-    border: 1px solid var(--accent-primary);
 }
 
 .flag-option label {
@@ -222,7 +209,7 @@
 }
 
 .results-header h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0;
 }
@@ -304,7 +291,7 @@
 }
 
 .replace-section h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0 0 15px 0;
 }
@@ -360,7 +347,7 @@
 }
 
 .examples-section h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0 0 15px 0;
 }
@@ -497,4 +484,25 @@
     .examples-grid {
         grid-template-columns: 1fr 1fr;
     }
+}
+/* Inline onboarding: loads the Email preset instead of leaving the tool blank. */
+.try-example {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.try-example:hover,
+.try-example:focus-visible {
+    color: var(--accent-secondary);
+    text-decoration: underline;
+    outline: none;
 }

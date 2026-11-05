@@ -1,0 +1,226 @@
+﻿/* Backup page: local storage overview and a single JSON file in/out. */
+
+.backup-header-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.backup-brand {
+    color: var(--text-primary);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+}
+
+.backup-brand:hover {
+    color: var(--accent-secondary);
+}
+
+.backup-crumb {
+    color: var(--text-secondary);
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.backup-header-row .theme-selector {
+    position: static;
+    margin-left: auto;
+    padding-right: 0;
+}
+
+.backup-main {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 36px 24px 64px;
+    box-sizing: border-box;
+}
+
+.backup-eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+}
+
+.backup-main h1 {
+    margin: 0 0 12px;
+    color: var(--text-primary);
+    font-size: 2rem;
+    text-align: left;
+}
+
+.backup-intro {
+    max-width: 68ch;
+    margin: 0 0 24px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.backup-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 0 4px var(--shadow-color);
+}
+
+.stat-card h2 {
+    margin: 0 0 10px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stat-count {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.stat-meta {
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.backup-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.backup-actions .format-btn,
+.backup-actions .btn-secondary {
+    margin-top: 0;
+}
+
+.backup-status {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.backup-status.is-error {
+    color: var(--error-color);
+}
+
+.restore-panel {
+    margin: 0 0 24px;
+    padding: 18px;
+    background: var(--bg-secondary);
+    border: 1px solid color-mix(in srgb, var(--warning-color) 55%, var(--border-color));
+    border-radius: 8px;
+}
+
+.restore-panel h2 {
+    margin: 0 0 8px;
+    color: var(--text-primary);
+    font-size: 16px;
+    text-align: left;
+}
+
+.restore-panel p {
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.restore-warning {
+    color: var(--warning-color) !important;
+}
+
+.restore-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.restore-actions .btn-secondary {
+    margin-top: 0;
+}
+
+.btn-danger {
+    margin-top: 0;
+    padding: 8px 16px;
+    background: var(--error-color);
+    border: 1px solid var(--error-color);
+    border-radius: 3px;
+    color: var(--bg-primary);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+.backup-details {
+    margin: 0 0 24px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.backup-details strong {
+    color: var(--text-primary);
+}
+
+.backup-details ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.backup-footnote {
+    max-width: 70ch;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.backup-footnote a {
+    color: var(--accent-primary);
+}
+
+@media (max-width: 640px) {
+    .backup-main {
+        padding: 24px 16px 48px;
+    }
+
+    .backup-crumb {
+        display: none;
+    }
+}
+
+.backup-eyebrow,
+.backup-intro,
+.backup-footnote {
+    text-align: left;
+}

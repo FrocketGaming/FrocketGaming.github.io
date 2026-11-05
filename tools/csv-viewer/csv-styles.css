@@ -44,6 +44,99 @@
     margin-top: 0;
 }
 
+.controls[hidden] {
+    display: none;
+}
+
+/* First-run dropzone: the tool used to open on a blank page with only a small
+   Upload button. It now shows the accepted input and a sample to try. */
+.csv-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 900px;
+    min-height: 300px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    box-sizing: border-box;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+    text-align: center;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.csv-drop[hidden] {
+    display: none;
+}
+
+.csv-drop.is-dragover {
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-secondary));
+}
+
+.csv-drop-icon {
+    font-size: 32px;
+    color: var(--accent-primary);
+}
+
+.csv-drop-title {
+    margin: 4px 0 0;
+    color: var(--text-primary);
+    font-size: 24px;
+}
+
+.csv-drop-copy {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.csv-drop-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.csv-drop-actions .format-btn,
+.csv-drop-actions .btn-secondary {
+    margin-top: 0;
+}
+
+.csv-drop-note {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.csv-drop-delimiter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.csv-drop-delimiter .delimiter-select {
+    padding: 5px 9px;
+    font-size: 12px;
+}
+
+.csv-drop-error {
+    margin: 6px 0 0;
+    color: var(--error-color);
+    font-size: 12px;
+}
+
+.csv-drop-error[hidden] {
+    display: none;
+}
+
 /* Two-Column Layout */
 .csv-main-content {
     display: flex;

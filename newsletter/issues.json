@@ -1,5 +1,14 @@
 [
     {
+        "date": "2026-10-19",
+        "number": 3,
+        "title": "Polars 2.0",
+        "intro": "",
+        "sections": [
+            "Deep Dive: Polars 2.0"
+        ]
+    },
+    {
         "date": "2026-10-05",
         "number": 2,
         "title": "Big Querying made simple",

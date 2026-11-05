@@ -59,14 +59,27 @@
             </div>
         </div>
 
+        <header class="landing-hero">
+            <h1>QoL Tools</h1>
+            <p>Small, local-first utilities for text, data, code, and diagrams. Everything runs in your browser.</p>
+        </header>
+
         <div class="landing-divider"></div>
 
+        <div class="ledger-toolbar">
+            <label class="ledger-search" for="toolFilter">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="toolFilter" type="search" placeholder="Filter tools…" aria-label="Filter tools" autocomplete="off" />
+                <kbd class="ledger-search-kbd">/</kbd>
+            </label>
+            <p class="ledger-hint"><kbd>/</kbd> filter <span aria-hidden="true">·</span> <kbd>1</kbd>–<kbd>9</kbd> open <span aria-hidden="true">·</span> <kbd id="paletteKbd">Ctrl K</kbd> palette</p>
+        </div>
 
-    <div class="tool-ledger">
+    <div class="tool-ledger" id="toolLedger">
       <a href="./tools/txt-formatter/index.html" class="ledger-row"><span class="ledger-index">01</span><i class="fa-solid fa-font ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Txt Formatter</span><span class="ledger-desc">Transform, format, and manipulate text — lists, case conversion, JSON, find &amp; replace, and more.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/snippets/index.html" class="ledger-row"><span class="ledger-index">02</span><i class="fa-solid fa-code ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Snippets</span><span class="ledger-desc">Store and organize code snippets locally. Sync across devices with Google sign-in.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/todo/index.html" class="ledger-row"><span class="ledger-index">03</span><i class="fa-solid fa-list-check ledger-icon"></i><span class="ledger-main"><span class="ledger-name">To-Do List</span><span class="ledger-desc">Manage tasks with categories, priorities, and local storage persistence.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
-      <a href="./tools/notes/index.html" class="ledger-row"><span class="ledger-index">04</span><i class="fa-solid fa-note-sticky ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Notes</span><span class="ledger-desc">Markdown notes with tags, pinning, archive, and trash. Sync across devices with Google sign-in.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/notes/index.html" class="ledger-row"><span class="ledger-index">04</span><i class="fa-solid fa-note-sticky ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Notes</span><span class="ledger-desc">Markdown notes with tags, pinning, archive, and trash. Works locally; sign in to sync.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/flow/index.html" class="ledger-row"><span class="ledger-index">05</span><i class="fa-solid fa-diagram-project ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Flow</span><span class="ledger-desc">Flowcharts on an infinite canvas: cards, groups, and labeled connectors. Reads and writes JSON Canvas; saves to Snippets.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/csv-viewer/index.html" class="ledger-row"><span class="ledger-index">06</span><i class="fa-solid fa-table ledger-icon"></i><span class="ledger-main"><span class="ledger-name">CSV Viewer</span><span class="ledger-desc">View, sort, and filter CSV data in an interactive table with SQL query support.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/regex-tester/index.html" class="ledger-row"><span class="ledger-index">07</span><i class="fa-solid fa-asterisk ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Regex Tester</span><span class="ledger-desc">Test regular expressions in real time with match highlighting and group capture details.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
@@ -76,8 +89,12 @@
       <a href="./tools/text-diff/index.html" class="ledger-row"><span class="ledger-index">11</span><i class="fa-solid fa-code-compare ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Text Diff</span><span class="ledger-desc">Compare two texts and see additions, deletions, and modifications with word-level highlighting.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/json-viewer/index.html" class="ledger-row"><span class="ledger-index">12</span><i class="fa-solid fa-file-code ledger-icon"></i><span class="ledger-main"><span class="ledger-name">JSON Viewer</span><span class="ledger-desc">Validate, format, and explore JSON as an interactive tree. Click any key to copy its path.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
       <a href="./tools/palette-extractor/index.html" class="ledger-row"><span class="ledger-index">13</span><i class="fa-solid fa-palette ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Palette Extractor</span><span class="ledger-desc">Extract a color palette from any image — drag, drop, or paste. All processing runs locally.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
-      <a href="./tools/phase-board/index.html" class="ledger-row"><span class="ledger-index">14</span><i class="fa-solid fa-bars-progress ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Phase Board</span><span class="ledger-desc">Track projects from discovery to deploy: exit criteria, action items, risks, and outcomes. Sync with Google sign-in.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
+      <a href="./tools/phase-board/index.html" class="ledger-row"><span class="ledger-index">14</span><i class="fa-solid fa-bars-progress ledger-icon"></i><span class="ledger-main"><span class="ledger-name">Phase Board</span><span class="ledger-desc">Track projects from discovery to deploy: exit criteria, action items, risks, and outcomes. Works locally; sign in to sync.</span></span><i class="fa-solid fa-chevron-right ledger-arrow"></i></a>
     </div>
+
+    <p class="ledger-empty" id="ledgerEmpty" role="status" hidden>No tools match that filter.</p>
+
+    <p class="ledger-footnote">Everything is stored in this browser. <a href="./backup/">Back up all local data</a></p>
 
 
         <script src="./src/theme-manager.js"></script>
@@ -90,6 +107,79 @@
                 }
                 syncPadding();
                 new ResizeObserver(syncPadding).observe(header);
+            })();
+        </script>
+        <script src="./src/site-chrome.js"></script>
+        <script>
+            // Landing ledger: type to filter, "/" to focus, 1-9 to open a row,
+            // Enter to open the first match, Esc to clear. Digits are ignored
+            // while typing in a field so they stay available to the filter.
+            (function () {
+                var filter = document.getElementById("toolFilter");
+                var rows = Array.prototype.slice.call(document.querySelectorAll(".ledger-row"));
+                var empty = document.getElementById("ledgerEmpty");
+                var paletteKbd = document.getElementById("paletteKbd");
+
+                if (paletteKbd && /Mac|iPhone|iPad/.test(navigator.platform)) {
+                    paletteKbd.textContent = "⌘ K";
+                }
+
+                function isTyping(target) {
+                    var tag = (target.tagName || "").toLowerCase();
+                    return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+                }
+
+                function visibleRows() {
+                    return rows.filter(function (row) { return !row.hidden; });
+                }
+
+                function applyFilter() {
+                    var query = filter.value.trim().toLowerCase();
+                    rows.forEach(function (row) {
+                        var text = row.textContent.toLowerCase();
+                        row.hidden = query !== "" && text.indexOf(query) === -1;
+                    });
+                    empty.hidden = visibleRows().length !== 0;
+                }
+
+                filter.addEventListener("input", applyFilter);
+
+                document.addEventListener("keydown", function (event) {
+                    if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+                    if (event.key === "/" && !isTyping(event.target)) {
+                        event.preventDefault();
+                        filter.focus();
+                        filter.select();
+                        return;
+                    }
+
+                    if (document.activeElement === filter) {
+                        if (event.key === "Escape") {
+                            filter.value = "";
+                            applyFilter();
+                            filter.blur();
+                        } else if (event.key === "Enter") {
+                            var first = visibleRows()[0];
+                            if (first) {
+                                event.preventDefault();
+                                window.location.href = first.href;
+                            }
+                        }
+                        return;
+                    }
+
+                    if (isTyping(event.target)) return;
+
+                    var number = parseInt(event.key, 10);
+                    if (number >= 1 && number <= 9) {
+                        var row = visibleRows()[number - 1];
+                        if (row) {
+                            event.preventDefault();
+                            window.location.href = row.href;
+                        }
+                    }
+                });
             })();
         </script>
     </body>

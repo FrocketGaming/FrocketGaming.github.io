@@ -61,6 +61,7 @@ class TodoApp {
             this.setupDescriptionTooltip();
             this.setupCardContextMenu();
             this.render();
+            this.applyDeepLink();
 
             // Initialize Firebase sync if available
             if (typeof FirebaseSync !== 'undefined') {
@@ -72,6 +73,26 @@ class TodoApp {
             }
         } catch (error) {
             console.error('Failed to initialize Todo App:', error);
+        }
+    }
+
+    applyDeepLink() {
+        if (this.deepLinkApplied) return;
+        const params = new URLSearchParams(window.location.search);
+        const task = params.get('task');
+        if (task) {
+            const todo = this.todos.find(t => String(t.id) === task);
+            if (todo) {
+                this.deepLinkApplied = true;
+                history.replaceState({}, '', window.location.pathname);
+                this.openTaskEditModal(todo.id);
+            }
+        } else if (params.get('new') === '1') {
+            this.deepLinkApplied = true;
+            history.replaceState({}, '', window.location.pathname);
+            document.getElementById('todoInput')?.focus();
+        } else {
+            this.deepLinkApplied = true;
         }
     }
 
@@ -2276,6 +2297,7 @@ class TodoApp {
         }
 
         if (toPut.length > 0) this.render();
+        this.applyDeepLink();
     }
 
     async handleAuthChange(user) {

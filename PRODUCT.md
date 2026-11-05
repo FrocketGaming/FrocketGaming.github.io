@@ -18,23 +18,25 @@ The site also hosts Snake Charmer, a bi-weekly Python newsletter (package review
 
 ## Positioning
 
-Local-first: every tool works fully offline via IndexedDB (`QoLToolsDB`, shared `StorageManager` wrapper). Cloud sync (Snippets, Notes) via Firebase Firestore + Google OAuth is strictly opt-in and additive, never a requirement to use the tool. This differs from typical cloud-only alternatives (e.g. web-based snippet managers or note apps that require an account up front) in that nothing is gated behind sign-up, and no feature depends on a server the owner doesn't control.
+Local-first: every tool works fully offline via IndexedDB (`QoLToolsDB` for Snippets/To-Do, dedicated stores for Phase Board and Notes). Cloud sync (Snippets, Notes, Phase Board) via Firebase Firestore + Google OAuth is strictly opt-in and additive, never a requirement to use the tool; Phase Board and Notes open from a local copy and merge local work into the cloud on sign-in. This differs from typical cloud-only alternatives (e.g. web-based snippet managers or note apps that require an account up front) in that nothing is gated behind sign-up, and no feature depends on a server the owner doesn't control.
 
 ## Operating Context
 
 - Static site, no backend, no build step, no bundler, no framework — vanilla HTML/CSS/JS. Hosted on GitHub Pages with a custom domain (CNAME).
 - Each tool is a self-contained page following the pattern `tools/{tool}/index.html` + `{tool}-app.js` + `{tool}-styles.css`; shared code (theme system, storage, Firebase sync) lives in `src/`.
 - A site-wide theme system spans all tools: 8 selectable palettes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>`, with an inline script to prevent a flash of the wrong theme on load.
-- Firebase-dependent tools (Snippets, Notes) require the owner's own `src/firebase-config.js`; local-only features work without any configuration.
+- Firebase-dependent tools (Snippets, Notes, Phase Board) require the owner's own `src/firebase-config.js` for sync; all three work locally without any configuration. Notes' version history and image uploads require sign-in; everything else in Notes works offline.
 - A handful of CDN libraries are used per-tool as needed (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK) — no dependency is added without a clear per-tool reason.
 
 ## Capabilities and Constraints
 
 - No frameworks or bundlers may be introduced; any new tool or feature must work as plain HTML/CSS/JS loaded directly by the browser, consistent with every existing tool.
 - Any new or modified UI must render correctly across all 8 existing themes via the established CSS custom-property system in `src/stylesheet.css` (`--bg-*`, `--accent-*`, `--text-*`, `--border-color`, `--shadow-color`, `--syntax-*`, etc.) — no hardcoded colors that lock a component to one theme.
-- Local-first is non-negotiable: any feature must be fully usable offline via IndexedDB; Firebase sync (where present) must degrade gracefully when unconfigured or offline.
+- Local-first is non-negotiable: any feature must be fully usable offline via IndexedDB; Firebase sync (where present) must degrade gracefully when unconfigured or offline. The Firebase SDKs load on demand, so a local-only visit makes no Firebase requests.
+- The command palette is the keyboard-first route to tools, actions (new note/task/snippet/project) and local records; deep links (`?note=`, `?task=`, `?snippet=`, `?project=`) open a specific record.
+- `/backup/` exports every local store and UI setting to one JSON file and restores it. It covers snippets, tasks, notes, Phase Board projects and flows; Notes' Firebase-only images and version history are excluded.
 - Chart Builder is intentionally unlinked from the main navigation (direct-URL only); this is a deliberate scoping choice, not an oversight. Notes was re-surfaced in the nav and on the landing page.
-- The newsletter's issues are public on purpose (GitHub Pages is public and nothing internal is exposed), and it sends no email. Its colors must still come from theme tokens, so switching the theme recolors it live; `/newsletter/` alone defaults to the Canary theme when a visitor has no saved theme.
+- The newsletter's issues are public on purpose (GitHub Pages is public and nothing internal is exposed), and it sends no email. Its colors must still come from theme tokens, so switching the theme recolors it live; every page defaults to the Canary theme when a visitor has no saved theme (`src/theme-manager.js`), and a page can override that with `data-default-theme`.
 
 ## Brand Commitments
 

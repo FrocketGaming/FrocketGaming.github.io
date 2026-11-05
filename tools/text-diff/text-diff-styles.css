@@ -23,9 +23,9 @@
 }
 
 .diff-view-btn.active {
-    background-color: var(--accent-primary);
-    color: var(--bg-primary);
-    border-color: var(--accent-primary);
+    background-color: color-mix(in srgb, var(--accent-primary) 15%, var(--bg-secondary));
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 60%, var(--border-color));
 }
 
 .diff-checkbox-label {

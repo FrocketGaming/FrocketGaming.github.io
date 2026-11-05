@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -59,11 +59,11 @@
         <div class="header-content">
             <p>Manage your tasks with this simple to-do list. Sign in to sync across devices.</p>
             <div class="header-actions">
-                <button id="exportBtn" class="format-btn">
+                <button id="exportBtn" class="btn-secondary">
                     <i class="fa-solid fa-download"></i> Export
                 </button>
                 <input type="file" id="importFileInput" accept=".json" style="display: none;">
-                <button id="importBtn" class="format-btn">
+                <button id="importBtn" class="btn-secondary">
                     <i class="fa-solid fa-upload"></i> Import
                 </button>
                 <div class="auth-section" id="authSection">
@@ -330,6 +330,7 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="todo-app.js"></script>
+        <script src="../../src/site-chrome.js"></script>
 </body>
 
 </html>

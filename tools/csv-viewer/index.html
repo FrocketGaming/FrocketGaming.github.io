@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -54,10 +54,32 @@
         </div>
     </div>
 
-    <p>Upload a CSV file to view and query it. All processing is done locally in your browser.</p>
+    <p>View, sort, and query CSV data. All processing is done locally in your browser.</p>
 
     <div class="csv-container">
-        <div class="controls">
+        <div class="csv-drop" id="csvEmpty">
+            <i class="fa-solid fa-cloud-arrow-up csv-drop-icon" aria-hidden="true"></i>
+            <h2 class="csv-drop-title">Drop a CSV here</h2>
+            <p class="csv-drop-copy">Drag a file anywhere on this page, or</p>
+            <div class="csv-drop-actions">
+                <button id="browseBtn" class="format-btn"><i class="fa-solid fa-folder-open"></i> Browse files</button>
+                <button id="sampleBtn" class="btn-secondary"><i class="fa-solid fa-table-list"></i> Try sample data</button>
+            </div>
+            <label class="csv-drop-delimiter" for="dropDelimiter">
+                Delimiter
+                <select id="dropDelimiter" class="delimiter-select">
+                    <option value="auto">Auto-detect</option>
+                    <option value=",">Comma (,)</option>
+                    <option value=";">Semicolon (;)</option>
+                    <option value="\t">Tab</option>
+                    <option value="|">Pipe (|)</option>
+                </select>
+            </label>
+            <p class="csv-drop-note">Processed locally — nothing is uploaded.</p>
+            <p class="csv-drop-error" id="csvDropError" role="alert" hidden></p>
+        </div>
+
+        <div class="controls" id="csvControls" hidden>
             <label for="delimiter">Delimiter:</label>
             <select id="delimiter" class="delimiter-select">
                 <option value="auto">Auto-detect</option>
@@ -91,7 +113,7 @@
                 <div class="sql-panel">
                     <div class="sql-header">
                         <h3><i class="fa-solid fa-database"></i> SQL Playground</h3>
-                        <span id="sqlStatus" class="sql-status">Ready</span>
+                        <span id="sqlStatus" class="sql-status" aria-live="polite">Ready</span>
                     </div>
                     <div id="sqlExamples" class="sql-examples"></div>
                     <div class="sql-editor-container">
@@ -101,7 +123,7 @@
                     </div>
                     <div class="sql-controls">
                         <button id="sqlRunBtn" class="format-btn"><i class="fa-solid fa-play"></i> Run Query</button>
-                        <button id="sqlExportBtn" class="format-btn">Export Results</button>
+                        <button id="sqlExportBtn" class="btn-secondary">Export Results</button>
                         <span id="sqlQueryInfo" class="sql-query-info"></span>
                     </div>
                     <div id="sqlError" class="sql-error"></div>
@@ -121,6 +143,7 @@
     <script src="../../src/theme-manager.js"></script>
     <script src="../../src/funcs.js"></script>
     <script src="csv-app.js"></script>
+        <script src="../../src/site-chrome.js"></script>
 </body>
 
 </html>

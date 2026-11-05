@@ -197,7 +197,7 @@
 }
 
 .config-card h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0 0 12px 0;
     display: flex;
@@ -712,7 +712,7 @@
 }
 
 .preview-header h3 {
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-size: 16px;
     margin: 0;
     display: flex;
