@@ -77,6 +77,9 @@ const finished = (name, actions) => {
   const onlyLate = K.dueItemsHTML(projects, null, null, { open: true, only: 'late' });
   ok(onlyLate.includes('data-action="b-late"') && !onlyLate.includes('data-open="a"') && /data-due-only="late" aria-pressed="true"/.test(onlyLate), 'a count narrows the cards to that group');
   ok(!/aria-pressed="true"/.test(K.dueItemsHTML(projects, null, null, { open: false, only: 'late' })), 'a collapsed panel shows no count as selected');
+  const byDue = K.dueItemsHTML(projects, null, null, { open: true, group: 'due' });
+  ok(byDue.includes('due-by-date') && byDue.indexOf('>Overdue<') < byDue.indexOf('>Today<') && byDue.indexOf('>Today<') < byDue.indexOf('>Next 3 days<'), 'the due view groups actions by Overdue, Today and Next 3 days');
+  ok(byDue.includes('data-due-group="due" aria-pressed="true"'), 'the due grouping control reflects the selected view');
 
   // ---- the card row ----
   const card = K.cardHTML('p', live('Card', [], { priority: 'high', tag: 'NHOP' }), 'x', {}, { n: 2, of: 4 });

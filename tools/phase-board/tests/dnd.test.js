@@ -40,7 +40,7 @@ const finished = name => { const p = live(name); p.flow.phases.forEach(d => { p.
   const r = K.rankMap(hand);
   const card = K.cardHTML('b', hand.b, '', {}, r.b, true);
   ok(card.includes('draggable="true" data-drag="b"') && card.includes('aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"'), 'an in-progress card on the board can be dragged');
-  ok(!K.cardHTML('b', hand.b, '', {}, r.b).includes('draggable') && !K.cardHTML('f', finished('F'), '', {}, undefined, true).includes('draggable'), 'exports and finished cards cannot be');
+  ok(!K.cardHTML('b', hand.b, '', {}, r.b).includes('draggable="true"') && !K.cardHTML('f', finished('F'), '', {}, undefined, true).includes('draggable="true"'), 'exports and finished cards cannot be');
   const body = K.portfolioBodyHTML(Object.keys(hand).map(id => ({ id, p: hand[id] })), 'all', { when: () => '', hues: {}, ranks: r, drag: true });
   ok(body.includes('Drag a card to change it') && (body.match(/data-drag=/g) || []).length === 4, 'the board explains how and every active card is draggable');
   ok(!K.portfolioBodyHTML([{ id: 'a', p: hand.a }], 'all', { when: () => '', hues: {}, ranks: K.rankMap({ a: hand.a }), drag: true }).includes('Drag a card'), 'with one card there is nothing to explain');

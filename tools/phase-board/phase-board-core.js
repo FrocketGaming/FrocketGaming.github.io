@@ -186,14 +186,20 @@ function phaseState(proj, def) {
 }
 function gateCount(def, st) { return def.gates.filter(g => st.gates && st.gates[g.id]).length; }
 function summarize(tpl, proj) {
-  let doneP = 0, g = 0, gt = 0, current = null, attention = false;
+  let doneP = 0, g = 0, gt = 0, current = null, attention = false, blocked = null, blockedStatus = '', overdue = 0;
   tpl.phases.forEach(d => {
     const st = phaseState(proj, d);
     if (st.status === 'done') doneP++; else if (!current) current = d;
-    if (st.status === 'blocked' || st.status === 'reopened') attention = true;
+    if (st.status === 'blocked' || st.status === 'reopened') {
+      attention = true;
+      if (!blocked) { blocked = d; blockedStatus = st.status; }
+    }
+    (st.actions || []).forEach(a => { if (!a.done && a.due && a.due < today()) overdue++; });
     g += gateCount(d, st); gt += d.gates.length;
   });
-  return { doneP: doneP, total: tpl.phases.length, g: g, gt: gt, current: current, attention: attention };
+  const targetLate = !!(proj.target && proj.target < today() && doneP < tpl.phases.length);
+  if (overdue || targetLate) attention = true;
+  return { doneP: doneP, total: tpl.phases.length, g: g, gt: gt, current: current, attention: attention, blocked: blocked, blockedStatus: blockedStatus, overdue: overdue, targetLate: targetLate };
 }
 
 /* Gate toggle rules. Mutates st, returns a log message or null. */
@@ -483,7 +489,28 @@ function dueFlag(tpl, p) {
   if (!n) return '';
   return '<span class="due-flag" title="' + (due.today ? plural(due.today, 'action', 'actions') + ' due today' : '') + (due.today && due.soon ? ', ' : '') + (due.soon ? plural(due.soon, 'action', 'actions') + ' due in the next ' + DUE_SOON_DAYS + ' days' : '') + '">' + (due.today ? 'Due today' : 'Due soon') + '</span>';
 }
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function targetFlag(p) {
+  if (!p.target || !/^\d{4}-\d{2}-\d{2}$/.test(p.target)) return '';
+  const late = p.target < today() && !isComplete(p);
+  const date = new Date(p.target + 'T00:00:00');
+  const text = late
+    ? 'Past target · ' + Math.max(1, Math.floor((new Date(today() + 'T00:00:00') - date) / 86400000)) + 'd'
+    : 'Target ' + date.getDate() + ' ' + MONTHS_SHORT[date.getMonth()];
+  return '<span class="target-flag' + (late ? ' is-late' : '') + '" title="Target date: ' + esc(p.target) + '">' + text + '</span>';
+}
+function nextActionOf(tpl, p) {
+  const items = [];
+  tpl.phases.forEach(d => {
+    (phaseState(p, d).actions || []).forEach(a => { if (!a.done) items.push({ a: a, d: d }); });
+  });
+  items.sort((x, y) => String(x.a.due || '9999-99-99').localeCompare(String(y.a.due || '9999-99-99')));
+  return items[0] || null;
+}
 /* The third argument (when it was last updated) is no longer shown; it stays so callers and tests keep their positions. */
+function cardLinkHTML(id, name) {
+  return '<h2><a class="card-link" href="?project=' + encodeURIComponent(id) + '" data-open="' + esc(id) + '" draggable="false">' + esc(name) + '</a></h2>';
+}
 function cardHTML(id, p, when, hues, rank, drag) {
   if (isComplete(p)) return doneCardHTML(id, p, when, hues);
   const tpl = tplOf(p), s = summarize(tpl, p), open = openActions(tpl, p);
@@ -494,11 +521,17 @@ function cardHTML(id, p, when, hues, rank, drag) {
   }).join('');
   /* Tag, priority and work-order number share a row above the name, so the footer holds only the criteria count and actions and stays on one line. */
   const flags = tagChip(p, hues) + priorityBadge(p) + rankBadge(rank);
-  return '<button class="card' + (rank ? ' has-rank' : '') + '" type="button" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' +
-    '<div>' + (flags ? '<div class="card-flags">' + flags + '</div>' : '') + '<h2>' + esc(p.name) + '</h2>' + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) + dueFlag(tpl, p) : pill('done') + '<span>All phases complete</span>') + archivedTag(p) + '</div>' +
+  const blockedFlag = s.blocked && (!cur || s.blocked.id !== cur.id)
+    ? '<span class="attention-flag is-blocked" title="' + esc(s.blocked.name + ' is ' + (s.blockedStatus === 'reopened' ? 'reopened' : 'blocked')) + '">' + esc(s.blocked.short || s.blocked.name) + (s.blockedStatus === 'reopened' ? ' reopened' : ' blocked') + '</span>'
+    : '';
+  const next = nextActionOf(tpl, p);
+  const nextLine = next ? '<p class="card-next"><span>Next</span> ' + esc(next.a.text) + (next.a.assignee ? ' · ' + esc(next.a.assignee) : '') + '</p>' : '';
+  const cardClass = 'card' + (rank ? ' has-rank' : '') + (s.blocked ? ' is-blocked' : s.attention ? ' is-attention' : '');
+  return '<article class="' + cardClass + '" data-open="' + esc(id) + '"' + (rank && drag ? ' draggable="true" data-drag="' + esc(id) + '" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"' : '') + '>' +
+    '<div>' + (flags ? '<div class="card-flags">' + flags + '</div>' : '') + cardLinkHTML(id, p.name) + (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + nextLine + '</div>' +
+    '<div class="now">' + (cur ? '<span class="phase-badge">' + esc(cur.short) + '</span>' + pill(curSt.status) + dueFlag(tpl, p) : pill('done') + '<span>All phases complete</span>') + targetFlag(p) + blockedFlag + archivedTag(p) + '</div>' +
     '<div class="mini" aria-hidden="true">' + icons + '</div>' + barHTML(tpl, p) +
-    cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span></div></button>';
+    cardMeta(p) + '<div class="foot"><span class="foot-l"><span>' + (s.gt ? s.g + ' of ' + s.gt + ' criteria' : 'No exit criteria yet') + '</span>' + openActionsChip(tpl, p) + '</span></div></article>';
 }
 
 /* ---- project overview: owner, stakeholders, SMEs, target date ---- */
@@ -639,15 +672,37 @@ function dueItemsHTML(projects, ranks, keep, ui) {
   DUE_GROUPS.forEach(g => { count[g[0]] = items[g[0]].filter(r => !r.a.done).length; });
   const open = count.late + count.today + count.soon;
   const only = ui.open && count[ui.only] ? ui.only : '';
+  const group = ui.open && ui.group === 'due' ? 'due' : 'project';
   const meter = '<div class="due-meter" role="img" aria-label="' + DUE_GROUPS.map(g => count[g[0]] + ' ' + g[1]).join(', ') + '">' +
     DUE_GROUPS.map(g => count[g[0]] ? '<i class="ds-' + g[0] + '" style="flex:' + count[g[0]] + '"></i>' : '').join('') + '</div>';
   const segs = DUE_GROUPS.filter(g => count[g[0]]).map(g => '<button type="button" class="due-seg ds-' + g[0] + '" id="pbDueOnly-' + g[0] + '" data-due-only="' + g[0] + '" aria-pressed="' + (only === g[0]) + '"><i></i><b>' + count[g[0]] + '</b>' + g[1] + '</button>').join('');
-  const bar = '<div class="due-bar"><h2 class="sec-h">' + (open ? plural(open, 'action', 'actions') + ' due' : 'All due actions done') + '</h2>' + meter + segs +
+  const groupToggle = ui.open
+    ? '<div class="due-group-toggle" role="group" aria-label="Group due actions"><button type="button" data-due-group="project" aria-pressed="' + (group === 'project') + '">By project</button><button type="button" data-due-group="due" aria-pressed="' + (group === 'due') + '">By due</button></div>'
+    : '';
+  const bar = '<div class="due-bar"><h2 class="sec-h">' + (open ? plural(open, 'action', 'actions') + ' due' : 'All due actions done') + '</h2>' + meter + segs + groupToggle +
     '<button type="button" class="due-toggle" id="pbDueToggle" data-due-toggle aria-expanded="' + !!ui.open + '" aria-controls="pbDueBody">' + (ui.open ? 'Hide' : 'Show') + '</button></div>';
   if (!ui.open) return '<section class="due-panel" aria-label="Action items due">' + bar + '</section>';
 
+  const filteredRows = rows.filter(r => !only || dueBucket(r.a.due) === only);
+  const row = (r, withProject) => {
+    const box = 'due-' + esc(r.id) + '-' + esc(r.a.id), who = String(r.a.assignee || '').trim(), b = dueBucket(r.a.due);
+    const projectLink = withProject ? ' &middot; <button type="button" class="due-proj-link" data-open="' + esc(r.id) + '">' + esc(r.p.name) + '</button>' : '';
+    return '<li class="due-row ds-' + b + (r.a.done ? ' is-done' : '') + '"><input type="checkbox" id="' + box + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '" data-project="' + esc(r.id) + '"' + (r.a.done ? ' checked' : '') + '>' +
+      '<label for="' + box + '">' + esc(r.a.text) + '</label><span class="due-when mono" title="Due ' + esc(r.a.due) + '">' + dueLabel(r.a.due) + '</span>' +
+      '<small>' + esc(r.d.short) + (who ? ' &middot; ' + esc(who) : '') + projectLink + '</small></li>';
+  };
+  if (group === 'due') {
+    const buckets = DUE_GROUPS.map(g => ({
+      key: g[0], label: g[1].charAt(0).toUpperCase() + g[1].slice(1),
+      rows: filteredRows.filter(r => dueBucket(r.a.due) === g[0])
+        .sort((x, y) => x.a.due.localeCompare(y.a.due) || x.n - y.n)
+    })).filter(g => g.rows.length);
+    return '<section class="due-panel is-open" aria-label="Action items due">' + bar + '<div class="due-grid due-by-date" id="pbDueBody">' +
+      buckets.map(g => '<div class="due-proj-card due-bucket ds-' + g.key + '"><div class="due-proj-h"><span class="due-bucket-name">' + g.label + '</span><span class="rank">' + g.rows.length + '</span></div><ul>' + g.rows.map(r => row(r, true)).join('') + '</ul></div>').join('') + '</div></section>';
+  }
+
   const rank = { late: 0, today: 1, soon: 2 }, byProj = {}, order = [];
-  rows.filter(r => !only || dueBucket(r.a.due) === only).forEach(r => {
+  filteredRows.forEach(r => {
     if (!byProj[r.id]) { byProj[r.id] = { id: r.id, p: r.p, n: r.n, rows: [], worst: 3, first: r.a.due }; order.push(byProj[r.id]); }
     const g = byProj[r.id];
     g.rows.push(r);
@@ -656,16 +711,10 @@ function dueItemsHTML(projects, ranks, keep, ui) {
   });
   order.forEach(g => g.rows.sort((x, y) => x.a.due.localeCompare(y.a.due)));
   order.sort((x, y) => x.worst - y.worst || x.first.localeCompare(y.first) || x.n - y.n);
-  const row = r => {
-    const box = 'due-' + esc(r.id) + '-' + esc(r.a.id), who = String(r.a.assignee || '').trim(), b = dueBucket(r.a.due);
-    return '<li class="due-row ds-' + b + (r.a.done ? ' is-done' : '') + '"><input type="checkbox" id="' + box + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '" data-project="' + esc(r.id) + '"' + (r.a.done ? ' checked' : '') + '>' +
-      '<label for="' + box + '">' + esc(r.a.text) + '</label><span class="due-when mono" title="Due ' + esc(r.a.due) + '">' + dueLabel(r.a.due) + '</span>' +
-      '<small>' + esc(r.d.short) + (who ? ' &middot; ' + esc(who) : '') + '</small></li>';
-  };
   const worst = ['due-worst-late', 'due-worst-today', '', ''];
   return '<section class="due-panel is-open" aria-label="Action items due">' + bar + '<div class="due-grid" id="pbDueBody">' +
     order.map(g => '<div class="due-proj-card ' + worst[g.worst] + '"><div class="due-proj-h"><button class="due-proj" type="button" data-open="' + esc(g.id) + '">' + esc(g.p.name) + '</button>' +
-      (isFinite(g.n) ? '<span class="rank">#' + g.n + '</span>' : '') + '</div><ul>' + g.rows.map(row).join('') + '</ul></div>').join('') + '</div></section>';
+      (isFinite(g.n) ? '<span class="rank">#' + g.n + '</span>' : '') + '</div><ul>' + g.rows.map(r => row(r, false)).join('') + '</ul></div>').join('') + '</div></section>';
 }
 
 /* ---- flow editing: pure helpers shared by the app and its checks ---- */
@@ -944,11 +993,11 @@ function doneCardHTML(id, p, when, hues) {
     ? '<div class="wins">' + tiles.map(m => '<div class="win"><b>' + esc(metricTileText(m)) + '</b><span>' + esc(m.name) + '</span></div>').join('') + '</div>'
     : (richItems(o.value).length ? '' : '<p class="msg">No value added recorded yet.</p>');
   const text = (label, t) => richItems(t).length ? '<div class="card-text"><p class="sub">' + label + '</p><div class="rt">' + bulletsHTML(t, 4) + '</div></div>' : '';
-  return '<button class="card is-done" type="button" data-open="' + esc(id) + '"><div>' + tagChip(p, hues) + '<h2>' + esc(p.name) + '</h2>' +
+  return '<article class="card is-done" data-open="' + esc(id) + '"><div>' + tagChip(p, hues) + cardLinkHTML(id, p.name) +
     (p.summary ? '<p class="summary">' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="now">' + pill('done') + (on ? '<span>Completed ' + esc(on) + '</span>' : '') + archivedTag(p) + '</div>' + wins +
     text('Value added', o.value) + text('Lessons learned', o.lessons) +
-    liveNotesHTML(p) + cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span></div></button>';
+    liveNotesHTML(p) + cardMeta(p) + '<div class="foot"><span>' + n.decisions + (n.decisions === 1 ? ' decision' : ' decisions') + ' / ' + n.actions + (n.actions === 1 ? ' action' : ' actions') + ' completed</span></div></article>';
 }
 
 /* Totals of amounts saved across completed projects. Recurring amounts become an estimated annual figure. */

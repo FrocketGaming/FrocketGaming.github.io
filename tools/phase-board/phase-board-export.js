@@ -55,7 +55,7 @@
 
     root.addEventListener('click', e => {
         const open = e.target.closest('[data-open]');
-        if (open) { view = open.getAttribute('data-open'); sel = null; render(); window.scrollTo(0, 0); return; }
+        if (open) { if (e.preventDefault) e.preventDefault(); view = open.getAttribute('data-open'); sel = null; render(); window.scrollTo(0, 0); return; }
         const f = e.target.closest('[data-filter]');
         if (f) { filter = f.getAttribute('data-filter'); render(); return; }
         const s = e.target.closest('[data-sel]');

@@ -20,7 +20,7 @@ ok(K.rankMap({}).x === undefined && Object.keys(K.rankMap(null)).length === 0, '
 
 ok(K.rankBadge({ n: 2, of: 4 }) === '<span class="rank" title="Work order: 2 of 4 active projects" aria-label="Work order 2 of 4">#2</span>' && K.rankBadge(undefined) === '', 'the badge says its place and the total, and is absent without a rank');
 const card = K.cardHTML('b', projects.b, 'now', {}, r.b);
-ok(card.includes('class="card has-rank"') && card.includes('>#2<') && card.indexOf('class="rank"') < card.indexOf('<h2>'), 'the in-progress card carries the number');
+ok(/class="card[^"]*has-rank/.test(card) && card.includes('>#2<') && card.indexOf('class="rank"') < card.indexOf('<h2>'), 'the in-progress card carries the number');
 ok(!K.cardHTML('b', projects.b, 'now', {}).includes('class="rank"'), 'without a rank there is no badge');
 ok(!K.cardHTML('d', projects.d, 'now', {}, r.b).includes('class="rank"'), 'a finished card never shows one');
 

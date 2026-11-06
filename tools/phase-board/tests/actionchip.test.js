@@ -22,7 +22,7 @@ ok(K.openActionsChip(K.tplOf(many), many) === '<span class="acts">3 open actions
 const late = proj([act('1', '2000-01-01'), act('2', '2000-02-01'), act('3', '2999-01-01'), act('4', '2000-01-01', true)]);
 ok(K.openActionsChip(K.tplOf(late), late) === '<span class="acts is-late">3 open actions / 2 overdue</span>', 'overdue ones turn the chip red and are counted');
 const card = K.cardHTML('a', many, '', {});
-ok(card.includes('class="foot-l"') && card.indexOf('criteria') < card.indexOf('class="acts"') && card.indexOf('class="acts"') < card.indexOf('</div></button>'), 'the chip sits in the footer after the criteria count');
+ok(card.includes('class="foot-l"') && card.indexOf('criteria') < card.indexOf('class="acts"') && card.indexOf('class="acts"') < card.indexOf('</div></article>'), 'the chip sits in the footer after the criteria count');
 ok(!/ open actions?<\/span><span>/.test(card) && !card.includes('/ 3 open'), 'the old plain-text count is gone');
 
 // the footer stays at the bottom of the card whatever else the card has, so neighbours line up

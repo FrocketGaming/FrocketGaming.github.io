@@ -60,12 +60,15 @@ class PhaseBoardApp {
         this.showRisks = false;
         this.actionFilter = 'all';
         this.actionGroup = 'assignee';
+        this.tagFilter = '';
         this.restore = null;
         try { if (localStorage.getItem('pb-completed-open') === '0') this.completedOpen = false; } catch (e) { /* storage unavailable: the section stays open */ }
         // The due panel is open unless it was last left collapsed in this browser; dueOnly narrows it to one group for this visit.
         this.dueOpen = true;
         this.dueOnly = '';
+        this.dueGroup = 'project';
         try { if (localStorage.getItem('pb-due-open') === '0') this.dueOpen = false; } catch (e) { /* storage unavailable: the panel stays open */ }
+        try { if (localStorage.getItem('pb-due-group') === 'due') this.dueGroup = 'due'; } catch (e) { /* default grouping */ }
     }
 
     init() {
@@ -526,15 +529,37 @@ class PhaseBoardApp {
 
     portfolioHTML() {
         const list = this.sortedProjects();
-        const shown = filterProjects(list, this.filter);
+        const tagMap = new Map();
+        list.filter(p => !p.p.archived).forEach(p => {
+            const tag = cleanTag(p.p.tag);
+            if (!tag) return;
+            const key = tagKey(tag);
+            if (!tagMap.has(key)) tagMap.set(key, { key: key, name: tag, count: 0 });
+            tagMap.get(key).count++;
+        });
+        const tags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+        if (this.tagFilter && !tagMap.has(tagKey(this.tagFilter))) this.tagFilter = '';
+        const tagList = this.tagFilter ? list.filter(p => tagKey(cleanTag(p.p.tag)) === tagKey(this.tagFilter)) : list;
+        let shown = filterProjects(tagList, this.filter);
+        const tagHuesMap = tagHues(this.projects);
+        const tagChipHTML = t => '<span class="ptag" style="--tc:hsl(' + (tagHuesMap[t.key] !== undefined ? tagHuesMap[t.key] : tagHue(t.name)) + ' ' + TAG_SAT + '% ' + TAG_LIGHT + '%)">' + esc(t.name) + '</span>';
+        const tagBar = tags.length > 1 || this.tagFilter
+            ? '<div class="tag-filter-row"><span class="tag-filter-label">Tags</span>' +
+                '<button type="button" class="tag-filter-chip' + (!this.tagFilter ? ' is-on' : '') + '" data-tag-clear aria-pressed="' + !this.tagFilter + '">All <span class="cnt">' + list.filter(p => !p.p.archived).length + '</span></button>' +
+                tags.map(t => '<button type="button" class="tag-filter-chip' + (tagKey(this.tagFilter) === t.key ? ' is-on' : '') + '" data-tag-filter="' + esc(t.name) + '" aria-pressed="' + (tagKey(this.tagFilter) === t.key) + '">' + tagChipHTML(t) + '<span class="cnt">' + t.count + '</span></button>').join('') +
+              '</div>'
+            : '';
+        const dueProjects = this.tagFilter
+            ? Object.fromEntries(list.filter(p => tagKey(cleanTag(p.p.tag)) === tagKey(this.tagFilter)).map(p => [p.id, p.p]))
+            : this.projects;
         let body;
         if (!this.loaded) body = '<p class="msg">Loading projects</p>';
         else if (!list.length) body = '<div class="empty"><h2>No projects yet</h2><p>Each project follows a flow template. Create the first one to track its phases, exit criteria and action items.</p>' + (this.mode === 'local' ? '<p class="pb-local-hint">Projects are saved in this browser. Sign in from the toolbar to sync them across devices.</p>' : '') + '<button class="btn primary" type="button" data-act="new">New project</button></div>';
         else if (!shown.length) body = '<div class="empty"><h2>Nothing in this view</h2><p>No projects match this filter.</p></div>';
         else body = portfolioBodyHTML(shown, this.filter, { when: p => p.updatedAt ? ago(p.updatedAt) : '', completedOpen: this.completedOpen, hues: tagHues(this.projects), ranks: rankMap(this.projects), drag: true });
-        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(list, this.filter) + '</div></div>' +
-            this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') +
-            (this.loaded && (this.filter === 'all' || this.filter === 'attention') ? dueItemsHTML(this.projects, rankMap(this.projects), this.justDone, { open: this.dueOpen, only: this.dueOnly }) : '') + body;
+        return '<div class="ph-row"><div><p class="eyebrow">Portfolio</p><h1>Projects</h1></div><div class="filters">' + filterChipsHTML(tagList, this.filter) + '</div></div>' +
+            this.statusLine() + this.restoreHTML() + (this.showNew ? this.newFormHTML() : '') + tagBar +
+            (this.loaded && (this.filter === 'all' || this.filter === 'attention') ? dueItemsHTML(dueProjects, rankMap(this.projects), this.justDone, { open: this.dueOpen, only: this.dueOnly, group: this.dueGroup }) : '') + body;
     }
 
     reviewPageHTML() {
@@ -1454,6 +1479,7 @@ class PhaseBoardApp {
         this.showRisks = false;
         this.actionFilter = 'all';
         this.actionGroup = 'assignee';
+        this.tagFilter = '';
         this.render();
         window.scrollTo(0, 0);
     }
@@ -1620,12 +1646,25 @@ class PhaseBoardApp {
             const actionGroup = e.target.closest('[data-action-group]');
             if (actionGroup) { this.actionGroup = actionGroup.getAttribute('data-action-group'); return this.render(); }
             const open = e.target.closest('[data-open]');
-            if (open) return this.openProject(open.getAttribute('data-open'));
+            if (open) { if (e.preventDefault) e.preventDefault(); return this.openProject(open.getAttribute('data-open')); }
             if (e.target.closest('[data-due-toggle]')) return this.setDueOpen(!this.dueOpen);
             const dueOnly = e.target.closest('[data-due-only]');
             if (dueOnly) { const g = dueOnly.getAttribute('data-due-only'); this.dueOnly = this.dueOpen && this.dueOnly === g ? '' : g; return this.setDueOpen(true); }
+            const dueGroup = e.target.closest('[data-due-group]');
+            if (dueGroup) {
+                this.dueGroup = dueGroup.getAttribute('data-due-group') === 'due' ? 'due' : 'project';
+                try { localStorage.setItem('pb-due-group', this.dueGroup); } catch (e) { /* best effort */ }
+                return this.render();
+            }
             const filter = e.target.closest('[data-filter]');
             if (filter) { this.filter = filter.getAttribute('data-filter'); return this.render(); }
+            if (e.target.closest('[data-tag-clear]')) { this.tagFilter = ''; return this.render(); }
+            const tagFilter = e.target.closest('[data-tag-filter]');
+            if (tagFilter) {
+                const tag = tagFilter.getAttribute('data-tag-filter');
+                this.tagFilter = this.tagFilter === tag ? '' : tag;
+                return this.render();
+            }
             const delAct = e.target.closest('[data-del-action]');
             if (delAct) return this.removeAction(delAct.getAttribute('data-phase'), delAct.getAttribute('data-del-action'));
             const sg = e.target.closest('[data-crit-suggest]');

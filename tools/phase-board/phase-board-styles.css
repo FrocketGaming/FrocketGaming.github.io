@@ -222,7 +222,7 @@
 @media (max-width: 960px) { .pb .sticky { position: static; } }
 
 /* phase card */
-.pb .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; box-shadow: 0 0 4px var(--shadow-color); }
+.pb .phase { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: 5px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; box-shadow: 0 0 4px var(--shadow-color); }
 .pb .ph-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .pb .ph-idx { font-family: Consolas, Monaco, monospace; font-size: 12px; color: var(--fg-2); }
 .pb .ph-head h3 { font-size: 16px; font-weight: 600; }
@@ -670,12 +670,10 @@
 .pb .crit-evidence summary i { margin-right: 4px; }
 .pb .crit-evidence .crit-note { margin-top: 4px; }
 
-.pb .phase { position: relative; }
-.pb .phase::before { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 3px; border-radius: 5px 0 0 5px; background: var(--line); pointer-events: none; }
-.pb .phase.st-good::before { background: var(--good); }
-.pb .phase.st-prog::before { background: var(--accent); }
-.pb .phase.st-crit::before { background: var(--crit); }
-.pb .phase.st-warn::before { background: var(--warn); }
+.pb .phase.st-good { border-left-color: var(--good); }
+.pb .phase.st-prog { border-left-color: var(--accent); }
+.pb .phase.st-crit { border-left-color: var(--crit); }
+.pb .phase.st-warn { border-left-color: var(--warn); }
 .pb .phase-complete { display: flex; align-items: center; gap: 6px; color: var(--good); font-size: 12px; font-weight: 600; }
 .pb .ph-actcount.is-late { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
 .pb .act-toggle .cnt.is-late { color: var(--crit); }
@@ -689,3 +687,32 @@
 
 .pb .phase-note-form { display: grid; gap: 8px; }
 .pb .phase-note-form textarea { min-height: 72px; resize: vertical; }
+
+/* ---- portfolio card attention, target and next action ---- */
+.pb .card { font: inherit; }
+.pb .card-link { color: inherit; text-decoration: none; }
+.pb .card-link:focus-visible { outline: 2px solid var(--accent-secondary); outline-offset: 3px; }
+.pb .card:focus-within { outline: 2px solid var(--accent-secondary); outline-offset: 2px; }
+.pb .card.is-attention { border-left: 3px solid var(--warn); }
+.pb .card.is-blocked { border-left: 3px solid var(--crit); }
+.pb .target-flag { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+.pb .target-flag.is-late { color: var(--crit); }
+.pb .attention-flag { padding: 1px 8px; border: 1px solid color-mix(in srgb, var(--crit) 55%, var(--line)); border-radius: 999px; color: var(--crit); font-size: 11px; font-weight: 600; }
+.pb .card-next { margin-top: 4px; overflow: hidden; color: var(--fg-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.pb .card-next span { margin-right: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---- portfolio tag filter and due grouping ---- */
+.pb .tag-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pb .tag-filter-label { color: var(--fg-2); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.pb .tag-filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; background: none; border: 1px solid var(--line); border-radius: 999px; color: var(--fg-2); font: inherit; font-size: 12px; cursor: pointer; }
+.pb .tag-filter-chip:hover { border-color: var(--accent-secondary); color: var(--fg); }
+.pb .tag-filter-chip.is-on { background: var(--surface-2); border-color: var(--accent); color: var(--fg); }
+.pb .tag-filter-chip .cnt { color: var(--fg-2); font-size: 10px; }
+.pb .tag-filter-chip .ptag { margin: 0; padding: 0; border: 0; background: none; }
+
+.pb .due-group-toggle { display: flex; gap: 2px; font-size: 11px; }
+.pb .due-group-toggle button { padding: 2px 5px; background: none; border: 0; border-radius: 3px; color: var(--fg-2); font: inherit; cursor: pointer; }
+.pb .due-group-toggle button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
+.pb .due-bucket-name { color: var(--fg); font-weight: 600; }
+.pb .due-proj-link { padding: 0; background: none; border: 0; color: var(--accent-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.pb .due-proj-link:hover { text-decoration: underline; }
