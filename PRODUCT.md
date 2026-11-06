@@ -12,7 +12,7 @@ The site's own developer/owner, using these tools personally as a daily develope
 
 ## Product Purpose
 
-"QoL Tools" is a collection of browser-based developer quality-of-life utilities: text formatting/case conversion, a local-first code snippet manager, a to-do list, a CSV viewer with SQL query support, a regex tester, a canvas-based image annotator/editor, a chart builder (Plotly.js), a visual cron expression builder, a multi-timezone comparison tool, a text diff viewer, and a Markdown note-taking tool with cloud sync. Everything runs client-side in the browser; no sign-up is required for any local-only feature. Success means the owner reaches the right tool and completes the task with minimal friction, repeatedly, every day.
+"QoL Tools" is a collection of browser-based developer quality-of-life utilities: text formatting/case conversion, a local-first code snippet manager, a to-do list, a CSV viewer with SQL query support, a regex tester, a canvas-based image annotator/editor, a visual cron expression builder, a multi-timezone comparison tool, a text diff viewer, and a Markdown note-taking tool with cloud sync. Everything runs client-side in the browser; no sign-up is required for any local-only feature. Success means the owner reaches the right tool and completes the task with minimal friction, repeatedly, every day.
 
 The site also hosts Snake Charmer, a bi-weekly Python newsletter (package reviews, new repos, stdlib updates, and long-form deep dives) at `/newsletter/`. It is the one part of the site written to be read by other people. Issues are individual Markdown files in `newsletter/issues/`; the archive manifest `newsletter/issues.json` is generated from them by a small script that a GitHub Action runs, so the `.md` is the only file to edit. Issues render in the browser with no build step for the site itself; there is no email delivery, and RSS/Atom is deferred. A link to it sits at the far left of every page header, separate from the tool nav.
 
@@ -26,7 +26,7 @@ Local-first: every tool works fully offline via IndexedDB (`QoLToolsDB` for Snip
 - Each tool is a self-contained page following the pattern `tools/{tool}/index.html` + `{tool}-app.js` + `{tool}-styles.css`; shared code (theme system, storage, Firebase sync) lives in `src/`.
 - A site-wide theme system spans all tools: 8 selectable palettes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>`, with an inline script to prevent a flash of the wrong theme on load.
 - Firebase-dependent tools (Snippets, Notes, Phase Board) require the owner's own `src/firebase-config.js` for sync; all three work locally without any configuration. Notes' version history and image uploads require sign-in; everything else in Notes works offline.
-- A handful of CDN libraries are used per-tool as needed (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK) — no dependency is added without a clear per-tool reason.
+- A handful of CDN libraries are used per-tool as needed (Highlight.js, Marked, KaTeX, Firebase SDK) — no dependency is added without a clear per-tool reason.
 
 ## Capabilities and Constraints
 
@@ -35,7 +35,6 @@ Local-first: every tool works fully offline via IndexedDB (`QoLToolsDB` for Snip
 - Local-first is non-negotiable: any feature must be fully usable offline via IndexedDB; Firebase sync (where present) must degrade gracefully when unconfigured or offline. The Firebase SDKs load on demand, so a local-only visit makes no Firebase requests.
 - The command palette is the keyboard-first route to tools, actions (new note/task/snippet/project) and local records; deep links (`?note=`, `?task=`, `?snippet=`, `?project=`) open a specific record.
 - `/backup/` exports every local store and UI setting to one JSON file and restores it. It covers snippets, tasks, notes, Phase Board projects and flows; Notes' Firebase-only images and version history are excluded.
-- Chart Builder is intentionally unlinked from the main navigation (direct-URL only); this is a deliberate scoping choice, not an oversight. Notes was re-surfaced in the nav and on the landing page.
 - The newsletter's issues are public on purpose (GitHub Pages is public and nothing internal is exposed), and it sends no email. Its colors must still come from theme tokens, so switching the theme recolors it live; every page defaults to the Canary theme when a visitor has no saved theme (`src/theme-manager.js`), and a page can override that with `data-default-theme`.
 
 ## Brand Commitments

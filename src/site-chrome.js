@@ -309,7 +309,7 @@
         if (document.querySelector(".skip-link")) return;
         var target = document.querySelector([
             "#notesApp", "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
-            ".columns-row", ".csv-container", ".cron-container", ".chart-container",
+            ".columns-row", ".csv-container", ".cron-container",
             ".image-editor-container", ".json-container", ".regex-container",
             ".diff-container", ".snippets-container", ".tz-container", ".pe-container",
             ".flow-viewport", "main"

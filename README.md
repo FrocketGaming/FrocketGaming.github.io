@@ -26,9 +26,6 @@ Live regular expression testing with real-time match highlighting, capture group
 ### Image Editor
 A canvas-based annotation and editing tool. Supports drawing arrows, rectangles, ellipses, freehand lines, and text overlays. Also handles cropping, resizing, pixel-blur/redact, and composite export — useful for annotating screenshots before sharing.
 
-### Chart Builder
-Build interactive charts from pasted CSV or JSON data using Plotly.js. Supports 12 chart types (bar, line, scatter, pie, area, radar, bubble, heatmap, box, histogram, and more) with customizable styling and PNG/clipboard export.
-
 ### Cron Builder
 Visual cron expression editor with a plain-English description of the schedule and a next-run preview. Paste in an existing expression to decode it, or build one field-by-field.
 
@@ -102,7 +99,7 @@ Notes images and version history live in Firebase and are not part of the backup
 - **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>` with no flash on load
 - **Shared site chrome** — `src/site-chrome.js`/`.css` add the command palette (`Ctrl/⌘+K`, `Ctrl/⌘+Shift+P` on Notes), which searches tools, actions and local notes/tasks/snippets/projects and deep-links to the record; native tooltips and `aria-current` on the nav rail; and a skip link plus a visually hidden page heading.
 - **One-file backup** — `/backup/` exports every local store (snippets, tasks, notes, projects, flows) plus UI settings to one JSON file and restores it.
-- No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Plotly.js, Firebase SDK)
+- No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Firebase SDK)
 
 ---
 
@@ -150,7 +147,6 @@ Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/fir
 │   ├── template.md         Authoring rules and starting point
 │   └── issues/             One Markdown file per issue (YYYY-MM-DD.md)
 └── tools/
-    ├── chart-builder/
     ├── cron-builder/
     ├── csv-viewer/
     ├── image-editor/
