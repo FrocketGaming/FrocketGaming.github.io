@@ -29,6 +29,7 @@ ok(!/ open actions?<\/span><span>/.test(card) && !card.includes('/ 3 open'), 'th
 const css = fs.readFileSync(path.join(__dirname, '..', 'phase-board-styles.css'), 'utf8');
 const cardRule = (css.match(/^.pb .card {[^}]*}/m) || [''])[0];
 ok(/display: flex; flex-direction: column/.test(cardRule) && !/align-content: start/.test(cardRule), 'a card is a column that fills its height, not a grid packed to the top');
+ok(/box-sizing: border-box/.test(cardRule), 'the card width includes its padding, so it never spills out of its grid track');
 ok(/^.pb .card > .foot { margin-top: auto; }/m.test(css), 'the footer takes the spare space above it, so it sits at the bottom');
 console.log(fails ? fails + ' FAILED' : 'ALL PASSED');
 process.exit(fails ? 1 : 0);
