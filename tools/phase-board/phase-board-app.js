@@ -50,6 +50,9 @@ class PhaseBoardApp {
         this.actionsOpen = {};
         this.addActionOpen = null;
         this.decisionOpen = null;
+        this.editingAction = null;
+        this.addCritOpen = null;
+        this.contextOpen = {};
         this.showOverview = false;
         this.showRisks = false;
         this.actionFilter = 'all';
@@ -553,9 +556,12 @@ class PhaseBoardApp {
                 mode: 'edit', live: true, people,
                 current: d.id === currentId,
                 collapsed: !this.phaseIsOpen(d.id, currentId),
-                actionsOpen: !!this.actionsOpen[d.id],
+                actionsOpen: this.actionsOpen[d.id] !== false,
                 addActionOpen: this.addActionOpen === d.id,
                 decisionOpen: this.decisionOpen === d.id,
+                editingAction: this.editingAction,
+                addCritOpen: this.addCritOpen === d.id,
+                contextOpen: !!this.contextOpen[d.id],
                 nextPhase: next ? { id: next.id, name: next.short || next.name } : null,
                 extra: extra, editingGate: this.editingGate, confirmCrit: this.confirmCrit,
                 suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs,
@@ -718,7 +724,7 @@ class PhaseBoardApp {
     }
 
     toggleActions(id) {
-        this.actionsOpen[id] = !this.actionsOpen[id];
+        this.actionsOpen[id] = this.actionsOpen[id] === false;
         this.render();
     }
 
@@ -955,6 +961,7 @@ class PhaseBoardApp {
     async openPicker(pid) {
         this.phaseChoice = pid;
         this.expandAllPhases = false;
+        this.contextOpen[pid] = true;
         this.picker = { pid: pid, loading: true, items: [], error: '' };
         this.render();
         try {
@@ -1003,6 +1010,7 @@ class PhaseBoardApp {
     toggleArtifactForm(pid) {
         this.phaseChoice = pid;
         this.expandAllPhases = false;
+        this.contextOpen[pid] = true;
         this.artForm = this.artForm === pid ? null : pid;
         this.artNote = '';
         this.render();
@@ -1417,6 +1425,9 @@ class PhaseBoardApp {
         this.actionsOpen = {};
         this.addActionOpen = null;
         this.decisionOpen = null;
+        this.editingAction = null;
+        this.addCritOpen = null;
+        this.contextOpen = {};
         this.showOverview = false;
         this.showRisks = false;
         this.actionFilter = 'all';
@@ -1531,6 +1542,29 @@ class PhaseBoardApp {
             }
             const addAct = e.target.closest('[data-add-action-toggle]');
             if (addAct) return this.openAddAction(addAct.getAttribute('data-add-action-toggle'));
+            const editAct = e.target.closest('[data-edit-action]');
+            if (editAct) {
+                const pid = editAct.getAttribute('data-phase'), aid = editAct.getAttribute('data-edit-action');
+                this.editingAction = pid + ':' + aid;
+                this.render();
+                requestAnimationFrame(() => document.querySelector('[data-act-assignee="' + aid + '"]')?.focus());
+                return;
+            }
+            if (e.target.closest('[data-edit-action-done]')) { this.editingAction = null; return this.render(); }
+            const addCrit = e.target.closest('[data-add-crit-toggle]');
+            if (addCrit) {
+                const pid = addCrit.getAttribute('data-add-crit-toggle');
+                this.addCritOpen = this.addCritOpen === pid ? null : pid;
+                this.render();
+                if (this.addCritOpen) requestAnimationFrame(() => document.getElementById('newcrit-' + pid)?.focus());
+                return;
+            }
+            const context = e.target.closest('[data-context-toggle]');
+            if (context) {
+                const pid = context.getAttribute('data-context-toggle');
+                this.contextOpen[pid] = !this.contextOpen[pid];
+                return this.render();
+            }
             const actionFilter = e.target.closest('[data-action-filter]');
             if (actionFilter) { this.actionFilter = actionFilter.getAttribute('data-action-filter'); return this.render(); }
             const actionGroup = e.target.closest('[data-action-group]');
