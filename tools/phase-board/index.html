@@ -22,7 +22,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
         <link rel="stylesheet" href="../../src/stylesheet.css" />
         <link rel="stylesheet" href="../../src/firebase-sync.css" />
-        <link rel="stylesheet" href="phase-board-styles.css?v=9b85daff" />
+        <link rel="stylesheet" href="phase-board-styles.css?v=5f3965fd" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
@@ -77,9 +77,14 @@
                 <div class="pb-user">
                     <span id="pbModeBadge" class="pb-mode-badge" hidden title="Saved in this browser only">Local only</span>
                     <button id="pbLocalSignInBtn" class="btn pb-signin-inline" hidden title="Sign in to sync this board across devices"><i class="fa-brands fa-google"></i> Sign in to sync</button>
-                    <img id="pbAvatar" alt="" hidden />
-                    <span id="pbUserName"></span>
-                    <button id="pbSignOutBtn" title="Sign out" aria-label="Sign out" hidden><i class="fa-solid fa-right-from-bracket"></i></button>
+                    <div id="pbUserInfo" class="pb-user-info" hidden>
+                        <div class="pb-user-identity" tabindex="0" title="Hover or focus to reveal" aria-label="Signed in account, hover or focus to reveal">
+                            <span class="pb-user-hint"><i class="fa-solid fa-user"></i></span>
+                            <img id="pbAvatar" class="pb-avatar" alt="" />
+                            <span id="pbUserName" class="pb-username"></span>
+                        </div>
+                        <button id="pbSignOutBtn" title="Sign out" aria-label="Sign out" hidden><i class="fa-solid fa-right-from-bracket"></i></button>
+                    </div>
                 </div>
             </div>
             <div id="pbPage" class="page"></div>
@@ -88,9 +93,9 @@
         <script src="../../src/theme-manager.js"></script>
         <script src="../../src/firebase-loader.js"></script>
         <script src="../../src/storage-manager.js"></script>
-        <script src="phase-board-core.js?v=9b85daff"></script>
-        <script src="phase-board-local.js?v=9b85daff"></script>
-        <script src="phase-board-app.js?v=9b85daff"></script>
+        <script src="phase-board-core.js?v=5f3965fd"></script>
+        <script src="phase-board-local.js?v=5f3965fd"></script>
+        <script src="phase-board-app.js?v=5f3965fd"></script>
         <script src="../../src/site-chrome.js"></script>
     </body>
 </html>

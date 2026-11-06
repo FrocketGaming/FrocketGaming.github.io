@@ -246,6 +246,8 @@ function barHTML(tpl, proj) {
 function phaseHTML(def, st, idx, o) {
   o = o || {};
   const meta = STATUS[st.status] || STATUS.not_started, n = gateCount(def, st), edit = o.mode === 'edit';
+  const live = !!o.live, collapsed = live && !!o.collapsed, current = live && !!o.current;
+  const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
   const idp = o.idp || '';
   const gates = def.gates.map((g, i) => {
     const id = idp + 'g-' + def.id + '-' + i, key = def.id + ':' + g.id;
@@ -267,9 +269,8 @@ function phaseHTML(def, st, idx, o) {
   }).join('');
   const critAdd = edit ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' + suggestHTML(def, o) : '';
   const decs = (st.decisions || []).map(d => '<li><time>' + esc(d.at) + '</time><span>' + esc(d.text) + '</span></li>').join('');
-  const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
   const people = o.people || [];
-  const actList = acts.map(a => {
+  const actionRow = a => {
     const id = idp + 'a-' + def.id + '-' + a.id;
     const late = a.due && !a.done && a.due < today();
     const opts = (a.assignee && people.indexOf(a.assignee) < 0 ? people.concat([a.assignee]) : people);
@@ -279,23 +280,64 @@ function phaseHTML(def, st, idx, o) {
     const due = edit
       ? '<input class="field mini-date" type="date" data-act-due="' + esc(a.id) + '" data-phase="' + def.id + '" value="' + esc(a.due || '') + '" aria-label="Due date for ' + esc(a.text) + '">'
       : (a.due ? '<span class="due mono' + (late ? ' late' : '') + '">Due ' + esc(a.due) + '</span>' : '');
-    return '<li class="act' + (a.done ? ' is-done' : '') + '"><div class="act-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-action="' + esc(a.id) + '" data-phase="' + def.id + '"' + (a.done ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(a.text) + '</span></label>' +
+    return '<li class="act' + (a.done ? ' is-done' : '') + '"' + (live ? ' id="act-' + idp + def.id + '-' + esc(a.id) + '" data-action-row="' + esc(a.id) + '"' : '') + '><div class="act-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-action="' + esc(a.id) + '" data-phase="' + def.id + '"' + (a.done ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(a.text) + '</span></label>' +
       '<div class="act-meta">' + who + due + (a.done && a.doneAt ? '<span class="due mono">Done ' + esc(a.doneAt) + '</span>' : '') + (late && edit ? '<span class="late">Overdue</span>' : '') + '</div></div>' +
       (edit ? '<button type="button" class="x" data-del-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Remove action: ' + esc(a.text) + '">&times;</button>' : '') + '</li>';
-  }).join('');
-  const actBlock = '<div><p class="sub">Action items' + (acts.length ? ' <span class="cnt">' + openN + ' open</span>' : '') + '</p>' +
-    (actList ? '<ul class="gates">' + actList + '</ul>' : '<p class="note">No action items.</p>') +
-    (edit ? '<form class="act-add" data-addaction="' + def.id + '"><input class="field" id="' + idp + 'newact-' + def.id + '" autocomplete="off" placeholder="Add an action item" aria-label="New action item for ' + esc(def.name) + '"><select class="field" id="' + idp + 'newwho-' + def.id + '" aria-label="Assignee"><option value="">Unassigned</option>' + people.map(x => '<option>' + esc(x) + '</option>').join('') + '</select><input class="field" type="date" id="' + idp + 'newdue-' + def.id + '" aria-label="Due date"><button class="btn" type="submit">Add</button></form>' : '') + '</div>';
+  };
+  const actionRows = acts.map(a => ({ a: a, html: actionRow(a) }));
+  const openRows = actionRows.filter(r => !r.a.done);
+  const doneRows = actionRows.filter(r => r.a.done);
+  const actList = actionRows.map(r => r.html).join('');
+  const addForm = edit ? '<form class="act-add" data-addaction="' + def.id + '"><input class="field" id="' + idp + 'newact-' + def.id + '" autocomplete="off" placeholder="Add an action item" aria-label="New action item for ' + esc(def.name) + '"><select class="field" id="' + idp + 'newwho-' + def.id + '" aria-label="Assignee"><option value="">Unassigned</option>' + people.map(x => '<option>' + esc(x) + '</option>').join('') + '</select><input class="field" type="date" id="' + idp + 'newdue-' + def.id + '" aria-label="Due date"><button class="btn" type="submit">Add</button></form>' : '';
+  const nextAction = openRows[0] && openRows[0].a;
+  const actPreview = nextAction
+    ? 'Next: ' + esc(nextAction.text) + (nextAction.assignee ? ' · ' + esc(nextAction.assignee) : '') + (nextAction.due ? ' · due ' + esc(nextAction.due) : '')
+    : 'No open action items.';
+  const actBlock = !live
+    ? '<div><p class="sub">Action items' + (acts.length ? ' <span class="cnt">' + openN + ' open</span>' : '') + '</p>' +
+      (actList ? '<ul class="gates">' + actList + '</ul>' : '<p class="note">No action items.</p>') +
+      (edit ? addForm : '') + '</div>'
+    : '<div class="act-block">' +
+      '<button type="button" class="act-toggle" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '">' +
+      '<span>Action items</span><span class="cnt">' + openN + ' open' + (doneRows.length ? ' · ' + doneRows.length + ' done' : '') + '</span>' +
+      '<i class="fa-solid ' + (o.actionsOpen ? 'fa-chevron-up' : 'fa-chevron-down') + '" aria-hidden="true"></i></button>' +
+      (o.actionsOpen
+        ? (openRows.length ? '<ul class="gates act-list">' + openRows.map(r => r.html).join('') + '</ul>' : '<p class="note">No open action items.</p>') +
+          (doneRows.length ? '<details class="act-done"><summary>' + doneRows.length + ' completed</summary><ul class="gates">' + doneRows.map(r => r.html).join('') + '</ul></details>' : '') +
+          (edit ? (o.addActionOpen ? addForm : '<button type="button" class="act-add-toggle" data-add-action-toggle="' + def.id + '">+ Add action</button>') : '')
+        : '<p class="act-preview">' + actPreview + '</p>') +
+      '</div>';
   const loop = st.reopened > 0 ? '<p class="loop">' + icon('reopened', 16) + 'Reopened ' + st.reopened + (st.reopened === 1 ? ' time' : ' times') + '</p>' : '';
-  return '<article class="phase ' + meta.cls + '" id="' + idp + 'ph-' + def.id + '">' +
-    '<div class="ph-head"><span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) + (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
+  const head = '<span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><h3>' + esc(def.name) + '</h3>' + pill(st.status) + (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
     '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span>' +
-    (edit ? '<button type="button" class="art-plus" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '" aria-label="Add a link to ' + esc(def.name) + '" title="Add a link">+</button>' : '') + '</div>' +
+    (edit ? '<button type="button" class="art-plus" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '" aria-label="Add a link to ' + esc(def.name) + '" title="Add a link">+</button>' : '');
+  const headLive = '<div class="ph-head">' +
+    '<h3 class="ph-heading"><button type="button" class="ph-toggle" data-toggle-phase="' + def.id + '" aria-expanded="' + (!collapsed) + '"' + (collapsed ? '' : ' aria-controls="' + idp + 'phase-' + def.id + '"') + '>' +
+    '<span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><span class="ph-name">' + esc(def.name) + '</span>' +
+    '<i class="fa-solid ' + (collapsed ? 'fa-chevron-down' : 'fa-chevron-up') + '" aria-hidden="true"></i></button></h3>' + pill(st.status) + (current ? '<span class="current-chip">Current</span>' : '') +
+    (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
+    '<span class="ph-side"><span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span>' +
+    '<span class="ph-progress" aria-hidden="true"><i style="width:' + (def.gates.length ? Math.round(n / def.gates.length * 100) : 0) + '%"></i></span>' +
+    (acts.length ? '<button type="button" class="ph-actcount" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '">' + openN + ' open action' + (openN === 1 ? '' : 's') + '</button>' : '') +
+    (edit && !collapsed && st.status !== 'done' ? '<button type="button" class="link-btn ph-block" data-phase-status="' + (st.status === 'blocked' ? 'in_progress' : 'blocked') + '" data-phase="' + def.id + '">' + (st.status === 'blocked' ? 'Resume' : 'Block') + '</button>' : '') +
+    (edit && !collapsed ? '<button type="button" class="art-plus" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '" aria-label="Add a link to ' + esc(def.name) + '" title="Add a link">+</button>' : '') + '</span></div>';
+  const summaryLine = nextAction
+    ? 'Next: ' + esc(nextAction.text) + (nextAction.assignee ? ' · ' + esc(nextAction.assignee) : '') + (nextAction.due ? ' · due ' + esc(nextAction.due) : '')
+    : (def.goal ? esc(def.goal) : 'No open action items.');
+  if (live && collapsed) {
+    return '<article class="phase is-collapsed ' + meta.cls + (current ? ' is-current' : '') + '" id="' + idp + 'ph-' + def.id + '" data-toggle-phase="' + def.id + '">' +
+      headLive + '<p class="ph-summary">' + summaryLine + '</p></article>';
+  }
+  return '<article class="phase ' + meta.cls + (live ? ' is-open' : '') + (live && current ? ' is-current' : '') + '" id="' + idp + 'ph-' + def.id + '">' +
+    (live ? headLive : '<div class="ph-head">' + head + '</div>') +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
+    (live ? '<div class="phase-body" id="' + idp + 'phase-' + def.id + '">' : '') +
     '<div class="ph-cols"><div class="stack"><div><p class="sub">Exit criteria</p>' + (def.gates.length ? '<ul class="gates">' + gates + '</ul>' : '<p class="note">' + (edit ? 'No exit criteria yet. Add at least one below to track this phase. It cannot be completed until it has criteria.' : 'No exit criteria set.') + '</p>') + critAdd + '</div>' + actBlock + '</div>' +
     '<div class="stack"><div><p class="sub">Decisions</p>' + (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + '</div>' + diagramsHTML(def, st, o) + artifactsHTML(def, st, o) +
     (st.notes && !o.hideNotes ? '<div><p class="sub">Notes</p><p class="note">' + esc(st.notes) + '</p></div>' : '') + '</div></div>' +
-    (o.extra || '') + '</article>';
+    (live ? '<div class="dec-block"><button type="button" class="dec-toggle" data-decision-toggle="' + def.id + '" aria-expanded="' + (!!o.decisionOpen) + '">Record a decision <i class="fa-solid ' + (o.decisionOpen ? 'fa-chevron-up' : 'fa-chevron-down') + '" aria-hidden="true"></i></button>' + (o.decisionOpen && o.extra ? o.extra : '') + '</div>' : (o.extra || '')) +
+    (live && o.nextPhase ? '<div class="phase-next"><button type="button" class="btn" data-goto-phase="' + esc(o.nextPhase.id) + '">Next: ' + esc(o.nextPhase.name) + ' &rarr;</button></div>' : '') +
+    (live ? '</div>' : '') + '</article>';
 }
 
 /* ---- portfolio card, shared by the live board and the exported snapshot ---- */

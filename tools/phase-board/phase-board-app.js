@@ -44,6 +44,16 @@ class PhaseBoardApp {
         this.flowStaticPromise = null;
         this.diagramBusy = false;
         this.completedOpen = true;
+        // Project-detail view state. `undefined` means "open the current phase".
+        this.phaseChoice = undefined;
+        this.expandAllPhases = false;
+        this.actionsOpen = {};
+        this.addActionOpen = null;
+        this.decisionOpen = null;
+        this.showOverview = false;
+        this.showRisks = false;
+        this.actionFilter = 'all';
+        this.actionGroup = 'assignee';
         this.restore = null;
         try { if (localStorage.getItem('pb-completed-open') === '0') this.completedOpen = false; } catch (e) { /* storage unavailable: the section stays open */ }
         // The due panel is open unless it was last left collapsed in this browser; dueOnly narrows it to one group for this visit.
@@ -62,6 +72,7 @@ class PhaseBoardApp {
             ])
             : Promise.resolve();
         this.bindEvents();
+        if (typeof window.addEventListener === 'function') window.addEventListener('resize', () => this.updateStickyLayout());
         // Show the board immediately from local storage; a signed-in visitor's
         // cloud copy replaces it as soon as auth and the first snapshot arrive.
         this.localReady.then(() => {
@@ -99,17 +110,35 @@ class PhaseBoardApp {
         const user = this.user;
         const badge = document.getElementById('pbModeBadge');
         const signIn = document.getElementById('pbLocalSignInBtn');
+        const userInfo = document.getElementById('pbUserInfo');
         const avatar = document.getElementById('pbAvatar');
         const name = document.getElementById('pbUserName');
         const signOut = document.getElementById('pbSignOutBtn');
         if (badge) badge.hidden = !local;
         if (signIn) signIn.hidden = !!user;
+        if (userInfo) userInfo.hidden = !user;
         if (avatar) {
-            avatar.hidden = !user || !user.photoURL;
-            if (user && user.photoURL) avatar.src = user.photoURL;
+            if (user) avatar.src = user.photoURL || this.fallbackAvatar(user);
+            avatar.alt = user ? (user.displayName || user.email || '') : '';
         }
         if (name) name.textContent = user ? (user.displayName || user.email || '') : '';
         if (signOut) signOut.hidden = !user;
+    }
+
+    // Accounts without a Google profile photo would otherwise leave an empty
+    // circle when the identity is revealed.
+    fallbackAvatar(user) {
+        const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
+        const styles = typeof getComputedStyle === 'function' && document.documentElement
+            ? getComputedStyle(document.documentElement)
+            : null;
+        const accent = (styles && styles.getPropertyValue('--accent-primary').trim()) || '#74a12e';
+        const bg = (styles && styles.getPropertyValue('--bg-primary').trim()) || '#1a1a1a';
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">'
+            + '<rect width="28" height="28" rx="14" fill="' + accent + '"/>'
+            + '<text x="14" y="19" font-family="Raleway, sans-serif" font-size="13" font-weight="700" '
+            + 'fill="' + bg + '" text-anchor="middle">' + esc(initial) + '</text></svg>';
+        return 'data:image/svg+xml,' + encodeURIComponent(svg);
     }
 
     async startLocalMode(message) {
@@ -515,10 +544,24 @@ class PhaseBoardApp {
         const p = this.projects[this.view];
         if (!p) return '<button class="back" type="button" data-act="back">Back to projects</button><div class="empty"><h2>Project not found</h2><p>It may have been removed.</p></div>';
         const tpl = tplOf(p), s = summarize(tpl, p), people = peopleOf(p);
+        const currentId = s.current ? s.current.id : '';
         const cards = tpl.phases.map((d, i) => {
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
-            return phaseHTML(d, phaseState(p, d), i, { mode: 'edit', extra: extra, people: people, editingGate: this.editingGate, confirmCrit: this.confirmCrit, suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs, openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram, artForm: this.artForm, artNote: this.artNote });
+            const next = tpl.phases[i + 1];
+            return phaseHTML(d, phaseState(p, d), i, {
+                mode: 'edit', live: true, people,
+                current: d.id === currentId,
+                collapsed: !this.phaseIsOpen(d.id, currentId),
+                actionsOpen: !!this.actionsOpen[d.id],
+                addActionOpen: this.addActionOpen === d.id,
+                decisionOpen: this.decisionOpen === d.id,
+                nextPhase: next ? { id: next.id, name: next.short || next.name } : null,
+                extra: extra, editingGate: this.editingGate, confirmCrit: this.confirmCrit,
+                suggOpen: this.openSuggestions, editingNote: this.editingNote, svgs: this.svgs,
+                openDiagrams: this.openDiagrams, picker: this.picker, confirmDiagram: this.confirmDiagram,
+                artForm: this.artForm, artNote: this.artNote
+            });
         }).join('');
         const del = this.confirmDelete
             ? '<span class="msg">Delete "' + esc(p.name) + '" and all its data?</span><button class="btn danger" type="button" data-act="del-confirm">Delete project</button><button class="btn" type="button" data-act="del-cancel">Keep it</button>'
@@ -526,12 +569,221 @@ class PhaseBoardApp {
         const archiveBtn = isArchived(p)
             ? '<button class="btn" type="button" data-act="unarchive">Restore from archive</button>'
             : '<button class="btn" type="button" data-act="archive">Archive project</button>';
+        const riskCount = (p.risks || []).filter(r => r.kind === 'constraint' ? !r.resolved : riskStatus(r) !== 'mitigated').length;
+
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
-            '<div><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(this.projects)) + '</div>' +
-            this.statusLine() + overviewHTML(p, true, { tags: tagsOf(this.projects) }) + risksHTML(p, true) +
-            '<div class="railbox">' + railHTML(tpl, p, { link: true }) + barHTML(tpl, p) + '<div class="ph-row"><p class="msg">' + s.doneP + ' of ' + s.total + ' phases done / ' + s.g + ' of ' + s.gt + ' criteria met</p><button class="btn" type="button" data-act="edit-flow" style="margin-left:auto">Edit phases</button></div></div>' +
-            '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky"><p class="eyebrow">Open action items</p>' + openActionsHTML(p) + '</aside></div>' +
+            '<div class="project-head">' +
+                '<div class="project-title"><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(this.projects)) + '</div>' +
+                '<div class="project-tools">' +
+                    '<button type="button" class="btn' + (this.showOverview ? ' is-on' : '') + '" data-act="toggle-overview" aria-expanded="' + this.showOverview + '"><i class="fa-solid fa-address-card" aria-hidden="true"></i> Project details</button>' +
+                    '<button type="button" class="btn' + (this.showRisks ? ' is-on' : '') + '" data-act="toggle-risks" aria-expanded="' + this.showRisks + '"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Risks' + (riskCount ? ' (' + riskCount + ')' : '') + '</button>' +
+                '</div>' +
+            '</div>' +
+            (p.summary && !this.showOverview ? '<p class="project-goal">' + esc(p.summary) + '</p>' : '') +
+            this.projectSummaryHTML(p) +
+            (this.showOverview ? overviewHTML(p, true, { tags: tagsOf(this.projects) }) : '') +
+            (this.showRisks ? risksHTML(p, true) : '') +
+            this.statusLine() +
+            '<div class="phase-workspace">' + this.phaseNavHTML(tpl, p, s, currentId) +
+            '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky">' + this.openActionsPanelHTML(p) + '</aside></div></div>' +
             outcomesHTML(p, true) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
+    }
+
+    phaseIsOpen(id, currentId) {
+        if (this.expandAllPhases) return true;
+        if (this.phaseChoice === undefined) return id === currentId;
+        return this.phaseChoice === id;
+    }
+
+    currentPhaseId() {
+        const p = this.projects[this.view];
+        if (!p) return '';
+        const s = summarize(tplOf(p), p);
+        return s.current ? s.current.id : '';
+    }
+
+    projectSummaryHTML(p) {
+        const bits = [];
+        const add = (label, value, cls) => {
+            if (!value) return;
+            bits.push('<span class="ps-bit' + (cls ? ' ' + cls : '') + '"><span class="ps-k">' + label + '</span><span class="ps-v">' + esc(value) + '</span></span>');
+        };
+        add('Owner', p.owner);
+        add('Lead', p.lead);
+        add('Target', p.target, p.target && p.target < today() && !isComplete(p) ? 'is-late' : '');
+        if (priorityOf(p) && !isComplete(p)) add('Priority', PRIORITY[priorityOf(p)]);
+        add('Started', p.started);
+        if (!bits.length) return '<p class="project-summary is-empty">No project details set. Use Project details to add an owner, target date and priority.</p>';
+        return '<div class="project-summary">' + bits.join('') + '</div>';
+    }
+
+    phaseNavHTML(tpl, p, s, currentId) {
+        const tabs = tpl.phases.map(d => {
+            const st = phaseState(p, d), meta = STATUS[st.status] || STATUS.not_started, n = gateCount(d, st);
+            const openActions = (st.actions || []).filter(a => !a.done).length;
+            const open = this.phaseIsOpen(d.id, currentId);
+            return '<button type="button" class="phase-tab ' + meta.cls + (d.id === currentId ? ' is-current' : '') + (open ? ' is-open' : '') + '" data-goto-phase="' + d.id + '"' +
+                (d.id === currentId ? ' aria-current="step"' : '') + ' aria-expanded="' + open + '" title="' + esc(d.name + ': ' + meta.label) + '">' +
+                '<span class="ptab-icon">' + icon(st.status, 16) + '</span>' +
+                '<span class="ptab-body"><span class="ptab-name">' + esc(d.short || d.name) + '</span>' +
+                '<span class="ptab-meta">' + (d.gates.length ? n + '/' + d.gates.length : 'No criteria') + (openActions ? ' · ' + openActions + ' open' : '') + '</span></span></button>';
+        }).join('');
+        return '<nav class="phase-nav" aria-label="Phases">' +
+            '<div class="phase-nav-scroll">' + tabs + '</div>' +
+            '<div class="phase-nav-side"><span class="phase-nav-progress">' + s.doneP + '/' + s.total + ' phases · ' + s.g + '/' + s.gt + ' criteria</span>' +
+            '<button type="button" class="btn small" data-act="toggle-expand">' + (this.expandAllPhases ? 'Collapse' : 'Expand all') + '</button>' +
+            '<button type="button" class="btn small" data-act="edit-flow">Edit phases</button></div></nav>';
+    }
+
+    openActionsPanelHTML(p) {
+        const tpl = tplOf(p);
+        const rows = [];
+        tpl.phases.forEach(d => {
+            const st = phaseState(p, d);
+            (st.actions || []).forEach(a => { if (!a.done) rows.push({ a: a, d: d }); });
+        });
+        const counts = {
+            all: rows.length,
+            overdue: rows.filter(r => r.a.due && r.a.due < today()).length,
+            mine: p.owner ? rows.filter(r => r.a.assignee === p.owner).length : 0,
+            unassigned: rows.filter(r => !r.a.assignee).length
+        };
+        const filter = this.actionFilter !== 'all' && !counts[this.actionFilter] ? 'all' : this.actionFilter;
+        const list = rows.filter(r => {
+            if (filter === 'overdue') return r.a.due && r.a.due < today();
+            if (filter === 'mine') return p.owner && r.a.assignee === p.owner;
+            if (filter === 'unassigned') return !r.a.assignee;
+            return true;
+        });
+        const filters = [['all', 'All'], ['overdue', 'Overdue']];
+        if (p.owner && counts.mine) filters.push(['mine', 'Owner']);
+        if (counts.unassigned) filters.push(['unassigned', 'Unassigned']);
+
+        const groups = this.actionGroupsFor(list, tpl, p);
+        const rowsHTML = groups.map(g => {
+            const style = g.color ? ' style="--tc:' + g.color + '"' : '';
+            return '<div class="who-grp' + (g.key ? '' : ' is-none') + '"' + style + '>' +
+                '<p class="who">' + esc(g.name) + '<span class="cnt">' + g.items.length + '</span></p><ul>' +
+                g.items.map(r => {
+                    const late = r.a.due && r.a.due < today();
+                    const inputId = 'side-' + r.d.id + '-' + r.a.id;
+                    return '<li><label class="gate" for="' + esc(inputId) + '"><input type="checkbox" id="' + esc(inputId) + '" data-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '"><span>' + esc(r.a.text) + '</span></label>' +
+                        '<small><a class="pj" href="#ph-' + esc(r.d.id) + '" data-jump-action="' + esc(r.a.id) + '" data-phase="' + esc(r.d.id) + '">' + esc(r.d.short || r.d.name) + '</a>' +
+                        (r.a.due ? ' / due <span class="mono' + (late ? ' late' : '') + '">' + esc(r.a.due) + '</span>' : '') + '</small></li>';
+                }).join('') + '</ul></div>';
+        }).join('');
+
+        return '<div class="feed-head"><p class="eyebrow">Open action items</p><span class="cnt">' + counts.all + '</span></div>' +
+            '<div class="action-tools"><div class="action-filters">' +
+            filters.map(f => '<button type="button" class="action-filter' + (filter === f[0] ? ' is-on' : '') + '" data-action-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + (counts[f[0]] ? ' ' + counts[f[0]] : '') + '</button>').join('') +
+            '</div><div class="action-group-toggle" role="group" aria-label="Group actions">' +
+            '<button type="button" class="' + (this.actionGroup === 'assignee' ? 'is-on' : '') + '" data-action-group="assignee" aria-pressed="' + (this.actionGroup === 'assignee') + '">By person</button>' +
+            '<button type="button" class="' + (this.actionGroup === 'phase' ? 'is-on' : '') + '" data-action-group="phase" aria-pressed="' + (this.actionGroup === 'phase') + '">By phase</button>' +
+            '</div></div>' +
+            (rows.length ? (rowsHTML || '<p class="msg">No actions match this filter.</p>') : '<p class="msg">No open action items.</p>');
+    }
+
+    actionGroupsFor(rows, tpl, p) {
+        if (this.actionGroup === 'phase') {
+            return tpl.phases.map(d => ({
+                key: d.id, name: d.short || d.name, color: '',
+                items: rows.filter(r => r.d.id === d.id)
+            })).filter(g => g.items.length);
+        }
+        const hues = assigneeHues(p);
+        const groups = new Map();
+        rows.forEach(r => {
+            const key = r.a.assignee || '';
+            if (!groups.has(key)) groups.set(key, { key: key, name: key || 'Unassigned', color: key ? personColor(key, hues) : '', items: [] });
+            groups.get(key).items.push(r);
+        });
+        return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    togglePhase(id) {
+        const currentId = this.currentPhaseId();
+        const open = this.phaseIsOpen(id, currentId);
+        this.expandAllPhases = false;
+        this.phaseChoice = open ? '' : id;
+        this.render();
+        if (!open) this.scrollToPhase(id);
+    }
+
+    goToPhase(id) {
+        if (!this.projects[this.view]) return;
+        this.expandAllPhases = false;
+        this.phaseChoice = id;
+        this.render();
+        this.scrollToPhase(id);
+    }
+
+    toggleActions(id) {
+        this.actionsOpen[id] = !this.actionsOpen[id];
+        this.render();
+    }
+
+    setPhaseStatus(pid, status) {
+        this.mutatePhase(pid, st => {
+            st.status = status;
+            if (status === 'blocked') st.blockedAt = today();
+            else delete st.blockedAt;
+        }, 'phase status');
+    }
+
+    openAddAction(id) {
+        this.actionsOpen[id] = true;
+        this.addActionOpen = id;
+        this.render();
+        requestAnimationFrame(() => document.getElementById('newact-' + id)?.focus());
+    }
+
+    scrollToPhase(id) {
+        requestAnimationFrame(() => {
+            const el = document.getElementById('ph-' + id);
+            if (!el) return;
+            el.scrollIntoView({ block: 'start' });
+            try { history.replaceState(null, '', '#ph-' + id); } catch (e) { /* ignore */ }
+        });
+    }
+
+    goToAdjacentPhase(delta) {
+        const p = this.projects[this.view];
+        if (!p) return;
+        const phases = tplOf(p).phases;
+        const currentId = this.currentPhaseId();
+        const active = (typeof this.phaseChoice === 'string' && this.phaseChoice) ? this.phaseChoice : currentId;
+        let index = phases.findIndex(d => d.id === active);
+        if (index < 0) index = delta > 0 ? -1 : phases.length;
+        const next = phases[index + delta];
+        if (next) this.goToPhase(next.id);
+    }
+
+    jumpToAction(phase, action) {
+        this.expandAllPhases = false;
+        this.phaseChoice = phase;
+        this.actionsOpen[phase] = true;
+        this.render();
+        requestAnimationFrame(() => {
+            const row = Array.from(document.querySelectorAll('[data-action-row]')).find(el => el.getAttribute('data-action-row') === action);
+            if (!row) return;
+            row.scrollIntoView({ block: 'center' });
+            row.classList.add('is-flash');
+            setTimeout(() => row.classList.remove('is-flash'), 1800);
+        });
+    }
+
+    updateStickyLayout() {
+        if (typeof document.querySelector !== 'function') return;
+        if (!document.documentElement || !document.documentElement.style) return;
+        const header = document.querySelector('.header');
+        const nav = document.querySelector('.phase-nav');
+        const root = document.documentElement.style;
+        const site = header ? header.offsetHeight : 0;
+        const navH = nav ? nav.offsetHeight : 0;
+        if (document.body && site) document.body.style.paddingTop = (site + 8) + 'px';
+        root.setProperty('--pb-sticky-top', (site + 8) + 'px');
+        root.setProperty('--pb-phase-head-top', (site + navH + 16) + 'px');
+        root.setProperty('--pb-phase-scroll', (site + navH + 24) + 'px');
     }
 
     // Re-rendering replaces the DOM, so put focus (and the caret) back where the user was typing.
@@ -567,6 +819,7 @@ class PhaseBoardApp {
             }
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
         });
+        this.updateStickyLayout();
     }
 
     // ─── Writes ───────────────────────────────────────────────
@@ -700,6 +953,8 @@ class PhaseBoardApp {
     }
 
     async openPicker(pid) {
+        this.phaseChoice = pid;
+        this.expandAllPhases = false;
         this.picker = { pid: pid, loading: true, items: [], error: '' };
         this.render();
         try {
@@ -746,6 +1001,8 @@ class PhaseBoardApp {
     }
 
     toggleArtifactForm(pid) {
+        this.phaseChoice = pid;
+        this.expandAllPhases = false;
         this.artForm = this.artForm === pid ? null : pid;
         this.artNote = '';
         this.render();
@@ -848,6 +1105,8 @@ class PhaseBoardApp {
     }
 
     startNoteEdit(pid, gid) {
+        this.phaseChoice = pid;
+        this.expandAllPhases = false;
         this.editingNote = pid + ':' + gid;
         this.editingGate = null;
         this.render();
@@ -872,6 +1131,8 @@ class PhaseBoardApp {
     }
 
     startCritEdit(pid, gid) {
+        this.phaseChoice = pid;
+        this.expandAllPhases = false;
         this.editingGate = pid + ':' + gid;
         this.confirmCrit = null;
         this.render();
@@ -1151,6 +1412,15 @@ class PhaseBoardApp {
         this.view = id;
         this.showNew = false;
         this.confirmDelete = false;
+        this.phaseChoice = undefined;
+        this.expandAllPhases = false;
+        this.actionsOpen = {};
+        this.addActionOpen = null;
+        this.decisionOpen = null;
+        this.showOverview = false;
+        this.showRisks = false;
+        this.actionFilter = 'all';
+        this.actionGroup = 'assignee';
         this.render();
         window.scrollTo(0, 0);
     }
@@ -1229,6 +1499,42 @@ class PhaseBoardApp {
 
         const page = document.getElementById('pbPage');
         page.addEventListener('click', e => {
+            const jump = e.target.closest('[data-jump-action]');
+            if (jump) { e.preventDefault(); return this.jumpToAction(jump.getAttribute('data-phase'), jump.getAttribute('data-jump-action')); }
+            const actCount = e.target.closest('.ph-actcount');
+            if (actCount) {
+                const id = actCount.getAttribute('data-toggle-actions');
+                this.expandAllPhases = false;
+                this.phaseChoice = id;
+                this.actionsOpen[id] = true;
+                this.render();
+                this.scrollToPhase(id);
+                return;
+            }
+            const goto = e.target.closest('[data-goto-phase]');
+            if (goto) { e.preventDefault(); return this.goToPhase(goto.getAttribute('data-goto-phase')); }
+            const togglePhase = e.target.closest('[data-toggle-phase]');
+            if (togglePhase) { e.preventDefault(); return this.togglePhase(togglePhase.getAttribute('data-toggle-phase')); }
+            const toggleActs = e.target.closest('[data-toggle-actions]');
+            if (toggleActs) return this.toggleActions(toggleActs.getAttribute('data-toggle-actions'));
+            const phaseStatus = e.target.closest('[data-phase-status]');
+            if (phaseStatus) return this.setPhaseStatus(phaseStatus.getAttribute('data-phase'), phaseStatus.getAttribute('data-phase-status'));
+            const decToggle = e.target.closest('[data-decision-toggle]');
+            if (decToggle) {
+                const id = decToggle.getAttribute('data-decision-toggle');
+                this.phaseChoice = id;
+                this.expandAllPhases = false;
+                this.decisionOpen = this.decisionOpen === id ? null : id;
+                this.render();
+                if (this.decisionOpen) requestAnimationFrame(() => document.getElementById('dec-' + id)?.focus());
+                return;
+            }
+            const addAct = e.target.closest('[data-add-action-toggle]');
+            if (addAct) return this.openAddAction(addAct.getAttribute('data-add-action-toggle'));
+            const actionFilter = e.target.closest('[data-action-filter]');
+            if (actionFilter) { this.actionFilter = actionFilter.getAttribute('data-action-filter'); return this.render(); }
+            const actionGroup = e.target.closest('[data-action-group]');
+            if (actionGroup) { this.actionGroup = actionGroup.getAttribute('data-action-group'); return this.render(); }
             const open = e.target.closest('[data-open]');
             if (open) return this.openProject(open.getAttribute('data-open'));
             if (e.target.closest('[data-due-toggle]')) return this.setDueOpen(!this.dueOpen);
@@ -1297,6 +1603,9 @@ class PhaseBoardApp {
                 else if (k === 'del-cancel') { this.confirmDelete = false; this.render(); }
                 else if (k === 'del-confirm') { this.deleteProject(); }
                 else if (k === 'edit-flow') { this.editProjectFlow(); }
+                else if (k === 'toggle-overview') { this.showOverview = !this.showOverview; this.render(); }
+                else if (k === 'toggle-risks') { this.showRisks = !this.showRisks; this.render(); }
+                else if (k === 'toggle-expand') { this.expandAllPhases = !this.expandAllPhases; this.render(); }
                 else if (k === 'archive') { this.setArchived(true); }
                 else if (k === 'unarchive') { this.setArchived(false); }
                 else if (k === 'restore-new') { this.applyRestore(false); }
@@ -1394,6 +1703,16 @@ class PhaseBoardApp {
             if (e.key !== 'Escape' || !e.target.matches) return;
             if (e.target.matches('[data-crit-input]')) this.cancelCritEdit();
             else if (e.target.matches('[data-note-input]')) this.cancelNoteEdit();
+        });
+
+        if (typeof document.addEventListener === 'function') document.addEventListener('keydown', e => {
+            if (!this.projects[this.view] || this.view.indexOf('__') === 0) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.target.matches && e.target.matches('input, textarea, select, [contenteditable="true"]')) return;
+            if (e.key === '[' || e.key === ']') {
+                e.preventDefault();
+                this.goToAdjacentPhase(e.key === ']' ? 1 : -1);
+            }
         });
 
         page.addEventListener('input', e => {

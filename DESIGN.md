@@ -210,6 +210,10 @@ A handful of literal colors exist outside the token list above, each for a speci
 
 Fixed-position header (logo + theme selector + tool nav) with `body { padding-top: 140px }` to clear it; `body` uses `display:flex; flex-direction:column; align-items:center`, so page containers must set `width: 100%` to fill available space. The landing page is a centered hero (max-width 700px) above a numbered tool ledger (max-width 900px), with a filter field and `1`–`9` shortcuts above the rows. Tool pages generally use a two-panel or three-panel row layout (`.columns-row`, `.box` at `height: 50vh`) that collapses to a single column under 992px.
 
+### Phase Board project workspace
+
+A project opens on its current phase. A sticky phase switcher under the site header marks the current phase with an accent tab and `aria-current="step"`; only that phase is expanded, while the rest are one-line summary rows, and “Expand all” restores the full stack. Project details and risks sit behind header buttons so the phases begin near the top of the page. Inside a phase, action items and the decision form are collapsed by default; the sticky phase header carries criteria progress, the open-action count and a Block/Resume control. The open-action sidebar filters by Overdue/Owner/Unassigned and groups by person or phase; jumping from an action expands its phase and briefly flashes the row. Sticky offsets come from `--pb-sticky-top`, `--pb-phase-head-top` and `--pb-phase-scroll`, measured at render/resize rather than hardcoded, so the fixed header and the switcher cannot overlap.
+
 ## Elevation & Depth
 
 Flat by default. Resting panels (`.box`) carry a faint ambient glow (`box-shadow: 0 0 4px var(--shadow-color)`), not a directional drop shadow implying a light source — it reads as "distinct surface," not "lifted object." The landing ledger is flat too: rows separate with hairline borders and a left accent edge on hover, with no lift or directional shadow.
