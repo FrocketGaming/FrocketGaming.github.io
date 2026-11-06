@@ -48,9 +48,12 @@ class PhaseBoardApp {
         this.phaseChoice = undefined;
         this.expandAllPhases = false;
         this.actionsOpen = {};
+        this.actionsOpenDefault = true;
+        try { this.actionsOpenDefault = localStorage.getItem('pb-actions-open') !== '0'; } catch (e) { /* default open */ }
         this.addActionOpen = null;
         this.decisionOpen = null;
         this.editingAction = null;
+        this.editingPhaseNote = null;
         this.addCritOpen = null;
         this.contextOpen = {};
         this.showOverview = false;
@@ -556,10 +559,11 @@ class PhaseBoardApp {
                 mode: 'edit', live: true, people,
                 current: d.id === currentId,
                 collapsed: !this.phaseIsOpen(d.id, currentId),
-                actionsOpen: this.actionsOpen[d.id] !== false,
+                actionsOpen: this.actionsOpen[d.id] !== undefined ? this.actionsOpen[d.id] : this.actionsOpenDefault,
                 addActionOpen: this.addActionOpen === d.id,
                 decisionOpen: this.decisionOpen === d.id,
                 editingAction: this.editingAction,
+                phaseNoteOpen: this.editingPhaseNote === d.id,
                 addCritOpen: this.addCritOpen === d.id,
                 contextOpen: !!this.contextOpen[d.id],
                 nextPhase: next ? { id: next.id, name: next.short || next.name } : null,
@@ -724,8 +728,19 @@ class PhaseBoardApp {
     }
 
     toggleActions(id) {
-        this.actionsOpen[id] = this.actionsOpen[id] === false;
+        const open = this.actionsOpen[id] !== undefined ? this.actionsOpen[id] : this.actionsOpenDefault;
+        this.actionsOpen[id] = !open;
+        this.actionsOpenDefault = !open;
+        try { localStorage.setItem('pb-actions-open', open ? '0' : '1'); } catch (e) { /* best effort */ }
         this.render();
+    }
+
+    quickDueDate(kind) {
+        if (kind === 'clear') return '';
+        const days = kind === 'tomorrow' ? 1 : kind === 'week' ? 7 : 0;
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
     setPhaseStatus(pid, status) {
@@ -876,6 +891,10 @@ class PhaseBoardApp {
 
     addDecision(pid, text) {
         this.mutatePhase(pid, st => { st.decisions = (st.decisions || []).concat([{ at: today(), text: text }]); startOnActivity(st); }, 'decision');
+    }
+
+    savePhaseNote(pid, text) {
+        this.mutatePhase(pid, st => { st.notes = String(text || '').slice(0, 2000); startOnActivity(st); }, 'phase note');
     }
 
     addAction(pid, text, assignee, due) {
@@ -1423,9 +1442,12 @@ class PhaseBoardApp {
         this.phaseChoice = undefined;
         this.expandAllPhases = false;
         this.actionsOpen = {};
+        this.actionsOpenDefault = true;
+        try { this.actionsOpenDefault = localStorage.getItem('pb-actions-open') !== '0'; } catch (e) { /* default open */ }
         this.addActionOpen = null;
         this.decisionOpen = null;
         this.editingAction = null;
+        this.editingPhaseNote = null;
         this.addCritOpen = null;
         this.contextOpen = {};
         this.showOverview = false;
@@ -1550,13 +1572,25 @@ class PhaseBoardApp {
                 requestAnimationFrame(() => document.querySelector('[data-act-assignee="' + aid + '"]')?.focus());
                 return;
             }
-            if (e.target.closest('[data-edit-action-done]')) { this.editingAction = null; return this.render(); }
+            if (e.target.closest('[data-edit-action-done]')) {
+                const done = e.target.closest('[data-edit-action-done]');
+                const aid = done.getAttribute('data-edit-action-done');
+                this.editingAction = null;
+                this.render();
+                requestAnimationFrame(() => document.querySelector('[data-edit-action="' + aid + '"]')?.focus());
+                return;
+            }
+            const quickDue = e.target.closest('[data-quick-due]');
+            if (quickDue) {
+                this.editAction(quickDue.getAttribute('data-phase'), quickDue.getAttribute('data-action'), { due: this.quickDueDate(quickDue.getAttribute('data-quick-due')) });
+                return;
+            }
             const addCrit = e.target.closest('[data-add-crit-toggle]');
             if (addCrit) {
                 const pid = addCrit.getAttribute('data-add-crit-toggle');
                 this.addCritOpen = this.addCritOpen === pid ? null : pid;
                 this.render();
-                if (this.addCritOpen) requestAnimationFrame(() => document.getElementById('newcrit-' + pid)?.focus());
+                requestAnimationFrame(() => document.getElementById(this.addCritOpen ? 'newcrit-' + pid : 'add-crit-' + pid)?.focus());
                 return;
             }
             const context = e.target.closest('[data-context-toggle]');
@@ -1564,6 +1598,22 @@ class PhaseBoardApp {
                 const pid = context.getAttribute('data-context-toggle');
                 this.contextOpen[pid] = !this.contextOpen[pid];
                 return this.render();
+            }
+            const phaseNoteEdit = e.target.closest('[data-phase-note-edit]');
+            if (phaseNoteEdit) {
+                const pid = phaseNoteEdit.getAttribute('data-phase-note-edit');
+                this.editingPhaseNote = pid;
+                this.contextOpen[pid] = true;
+                this.render();
+                requestAnimationFrame(() => document.getElementById('phase-note-' + pid)?.focus());
+                return;
+            }
+            if (e.target.closest('[data-phase-note-cancel]')) {
+                const pid = this.editingPhaseNote;
+                this.editingPhaseNote = null;
+                this.render();
+                if (pid) requestAnimationFrame(() => document.getElementById('phase-note-edit-' + pid)?.focus());
+                return;
             }
             const actionFilter = e.target.closest('[data-action-filter]');
             if (actionFilter) { this.actionFilter = actionFilter.getAttribute('data-action-filter'); return this.render(); }
@@ -1787,6 +1837,12 @@ class PhaseBoardApp {
             } else if (f.hasAttribute('data-art-form')) {
                 const pid = f.getAttribute('data-art-form');
                 this.addArtifact(pid, document.getElementById('artUrl-' + pid).value, document.getElementById('artTitle-' + pid).value);
+            } else if (f.hasAttribute('data-phase-note')) {
+                const pid = f.getAttribute('data-phase-note');
+                this.savePhaseNote(pid, f.querySelector('textarea').value);
+                this.editingPhaseNote = null;
+                this.render();
+                requestAnimationFrame(() => document.getElementById('phase-note-edit-' + pid)?.focus());
             } else if (f.hasAttribute('data-dec') || f.hasAttribute('data-addaction')) {
                 const input = f.querySelector('input');
                 const text = input.value.trim();

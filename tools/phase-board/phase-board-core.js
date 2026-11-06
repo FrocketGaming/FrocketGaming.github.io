@@ -248,6 +248,7 @@ function phaseHTML(def, st, idx, o) {
   const meta = STATUS[st.status] || STATUS.not_started, n = gateCount(def, st), edit = o.mode === 'edit';
   const live = !!o.live, collapsed = live && !!o.collapsed, current = live && !!o.current;
   const acts = st.actions || [], openN = acts.filter(a => !a.done).length;
+  const overdueN = acts.filter(a => !a.done && a.due && a.due < today()).length;
   const idp = o.idp || '';
   const gates = def.gates.map((g, i) => {
     const id = idp + 'g-' + def.id + '-' + i, key = def.id + ':' + g.id;
@@ -273,7 +274,7 @@ function phaseHTML(def, st, idx, o) {
     ? (o.addCritOpen
       ? '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' + suggestHTML(def, o) +
         '<button type="button" class="link-btn" data-add-crit-toggle="' + def.id + '">Cancel</button>'
-      : '<button type="button" class="add-row" data-add-crit-toggle="' + def.id + '">+ Add criterion</button>')
+      : '<button type="button" class="add-row" id="add-crit-' + def.id + '" data-add-crit-toggle="' + def.id + '">+ Add criterion</button>')
     : '<form class="dec-add" data-crit-add="' + def.id + '" style="margin-top:8px"><input class="field" id="newcrit-' + def.id + '" autocomplete="off" placeholder="Add an exit criterion" aria-label="New exit criterion for ' + esc(def.name) + '"><button class="btn" type="submit">Add</button></form>' + suggestHTML(def, o))
     : '';
   const decs = (st.decisions || []).map(d => '<li><time>' + esc(d.at) + '</time><span>' + esc(d.text) + '</span></li>').join('');
@@ -290,21 +291,30 @@ function phaseHTML(def, st, idx, o) {
     const due = controls
       ? '<input class="field mini-date" type="date" data-act-due="' + esc(a.id) + '" data-phase="' + def.id + '" value="' + esc(a.due || '') + '" aria-label="Due date for ' + esc(a.text) + '">'
       : (a.due ? '<span class="due mono' + (late ? ' late' : '') + '">Due ' + esc(a.due) + '</span>' : '');
+    const quickDue = live && editing
+      ? '<span class="due-quick"><button type="button" data-quick-due="today" data-action="' + esc(a.id) + '" data-phase="' + def.id + '">Today</button>' +
+        '<button type="button" data-quick-due="tomorrow" data-action="' + esc(a.id) + '" data-phase="' + def.id + '">Tomorrow</button>' +
+        '<button type="button" data-quick-due="week" data-action="' + esc(a.id) + '" data-phase="' + def.id + '">+1 week</button>' +
+        '<button type="button" data-quick-due="clear" data-action="' + esc(a.id) + '" data-phase="' + def.id + '">Clear</button></span>'
+      : '';
     const tools = live
       ? (editing
-        ? '<span class="act-tools"><button type="button" class="link-btn" data-edit-action-done="1" data-phase="' + def.id + '">Done</button>' +
+        ? '<span class="act-tools"><button type="button" class="link-btn" data-edit-action-done="' + esc(a.id) + '" data-phase="' + def.id + '">Done</button>' +
           '<button type="button" class="x" data-del-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Remove action: ' + esc(a.text) + '">&times;</button></span>'
-        : '<button type="button" class="action-edit" data-edit-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Edit action: ' + esc(a.text) + '"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>')
+        : '<button type="button" class="action-edit" data-edit-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Edit action: ' + esc(a.text) + '"><i class="fa-solid fa-pen" aria-hidden="true"></i><span>Edit</span></button>')
       : (edit ? '<button type="button" class="x" data-del-action="' + esc(a.id) + '" data-phase="' + def.id + '" aria-label="Remove action: ' + esc(a.text) + '">&times;</button>' : '');
     return '<li class="act' + (a.done ? ' is-done' : '') + '"' + (live ? ' id="act-' + idp + def.id + '-' + esc(a.id) + '" data-action-row="' + esc(a.id) + '"' : '') + '><div class="act-main"><label class="gate" for="' + id + '"><input type="checkbox" id="' + id + '" data-action="' + esc(a.id) + '" data-phase="' + def.id + '"' + (a.done ? ' checked' : '') + (edit ? '' : ' disabled') + '><span>' + esc(a.text) + '</span></label>' +
-      '<div class="act-meta">' + who + due + (a.done && a.doneAt ? '<span class="due mono">Done ' + esc(a.doneAt) + '</span>' : '') + (late && controls ? '<span class="late">Overdue</span>' : '') + '</div></div>' + tools + '</li>';
+      '<div class="act-meta">' + who + due + quickDue + (a.done && a.doneAt ? '<span class="due mono">Done ' + esc(a.doneAt) + '</span>' : '') + (late && controls ? '<span class="late">Overdue</span>' : '') + '</div></div>' + tools + '</li>';
   };
   const actionRows = acts.map(a => ({ a: a, html: actionRow(a) }));
-  const openRows = actionRows.filter(r => !r.a.done);
-  const doneRows = actionRows.filter(r => r.a.done);
+  const openRows = actionRows.filter(r => !r.a.done)
+    .sort((a, b) => String(a.a.due || '9999-99-99').localeCompare(String(b.a.due || '9999-99-99')));
+  const doneRows = actionRows.filter(r => r.a.done)
+    .sort((a, b) => String(b.a.doneAt || '').localeCompare(String(a.a.doneAt || '')));
   const actList = actionRows.map(r => r.html).join('');
   const addForm = edit ? '<form class="act-add" data-addaction="' + def.id + '"><input class="field" id="' + idp + 'newact-' + def.id + '" autocomplete="off" placeholder="Add an action item" aria-label="New action item for ' + esc(def.name) + '"><select class="field" id="' + idp + 'newwho-' + def.id + '" aria-label="Assignee"><option value="">Unassigned</option>' + people.map(x => '<option>' + esc(x) + '</option>').join('') + '</select><input class="field" type="date" id="' + idp + 'newdue-' + def.id + '" aria-label="Due date"><button class="btn" type="submit">Add</button></form>' : '';
   const nextAction = openRows[0] && openRows[0].a;
+  const actCountText = openN + ' open' + (overdueN ? ' · ' + overdueN + ' overdue' : '');
   const actPreview = nextAction
     ? 'Next: ' + esc(nextAction.text) + (nextAction.assignee ? ' · ' + esc(nextAction.assignee) : '') + (nextAction.due ? ' · due ' + esc(nextAction.due) : '')
     : 'No open action items.';
@@ -316,11 +326,11 @@ function phaseHTML(def, st, idx, o) {
   const actBody = o.actionsOpen
     ? (openRows.length ? '<ul class="gates act-list">' + openRows.map(r => r.html).join('') + '</ul>' : '<p class="note">No open action items.</p>') +
       (doneRows.length ? '<details class="act-done"><summary>' + doneRows.length + ' completed</summary><ul class="gates">' + doneRows.map(r => r.html).join('') + '</ul></details>' : '') +
-      (edit ? (o.addActionOpen ? addForm : '<button type="button" class="add-row" data-add-action-toggle="' + def.id + '">+ Add action</button>') : '')
+      (edit ? (o.addActionOpen ? addForm : '<button type="button" class="add-row" id="add-action-' + def.id + '" data-add-action-toggle="' + def.id + '">+ Add action</button>') : '')
     : '<p class="act-preview">' + actPreview + '</p>';
   const actSection = live
-    ? '<section class="phase-col phase-col-actions"><h4 class="sub act-heading"><button type="button" class="act-toggle" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '">' +
-      'Action items <span class="cnt">' + openN + ' open' + (doneRows.length ? ' · ' + doneRows.length + ' done' : '') + '</span>' +
+    ? '<section class="phase-col phase-col-actions"><h4 class="sub act-heading"><button type="button" class="act-toggle" id="act-toggle-' + def.id + '" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '">' +
+      'Action items <span class="cnt' + (overdueN ? ' is-late' : '') + '">' + actCountText + (doneRows.length ? ' · ' + doneRows.length + ' done' : '') + '</span>' +
       '<i class="fa-solid ' + (o.actionsOpen ? 'fa-chevron-up' : 'fa-chevron-down') + '" aria-hidden="true"></i></button></h4>' + actBody + '</section>'
     : '';
   const loop = st.reopened > 0 ? '<p class="loop">' + icon('reopened', 16) + 'Reopened ' + st.reopened + (st.reopened === 1 ? ' time' : ' times') + '</p>' : '';
@@ -328,13 +338,16 @@ function phaseHTML(def, st, idx, o) {
     '<span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span>' +
     (edit ? '<button type="button" class="art-plus" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '" aria-label="Add a link to ' + esc(def.name) + '" title="Add a link">+</button>' : '');
   const pct = def.gates.length ? Math.round(n / def.gates.length * 100) : 0;
+  const criteriaText = def.gates.length
+    ? '<span class="ph-count-num">' + n + '/' + def.gates.length + '</span> <span class="ph-count-word">criteria</span>'
+    : 'No criteria';
   const headLive = '<div class="ph-head">' +
     '<h3 class="ph-heading"><button type="button" class="ph-toggle" data-toggle-phase="' + def.id + '" aria-expanded="' + (!collapsed) + '"' + (collapsed ? '' : ' aria-controls="' + idp + 'phase-' + def.id + '"') + '>' +
     '<span class="ph-idx">' + String(idx + 1).padStart(2, '0') + '</span><span class="ph-name">' + esc(def.name) + '</span>' +
     '<i class="fa-solid ' + (collapsed ? 'fa-chevron-down' : 'fa-chevron-up') + '" aria-hidden="true"></i></button></h3>' + pill(st.status) + (current ? '<span class="current-chip">Current</span>' : '') +
     (st.status === 'done' && st.completedAt ? '<span class="ph-date">Completed ' + esc(st.completedAt) + '</span>' : '') +
-    '<span class="ph-side"><span class="ph-count">' + (def.gates.length ? n + '/' + def.gates.length + ' criteria' : 'No criteria') + '</span>' +
-    (acts.length ? '<button type="button" class="ph-actcount" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '">' + openN + ' open action' + (openN === 1 ? '' : 's') + '</button>' : '') +
+    '<span class="ph-side"><span class="ph-count">' + criteriaText + '</span>' +
+    (acts.length ? '<button type="button" class="ph-actcount' + (overdueN ? ' is-late' : '') + '" data-toggle-actions="' + def.id + '" aria-expanded="' + (!!o.actionsOpen) + '" title="' + openN + ' open action' + (openN === 1 ? '' : 's') + (overdueN ? ', ' + overdueN + ' overdue' : '') + '">' + actCountText + '</button>' : '') +
     (edit && !collapsed ? '<details class="phase-menu"><summary title="Phase actions" aria-label="Phase actions"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></summary><div class="phase-menu-list">' +
       (st.status !== 'done' ? '<button type="button" data-phase-status="' + (st.status === 'blocked' ? 'in_progress' : 'blocked') + '" data-phase="' + def.id + '">' + (st.status === 'blocked' ? 'Resume phase' : 'Mark phase blocked') + '</button>' : '') +
       '<button type="button" data-art-toggle="' + def.id + '" aria-expanded="' + (o.artForm === def.id ? 'true' : 'false') + '">Add a link</button>' +
@@ -357,13 +370,18 @@ function phaseHTML(def, st, idx, o) {
     ? o.extra + '<button type="button" class="link-btn" data-decision-toggle="' + def.id + '">Cancel</button>'
     : '<button type="button" class="add-row" data-decision-toggle="' + def.id + '">Record a decision</button>';
   const contextSection = '<section class="phase-context">' +
-    '<button type="button" class="context-toggle" data-context-toggle="' + def.id + '" aria-expanded="' + (!!o.contextOpen) + '">' +
+    '<button type="button" class="context-toggle" id="context-toggle-' + def.id + '" data-context-toggle="' + def.id + '" aria-expanded="' + (!!o.contextOpen) + '">' +
     '<span class="ctx-title">Context</span><span class="ctx-summary">' + esc(ctxSummary) + '</span>' +
     '<i class="fa-solid ' + (o.contextOpen ? 'fa-chevron-up' : 'fa-chevron-down') + '" aria-hidden="true"></i></button>' +
     (o.contextOpen ? '<div class="phase-context-body">' +
       '<div class="context-section"><h4 class="sub">Decisions <span class="cnt">' + decN + '</span></h4>' +
       (decs ? '<ul class="decs">' + decs + '</ul>' : '<p class="note">None recorded.</p>') + decisionForm + '</div>' +
-      '<div class="context-section"><h4 class="sub">Notes</h4>' + (st.notes ? '<p class="note">' + esc(st.notes) + '</p>' : '<p class="note">None recorded.</p>') + '</div>' +
+      '<div class="context-section"><h4 class="sub">Notes</h4>' +
+      (o.phaseNoteOpen
+        ? '<form class="phase-note-form" data-phase-note="' + def.id + '"><textarea class="field" id="phase-note-' + def.id + '" maxlength="2000" placeholder="Anything worth keeping about this phase?">' + esc(st.notes || '') + '</textarea><div class="note-btns"><button class="btn small primary" type="submit">Save note</button><button class="link-btn" type="button" data-phase-note-cancel="1">Cancel</button></div></form>'
+        : (st.notes
+          ? '<p class="note">' + esc(st.notes) + '</p><button type="button" class="link-btn" id="phase-note-edit-' + def.id + '" data-phase-note-edit="' + def.id + '">Edit note</button>'
+          : '<button type="button" class="add-row" id="phase-note-edit-' + def.id + '" data-phase-note-edit="' + def.id + '">+ Add note</button>')) + '</div>' +
       diagramsHTML(def, st, o) + artifactsHTML(def, st, o) +
       '</div>' : '') + '</section>';
   const criteriaSection = '<section class="phase-col phase-col-criteria"><h4 class="sub">Exit criteria <span class="cnt">' + (def.gates.length ? n + '/' + def.gates.length : '0') + '</span></h4>' +
@@ -375,6 +393,7 @@ function phaseHTML(def, st, idx, o) {
   }
   return '<article class="phase ' + meta.cls + (live ? ' is-open' : '') + (live && current ? ' is-current' : '') + '" id="' + idp + 'ph-' + def.id + '">' +
     (live ? headLive : '<div class="ph-head">' + head + '</div>') +
+    (live && st.status === 'done' ? '<p class="phase-complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> All criteria met — phase complete</p>' : '') +
     '<p class="ph-goal">' + esc(def.goal) + '</p>' + loop +
     (live ? '<div class="phase-body" id="' + idp + 'phase-' + def.id + '">' +
       '<div class="phase-work' + (acts.length && o.actionsOpen ? '' : ' is-single') + '">' + criteriaSection + actSection + '</div>' + contextSection +

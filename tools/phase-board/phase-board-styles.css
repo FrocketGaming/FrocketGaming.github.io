@@ -669,3 +669,23 @@
 .pb .crit-evidence summary { color: var(--fg-2); font-size: 11px; cursor: pointer; }
 .pb .crit-evidence summary i { margin-right: 4px; }
 .pb .crit-evidence .crit-note { margin-top: 4px; }
+
+.pb .phase { position: relative; }
+.pb .phase::before { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 3px; border-radius: 5px 0 0 5px; background: var(--line); pointer-events: none; }
+.pb .phase.st-good::before { background: var(--good); }
+.pb .phase.st-prog::before { background: var(--accent); }
+.pb .phase.st-crit::before { background: var(--crit); }
+.pb .phase.st-warn::before { background: var(--warn); }
+.pb .phase-complete { display: flex; align-items: center; gap: 6px; color: var(--good); font-size: 12px; font-weight: 600; }
+.pb .ph-actcount.is-late { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
+.pb .act-toggle .cnt.is-late { color: var(--crit); }
+.pb .action-edit { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.pb .due-quick { display: flex; flex-wrap: wrap; gap: 3px; width: 100%; }
+.pb .due-quick button { padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--fg-2); font-size: 11px; cursor: pointer; }
+.pb .due-quick button:hover { border-color: var(--accent-secondary); color: var(--fg); }
+@media (max-width: 1200px) {
+    .pb .ph-count-word { display: none; }
+}
+
+.pb .phase-note-form { display: grid; gap: 8px; }
+.pb .phase-note-form textarea { min-height: 72px; resize: vertical; }
