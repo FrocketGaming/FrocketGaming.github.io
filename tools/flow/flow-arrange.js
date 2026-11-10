@@ -288,11 +288,12 @@
             const sa = item.styleAttributes || {};
             return { kind, color: item.color, fromEnd: item.fromEnd, toEnd: item.toEnd, route: sa.pathfindingMethod, dash: sa.path };
         }
-        return { kind, type: item.type, color: item.color, shape: item.type === 'text' ? S.nodeShape(item) : undefined };
+        return { kind, type: item.type, color: item.color, border: S.borderOf(item), shape: item.type === 'text' ? S.nodeShape(item) : undefined };
     }
 
     function paintNode(n, st) {
         if (st.color) n.color = st.color; else delete n.color;
+        if (!S.laneOf(n) && !S.poolOf(n)) setStyleAttr(n, 'border', st.border || null);
         if (n.type !== 'text' || st.type !== 'text' || !st.shape) return;
         const was = S.nodeShape(n);
         setStyleAttr(n, 'shape', st.shape === 'rect' ? null : st.shape);

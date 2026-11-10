@@ -140,7 +140,7 @@
     function signature(n) {
         // Any field can hold any JSON value: never let Array.join call an object's toString.
         const v = (x) => (x == null || typeof x !== 'object' ? x : JSON.stringify(x));
-        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), S.laneOf(n), S.poolOf(n), S.statusOf(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
+        return [v(n.type), v(n.text), v(n.url), v(n.file), v(n.subpath), v(n.label), v(n.color), S.nodeShape(n), S.stepType(n), S.laneOf(n), S.poolOf(n), S.statusOf(n), S.borderOf(n), S.isTitled(n), v(n.background), n.type === 'file' ? Number(n.height) >= 150 : 0].join('\u0001');
     }
 
     function renderNodes(d) {
@@ -270,11 +270,13 @@
             label.classList.toggle('is-empty', !S.str(n.label));
             if (!S.str(n.label)) label.textContent = lane ? 'Lane' : pool ? 'Pool' : 'Group';
             el.classList.toggle('has-bg', !!n.background);
+            el.classList.toggle('border-dashed', S.borderOf(n) === 'dashed');
+            el.classList.toggle('border-dotted', S.borderOf(n) === 'dotted');
             return;
         }
         const shape = S.nodeShape(n);
         const step = S.stepType(n);
-        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (step ? ' has-step' : '') + (S.statusOf(n) ? ' has-status' : '')
+        el.className = `flow-node flow-node-${(S.str(n.type) || 'unknown').replace(/[^\w-]/g, '_')} flow-shape-${shape}` + (colored ? ' has-color' : '') + (step ? ' has-step' : '') + (S.statusOf(n) ? ' has-status' : '') + (S.borderOf(n) ? ' border-' + S.borderOf(n) : '')
             + (el._locked ? ' is-locked' : '') + (el._hidden ? ' is-collapsed-hidden' : '') + (core.selection.nodes.has(n.id) ? ' is-selected' : '');
         // Step label chip (sibling of the content, so it stays visible while the card is edited).
         let chip = el.querySelector('.flow-step-chip');
@@ -299,7 +301,8 @@
             c.replaceChildren(im);
         } else if (n.type === 'text') {
             c.classList.add('flow-md');
-            if (S.isSimpleText(n.text) || S.centredShape(shape)) c.classList.add('is-simple');
+            if (S.centredText(n, shape)) c.classList.add('is-simple');
+            if (S.isTitled(n, shape)) c.classList.add('is-titled');
             c.innerHTML = n.text ? S.renderMarkdown(n.text) : '<p class="flow-placeholder">Empty card</p>';
         } else if (n.type === 'link') {
             const url = S.str(n.url);
@@ -565,6 +568,22 @@
         }
     }
 
+    /** In an open text editor, colour the bullet on the caret's line(s). False when no such editor is open. */
+    nodes.setEditorBullets = (key) => editEditorText(S.setBullets, key);
+    /** In an open text editor, make or change tag pills at the caret or selection. False when no such editor is open. */
+    nodes.setEditorTags = (key) => editEditorText(S.setTags, key);
+
+    function editEditorText(fn, key) {
+        if (!editor || editor.kind !== 'text') return false;
+        const ta = editor.input;
+        const r = fn(ta.value, key, { from: ta.selectionStart, to: ta.selectionEnd });
+        if (r.from < 0) return true;
+        ta.value = r.text;
+        ta.setSelectionRange(r.from, r.to);
+        applyEditorValue();
+        return true;
+    }
+
     function onEditorKey(e) {
         e.stopPropagation();
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -584,6 +603,26 @@
             nodes.stopEdit();
             core.viewportEl.focus({ preventScroll: true });
             return;
+        }
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && /^Digit[0-6]$/.test(e.code) && editor && editor.kind === 'text') {
+            e.preventDefault();
+            nodes.setEditorBullets(e.code === 'Digit0' ? '' : e.code.slice(5));
+            return;
+        }
+        // Enter continues a coloured bullet in the same colour; on an empty one it ends the list.
+        if (e.key === 'Enter' && !e.shiftKey && !e.altKey && editor && editor.kind === 'text') {
+            const ta = editor.input, s = ta.selectionStart;
+            const lineStart = ta.value.lastIndexOf('\n', s - 1) + 1;
+            const m = s === ta.selectionEnd && S.BULLET_PREFIX.exec(ta.value.slice(lineStart, s));
+            if (m) {
+                e.preventDefault();
+                const lineEnd = ta.value.indexOf('\n', s);
+                const empty = m[0].length === s - lineStart && !ta.value.slice(s, lineEnd < 0 ? undefined : lineEnd).trim();
+                if (empty) ta.setRangeText('', lineStart, s, 'end');
+                else ta.setRangeText('\n' + m[0], s, s, 'end');
+                applyEditorValue();
+                return;
+            }
         }
         if (e.key === 'Tab' && editor && editor.kind === 'text') {
             // Tab indents markdown lists instead of leaving the card.
