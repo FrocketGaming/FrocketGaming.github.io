@@ -716,6 +716,8 @@
         $('flowOpenList').addEventListener('click', (e) => {
             const discard = e.target.closest('[data-discard]');
             if (discard) { e.stopPropagation(); armDiscard(discard); return; }
+            const del = e.target.closest('[data-delete]');
+            if (del) { e.stopPropagation(); armDelete(del); return; }
             const li = e.target.closest('[data-index]');
             if (li) pick(items[Number(li.dataset.index)]);
         });
@@ -1242,7 +1244,8 @@
             return `<li class="flow-open-item${active ? ' is-active' : ''}" role="option" data-index="${i}" aria-selected="${active}">
                 <div class="flow-open-thumb">${t.svg}</div>
                 <div class="flow-open-meta"><div class="flow-open-name">${esc(s.name)}${s.id === current ? ' <span class="flow-open-current">open</span>' : ''}</div>
-                <div class="flow-open-sub">${esc(s.type || '')} · ${t.count} · ${esc(ago(s.updatedAt))}</div></div></li>`;
+                <div class="flow-open-sub">${esc(s.type || '')} · ${t.count} · ${esc(ago(s.updatedAt))}</div></div>
+                <button type="button" class="flow-open-discard flow-open-delete" data-delete="${esc(s.id)}" title="Delete from Snippets" aria-label="Delete ${esc(s.name)}"><i class="fa-regular fa-trash-can"></i></button></li>`;
         };
         let html = '';
         if (drafts.length) html += `<li class="flow-open-section" role="presentation">Unsaved work <span>kept in this browser</span></li>` + drafts.map(row).join('');
@@ -1275,6 +1278,39 @@
         btn.classList.add('is-armed');
         btn.innerHTML = 'Discard';
         setTimeout(() => { if (btn.isConnected) { btn.classList.remove('is-armed'); btn.innerHTML = '<i class="fa-solid fa-xmark"></i>'; } }, 3000);
+    }
+
+    /** Same two-click arming as Discard. Deleting removes the chart from Snippets with its
+     *  version history and cloud copy, exactly as deleting it in Snippets does. */
+    function armDelete(btn) {
+        if (btn.classList.contains('is-armed')) { deleteSnippet(btn.dataset.delete); return; }
+        btn.classList.add('is-armed');
+        btn.innerHTML = 'Delete';
+        setTimeout(() => { if (btn.isConnected) { btn.classList.remove('is-armed'); btn.innerHTML = '<i class="fa-regular fa-trash-can"></i>'; } }, 3000);
+    }
+
+    async function deleteSnippet(id) {
+        const s = allSnippets.find(x => x.id === id);
+        try {
+            await StorageManager.delete('snippets', id);
+            const versions = await StorageManager.getAllByIndex('snippetVersions', 'snippetId', id);
+            for (const v of versions) await StorageManager.delete('snippetVersions', v.id);
+            if (signedIn()) {
+                FirebaseSync.deleteSnippet(id);
+                if (FirebaseSync.deleteSnippetVersionsBySnippetId) FirebaseSync.deleteSnippetVersionsBySnippetId(id);
+                else versions.forEach(v => FirebaseSync.deleteSnippetVersion(v.id));
+            }
+        } catch (e) {
+            console.error('Flow: delete failed', e);
+            core.toast('Could not delete the chart', 'error');
+            return;
+        }
+        broadcast({ type: 'deleted', id });
+        core.toast(`Deleted “${s ? s.name : 'chart'}” from Snippets`);
+        // The chart on screen, if it was this one, stays here as a draft (checkLinked notices).
+        if (Flow.app.state().snippetId === id) await snippets.checkLinked();
+        await snippets.refreshOpenDialog();
+        syncBadge();
     }
 
     async function pick(it) {

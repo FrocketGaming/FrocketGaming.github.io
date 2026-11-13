@@ -1833,6 +1833,11 @@ body.flow-view-only .flow-viewport.is-panning * { cursor: grabbing; }
 }
 .flow-open-discard:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-color); }
 .flow-open-discard.is-armed { color: var(--error-color); border-color: var(--error-color); font-weight: 600; }
+/* Saved rows: the trash can stays quiet until the row is hovered or highlighted. */
+.flow-open-delete { opacity: 0; }
+.flow-open-item:hover .flow-open-delete, .flow-open-item.is-active .flow-open-delete, .flow-open-delete:focus-visible, .flow-open-delete.is-armed { opacity: 1; }
+.flow-open-delete:hover { color: var(--error-color); }
+@media (hover: none) { .flow-open-delete { opacity: 1; } }
 /* inline "new category" field */
 .flow-field input.flow-newcat { border-color: var(--accent-secondary); }
 /* conflict chooser */
