@@ -1031,6 +1031,126 @@ body.flow-moving .flow-viewport * { cursor: move !important; }
 .flow-minimap canvas { display: block; width: 200px; height: 140px; cursor: crosshair; touch-action: none; }
 .flow-footer-right { display: flex; gap: 8px; }
 .flow-pill-solo.is-active { color: var(--accent-primary); border-color: var(--accent-primary); }
+
+/* ── Layers (flow-layers.js) ───────────────────────────────────────────── */
+
+.flow-layers {
+    position: absolute;
+    right: 12px;
+    bottom: 68px;
+    z-index: 6;
+    width: 300px;
+    max-width: calc(100% - 24px);
+    max-height: min(60vh, 460px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+    color: var(--chrome-text);
+}
+.flow-layers[hidden] { display: none; }
+body.flow-has-minimap .flow-layers { bottom: 224px; }
+.flow-layers-head { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.flow-layers-sp { flex: 1; }
+.flow-layers-clear {
+    font: inherit;
+    font-size: 12px;
+    color: var(--accent-primary);
+    background: none;
+    border: 0;
+    padding: 4px 6px;
+    cursor: pointer;
+}
+.flow-layers-clear:hover { text-decoration: underline; }
+.flow-layers-note { margin: 0; font-size: 12px; line-height: 1.4; color: var(--chrome-muted); }
+.flow-layers-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
+.flow-layers-empty { font-size: 13px; line-height: 1.45; color: var(--chrome-muted); }
+.flow-layer-row { display: flex; align-items: center; gap: 4px; }
+.flow-layer-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--chrome-border);
+    background: var(--bg-tertiary);
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.flow-layer-main:hover { border-color: var(--lc); }
+.flow-layer-main[aria-pressed="true"] { border-color: var(--lc); }
+.flow-layer-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--lc); }
+.flow-layer-main[aria-pressed="false"] .flow-layer-dot { background: transparent; box-shadow: inset 0 0 0 2px var(--lc); }
+.flow-layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-layer-count { font-size: 11px; color: var(--chrome-muted); font-variant-numeric: tabular-nums; }
+.flow-layer-tools { display: none; gap: 2px; }
+.flow-layer-row:hover .flow-layer-tools,
+.flow-layer-row:focus-within .flow-layer-tools { display: flex; }
+.flow-layer-tool {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 11px;
+    color: var(--chrome-muted);
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.flow-layer-tool:hover:not(:disabled) { color: var(--chrome-text); background: var(--bg-tertiary); }
+.flow-layer-tool:disabled { opacity: 0.35; cursor: not-allowed; }
+.flow-layer-rename {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 6px;
+}
+.flow-layers-form { display: flex; gap: 6px; }
+.flow-layers-form input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--chrome-border);
+    border-radius: 6px;
+}
+.flow-layers-form input:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+
+/* On the chart: a dot per layer on each card, everything outside the switched-on layers steps back. */
+.flow-layer-dots { position: absolute; left: 10px; bottom: 6px; z-index: 3; display: flex; gap: 4px; pointer-events: none; }
+.flow-layer-dots i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--flow-card-bg); }
+.flow-node { transition: border-color 0.12s, box-shadow 0.12s, opacity 0.2s; }
+.flow-edge, .flow-edge-label { transition: opacity 0.2s; }
+.flow-node.is-layer-dim,
+.flow-edge.is-layer-dim,
+.flow-edge-label.is-layer-dim { opacity: 0.16; }
+.flow-node.has-layer-ring { outline: 2px solid var(--layer-color); outline-offset: 2px; }
+.flow-edge.has-layer-tint .flow-edge-line { stroke: var(--layer-color); }
+.flow-edge.has-layer-tint .flow-edge-head { fill: var(--layer-color); stroke: var(--layer-color); }
+.flow-edge-label.has-layer-tint { color: var(--layer-color); }
+.flow-step-opt.is-partial { border-style: dashed; }
+@media (prefers-reduced-motion: reduce) {
+    .flow-node, .flow-edge, .flow-edge-label { transition: none; }   /* also drops the 0.12s border fades: acceptable under reduced motion */
+}
 body.flow-painting .flow-viewport,
 body.flow-painting .flow-viewport * { cursor: copy !important; }
 

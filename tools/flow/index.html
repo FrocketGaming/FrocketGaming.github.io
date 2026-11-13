@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
     <link rel="stylesheet" href="../../src/firebase-sync.css">
-    <link rel="stylesheet" href="flow-styles.css?v=8cc720c3">
+    <link rel="stylesheet" href="flow-styles.css?v=6d065929">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -162,7 +162,23 @@
         <div class="flow-minimap" id="flowMinimap" data-ui hidden>
             <canvas id="flowMinimapCanvas" width="200" height="140" role="img" aria-label="Minimap: click or drag to move the view"></canvas>
         </div>
+        <!-- Layers (flow-layers.js): focus on one route, team or failure mode at a time -->
+        <div class="flow-layers" id="flowLayers" role="dialog" aria-label="Layers" data-ui hidden>
+            <div class="flow-layers-head">
+                <b>Layers</b>
+                <span class="flow-layers-sp"></span>
+                <button type="button" class="flow-layers-clear" id="flowLayersClear" data-act="clear" hidden>Show all</button>
+                <button type="button" class="flow-icon-btn" data-act="close" title="Close — Esc" aria-label="Close layers"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="flow-layers-note">Click a layer to focus on it. Switch on several to compare routes.</p>
+            <ul class="flow-layers-list" id="flowLayersList"></ul>
+            <form class="flow-layers-form" id="flowLayersForm">
+                <input type="text" id="flowLayersNew" maxlength="40" placeholder="New layer…" autocomplete="off" aria-label="New layer name">
+                <button type="submit" class="flow-btn">Add</button>
+            </form>
+        </div>
         <div class="flow-footer-right" data-ui>
+            <button class="flow-icon-btn flow-pill-solo" id="flowLayersBtn" title="Layers" aria-label="Layers" aria-haspopup="dialog" aria-expanded="false"><i class="fa-solid fa-layer-group"></i></button>
             <button class="flow-icon-btn flow-pill-solo" id="flowMinimapBtn" title="Minimap — M" aria-label="Minimap" aria-pressed="false"><i class="fa-regular fa-map"></i></button>
             <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Shapes and shortcuts — ?" aria-label="Shapes and shortcuts"><i class="fa-regular fa-circle-question"></i></button>
         </div>
@@ -219,23 +235,24 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="../../src/vendor/purify.min.js"></script>
-    <script src="flow-static.js?v=8cc720c3"></script>
-    <script src="flow-core.js?v=8cc720c3"></script>
-    <script src="flow-canvas.js?v=8cc720c3"></script>
-    <script src="flow-nodes.js?v=8cc720c3"></script>
-    <script src="flow-edges.js?v=8cc720c3"></script>
-    <script src="flow-interact.js?v=8cc720c3"></script>
-    <script src="flow-arrange.js?v=8cc720c3"></script>
-    <script src="flow-find.js?v=8cc720c3"></script>
-    <script src="flow-minimap.js?v=8cc720c3"></script>
-    <script src="flow-panel.js?v=8cc720c3"></script>
-    <script src="flow-mermaid.js?v=8cc720c3"></script>
-    <script src="flow-io.js?v=8cc720c3"></script>
-    <script src="flow-images.js?v=8cc720c3"></script>
-    <script src="flow-view.js?v=8cc720c3"></script>
-    <script src="flow-lanes.js?v=8cc720c3"></script>
-    <script src="flow-snippets.js?v=8cc720c3"></script>
-    <script src="flow-app.js?v=8cc720c3"></script>
+    <script src="flow-static.js?v=6d065929"></script>
+    <script src="flow-core.js?v=6d065929"></script>
+    <script src="flow-canvas.js?v=6d065929"></script>
+    <script src="flow-nodes.js?v=6d065929"></script>
+    <script src="flow-edges.js?v=6d065929"></script>
+    <script src="flow-interact.js?v=6d065929"></script>
+    <script src="flow-arrange.js?v=6d065929"></script>
+    <script src="flow-find.js?v=6d065929"></script>
+    <script src="flow-minimap.js?v=6d065929"></script>
+    <script src="flow-layers.js?v=6d065929"></script>
+    <script src="flow-panel.js?v=6d065929"></script>
+    <script src="flow-mermaid.js?v=6d065929"></script>
+    <script src="flow-io.js?v=6d065929"></script>
+    <script src="flow-images.js?v=6d065929"></script>
+    <script src="flow-view.js?v=6d065929"></script>
+    <script src="flow-lanes.js?v=6d065929"></script>
+    <script src="flow-snippets.js?v=6d065929"></script>
+    <script src="flow-app.js?v=6d065929"></script>
         <script src="../../src/site-chrome.js"></script>
 </body>
 

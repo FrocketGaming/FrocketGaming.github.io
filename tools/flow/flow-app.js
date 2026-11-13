@@ -243,6 +243,7 @@
         Flow.arrange.init();
         Flow.find.init();
         Flow.minimap.init();
+        Flow.layers.init();
         Flow.panel.init();
         Flow.io.init();
         Flow.images.init();

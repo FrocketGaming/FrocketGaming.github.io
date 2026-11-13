@@ -26,7 +26,7 @@
         el.addEventListener('mousedown', (e) => { if (e.target.closest('[data-action="bullet"], [data-action="tag"]') && Flow.nodes.isEditing()) e.preventDefault(); });
         // Custom step label: Enter applies it (via change), Escape leaves the field unchanged.
         el.addEventListener('keydown', (e) => {
-            if (e.target.dataset.action !== 'step-custom') return;
+            if (e.target.dataset.action !== 'step-custom' && e.target.dataset.action !== 'layer-new') return;
             e.stopPropagation();
             if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
             else if (e.key === 'Escape') { e.preventDefault(); render(); }
@@ -136,6 +136,21 @@
             html += btn('status', 'doing', '<i class="fa-solid fa-circle-half-stroke flow-status-doing"></i>', 'In progress (Alt+S cycles)', status === 'doing');
             html += btn('status', 'done', '<i class="fa-solid fa-circle-check flow-status-done"></i>', 'Done (Alt+S cycles)', status === 'done');
             html += '</div></div>';
+        }
+
+        // Layers: one chip per layer, lit when the whole selection is in it (dashed when only some is).
+        {
+            const all = Flow.layers.list();
+            html += '<div class="flow-panel-section"><div class="flow-panel-label">Layers</div>';
+            if (all.length) {
+                html += '<div class="flow-step-opts">';
+                for (const l of all) {
+                    const st = Flow.layers.stateFor(l.id);
+                    html += `<button type="button" class="flow-step-opt${st === 'all' ? ' is-active' : st === 'some' ? ' is-partial' : ''}" data-action="layer" data-value="${S.escapeHtml(l.id)}" style="--step-color:${l.css}" title="${st === 'all' ? 'Take the selection out of ' : 'Put the selection in '}${S.escapeHtml(l.name)}" aria-pressed="${st === 'all' ? 'true' : 'false'}">${S.escapeHtml(l.name)}</button>`;
+                }
+                html += '</div>';
+            }
+            html += '<div class="flow-step-custom"><input type="text" class="flow-step-input" data-action="layer-new" maxlength="40" placeholder="New layer…" aria-label="New layer name"></div></div>';
         }
 
         // Border line (cards and plain groups)
@@ -372,6 +387,7 @@
                 applyStep(v && v === cur ? '' : v);   // clicking the active preset removes it
                 break;
             }
+            case 'layer': Flow.layers.toggleSelection(v); break;
             case 'bullet': applyBullets(v); break;
             case 'tag': applyTags(v === 'x' ? null : v); break;
             case 'titled': toggleTitled(); break;
@@ -437,6 +453,7 @@
     }
     function onChange(e) {
         if (e.target.dataset.action === 'step-custom') { applyStep(e.target.value); return; }
+        if (e.target.dataset.action === 'layer-new') { if (Flow.layers.add(e.target.value, true)) return; e.target.value = ''; return; }
         if (e.target.dataset.action !== 'custom-color') return;
         if (colorTxn) { colorTxn = false; core.commit(); }
         render();
