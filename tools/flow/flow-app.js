@@ -228,6 +228,7 @@
                 case 'grid': core.setPref('grid', !core.prefs.grid); break;
                 case 'shortcuts': app.showShortcuts(); break;
                 case 'view-only': Flow.view.toggle(); break;
+                case 'play': Flow.play.toggle(); break;
                 case 'swimlanes': Flow.lanes.insertPool(core.viewCenter()); break;
             }
         });
@@ -244,6 +245,7 @@
         Flow.find.init();
         Flow.minimap.init();
         Flow.layers.init();
+        Flow.play.init();
         Flow.panel.init();
         Flow.io.init();
         Flow.images.init();

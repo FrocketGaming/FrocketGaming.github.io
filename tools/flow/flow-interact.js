@@ -671,6 +671,11 @@
             ['Ctrl + F', 'Find on canvas (Enter / Shift + Enter for next / previous)'], ['M', 'Toggle the minimap'],
             ['Alt + V', 'View only: hide the editing tools, drag or arrows to pan (or open with ?view=1)'],
         ]],
+        ['Play', [
+            ['Alt + P', 'Play the flow: a light walks the connectors from the first card (or the selected one). Nothing is edited'],
+            ['Space', 'Play / pause'], ['Right / Left arrow', 'Next step / step back'], ['1 - 9', 'Pick a branch at a decision'],
+            ['F', 'Fail this step: what follows it fades'], ['R', 'Reset the run'], ['Esc', 'Stop playing'],
+        ]],
         ['File', [
             ['Ctrl + S', 'Save to Snippets'], ['Ctrl + O', 'Open from Snippets'], ['Ctrl + Shift + O', 'Import .canvas'],
             ['Ctrl + Shift + S', 'Export .canvas'], ['Ctrl + Shift + E', 'Export PNG'], ['Shift + Alt + C', 'Copy PNG'],

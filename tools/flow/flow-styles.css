@@ -1823,3 +1823,166 @@ body.flow-view-only .flow-viewport.is-panning * { cursor: grabbing; }
 .flow-conflict-choices .flow-btn span { display: flex; flex-direction: column; gap: 2px; }
 .flow-conflict-choices .flow-btn small { font-weight: 400; font-size: 12px; opacity: 0.8; }
 .flow-conflict-choices .flow-btn i { width: 18px; text-align: center; }
+
+/* ── Play (flow-play.js) ───────────────────────────────────────────────── */
+
+body.flow-playing #flowViewBar { display: none !important; }
+body.flow-playing .flow-toast { bottom: 84px; }
+body.flow-view-only .flow-layer-tool[data-act="assign"],
+body.flow-view-only .flow-layer-tool[data-act="unassign"],
+body.flow-view-only .flow-layer-tool[data-act="colour"],
+body.flow-view-only .flow-layer-tool[data-act="rename"],
+body.flow-view-only .flow-layer-tool[data-act="delete"],
+body.flow-view-only .flow-layers-form { display: none; }
+
+.flow-play {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    max-width: calc(100% - 24px);
+    border-radius: 999px;
+    background: var(--chrome-bg);
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+    color: var(--chrome-text);
+}
+.flow-play[hidden] { display: none; }
+.flow-play-btn {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    font-size: 15px;
+    cursor: pointer;
+}
+.flow-play-btn:hover:not(:disabled) { background: var(--bg-tertiary); }
+.flow-play-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.flow-play-btn.is-main { width: 44px; height: 44px; background: var(--accent-primary); color: var(--bg-primary); }
+.flow-play-btn.is-main:hover:not(:disabled) { background: var(--accent-primary); filter: brightness(1.08); }
+.flow-play-btn.is-fail:hover:not(:disabled) { color: var(--error-color); }
+.flow-play-sep { flex: none; width: 1px; height: 22px; margin: 0 4px; background: var(--chrome-border); }
+.flow-play-speed {
+    flex: none;
+    min-width: 36px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--chrome-border);
+    border-radius: 999px;
+    background: none;
+    color: var(--chrome-muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.flow-play-speed:hover { color: var(--chrome-text); border-color: var(--chrome-muted); }
+.flow-play-stat { padding: 0 10px 0 8px; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.flow-play-num { margin-right: 6px; font-size: 12px; font-weight: 400; color: var(--chrome-muted); font-variant-numeric: tabular-nums; }
+.flow-play-exit {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--chrome-border);
+    border-radius: 999px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.flow-play-exit:hover { background: var(--bg-tertiary); }
+.flow-play-btn:focus-visible, .flow-play-speed:focus-visible, .flow-play-exit:focus-visible, .flow-play-pill:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+
+/* Choice pills sit on the connectors that leave a decision. Constant size on screen at any zoom. */
+.flow-layer-play { pointer-events: none; }
+.flow-play-pill {
+    position: absolute;
+    transform: translate(-50%, -50%) scale(calc(1 / var(--flow-zoom, 1)));
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px 5px 8px;
+    border-radius: 999px;
+    border: 1.5px solid var(--play-color, var(--accent-primary));
+    background: var(--chrome-bg);
+    color: var(--chrome-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    pointer-events: auto;
+}
+.flow-play-pill kbd {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--play-color, var(--accent-primary));
+}
+.flow-play-pill:hover, .flow-play-pill:focus-visible { background: var(--play-color, var(--accent-primary)); color: var(--bg-primary); }
+.flow-play-pill:hover kbd, .flow-play-pill:focus-visible kbd { color: var(--bg-primary); }
+.flow-edge-label.is-play-hidden { visibility: hidden; }
+
+/* The run drawn over the chart (world units; widths are screen pixels via the zoom). */
+.flow-play-comet { fill: none; stroke: var(--play-color, var(--accent-primary)); stroke-linecap: round; stroke-linejoin: round; }
+.flow-play-comet.is-trail { opacity: 0.18; stroke-width: calc(6px / var(--flow-zoom, 1)); }
+.flow-play-comet.is-mid { opacity: 0.4; stroke-width: calc(4.5px / var(--flow-zoom, 1)); }
+.flow-play-comet.is-head { opacity: 1; stroke-width: calc(4px / var(--flow-zoom, 1)); }
+.flow-play-march {
+    display: none;
+    fill: none;
+    stroke: var(--play-color, var(--accent-primary));
+    stroke-width: calc(2.75px / var(--flow-zoom, 1));
+    stroke-linejoin: round;
+    stroke-dasharray: calc(5px / var(--flow-zoom, 1)) calc(9px / var(--flow-zoom, 1));
+    animation: flow-play-march calc(0.9s / var(--play-speed, 1)) linear infinite;
+}
+.flow-play-march.is-on { display: inline; }
+@keyframes flow-play-march { to { stroke-dashoffset: calc(-14px / var(--flow-zoom, 1)); } }
+.flow-play-ring { fill: none; stroke: var(--play-color, var(--accent-primary)); stroke-width: calc(2px / var(--flow-zoom, 1)); opacity: 0; display: none; }
+.flow-play-ring.is-on { display: inline; animation: flow-play-breathe calc(1.8s / var(--play-speed, 1)) ease-in-out infinite; }
+@keyframes flow-play-breathe {
+    0%, 100% { opacity: 0.15; stroke-width: calc(2px / var(--flow-zoom, 1)); }
+    50% { opacity: 0.9; stroke-width: calc(5px / var(--flow-zoom, 1)); }
+}
+.flow-play-rip {
+    fill: none;
+    stroke: var(--play-color, var(--accent-primary));
+    stroke-width: calc(2.5px / var(--flow-zoom, 1));
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.flow-play-badge { transform-box: fill-box; transform-origin: center; }
+
+/* Cards and connectors while a run is on them. */
+.flow-node.is-play-cur { border-color: var(--play-color, var(--accent-primary)); }
+.flow-node.is-play-cur .flow-node-shape { stroke: var(--play-color, var(--accent-primary)); stroke-width: 2.5px; }
+.flow-node.is-play-done { border-color: color-mix(in srgb, var(--hue-green) 55%, var(--flow-card-border)); }
+.flow-node.is-play-failed { border-color: var(--error-color); }
+.flow-node.is-play-failed .flow-node-shape { stroke: var(--error-color); stroke-width: 2.5px; }
+.flow-node.is-play-blocked { opacity: 0.4; border-style: dashed; }
+.flow-node.is-play-dim, .flow-edge.is-play-dim { opacity: 0.14; }
+.flow-edge.is-play-blocked { opacity: 0.4; }
+.flow-edge.is-play-lit .flow-edge-line { stroke: var(--play-color, var(--accent-primary)); stroke-width: max(2.75px, calc(2.5px / var(--flow-zoom, 1))); }
+.flow-edge.is-play-lit .flow-edge-head { fill: var(--play-color, var(--accent-primary)); stroke: var(--play-color, var(--accent-primary)); }
+@media (prefers-reduced-motion: reduce) {
+    .flow-play-march, .flow-play-ring.is-on { animation: none; }
+}
+@media (max-width: 640px) {
+    .flow-play-stat, .flow-play-exit span { display: none; }
+}

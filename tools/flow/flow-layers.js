@@ -226,6 +226,7 @@
             } else {
                 html += `<button type="button" class="flow-layer-main" data-act="toggle" aria-pressed="${on ? 'true' : 'false'}" title="${on ? 'Stop focusing on this layer' : 'Focus on this layer'}"><span class="flow-layer-dot"></span><span class="flow-layer-name">${S.escapeHtml(l.name)}</span><span class="flow-layer-count">${c}</span></button>`;
                 html += '<span class="flow-layer-tools">';
+                html += tool('play', 'fa-play', 'Play this layer on its own');
                 html += tool('assign', 'fa-plus', 'Add the selection to this layer', hasSel ? '' : ' disabled');
                 html += tool('unassign', 'fa-minus', 'Take the selection out of this layer', hasSel ? '' : ' disabled');
                 html += tool('colour', 'fa-palette', 'Change colour');
@@ -269,6 +270,7 @@
                 case 'close': openPop(false); btn.focus(); break;
                 case 'clear': layers.clearActive(); break;
                 case 'toggle': layers.toggleActive(id); break;
+                case 'play': Flow.play.playLayer(id); break;
                 case 'assign': layers.assign(id, true); break;
                 case 'unassign': layers.assign(id, false); break;
                 case 'colour': layers.recolor(id); break;
