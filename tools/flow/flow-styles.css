@@ -1154,6 +1154,13 @@ body.flow-has-minimap .flow-layers { bottom: 224px; }
 .flow-edge.is-layer-dim,
 .flow-edge-label.is-layer-dim { opacity: 0.16; }
 .flow-node.has-layer-ring { outline: 2px solid var(--layer-color); outline-offset: 2px; }
+/* Drawn shapes sit in a transparent box, so an outline would draw that box. Ring the outline itself. */
+.flow-node.has-layer-ring:has(> .flow-node-shape) { outline: none; }
+.flow-node.has-layer-ring .flow-node-shape {
+    stroke: var(--layer-color);
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--layer-color) 60%, transparent));
+}
 .flow-edge.has-layer-tint .flow-edge-line { stroke: var(--layer-color); }
 /* A lit connector is drawn heavier, so the route reads as clearly as its ringed cards. */
 .flow-edge.is-layer-lit .flow-edge-line { stroke-width: max(2.5px, calc(2.25px / var(--flow-zoom, 1))); }
