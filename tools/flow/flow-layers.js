@@ -157,17 +157,30 @@
         const filtering = active.size > 0;
         let any = false;
 
+        // A connector belongs to a layer when it was added itself, or when both of its cards are in that
+        // layer: people add cards, and the lines between them are part of the same route.
+        const nodeIds = new Map();
+        for (const n of core.nodes()) nodeIds.set(n.id, layersOf(n).filter(id => byId.has(id)));
+        const edgeIds = (e) => {
+            const own = layersOf(e).filter(id => byId.has(id));
+            const a = nodeIds.get(e.fromNode) || [], b = nodeIds.get(e.toNode) || [];
+            const shared = a.filter(id => b.includes(id) && !own.includes(id));
+            return { own, all: own.concat(shared) };
+        };
+
         const apply = (el, o, kind) => {
-            const ids = layersOf(o).filter(id => byId.has(id));
-            const lit = ids.filter(id => active.has(id));
+            const membership = kind === 'node' ? { own: nodeIds.get(o.id) || [], all: nodeIds.get(o.id) || [] } : edgeIds(o);
+            const ids = membership.own;
+            const lit = membership.all.filter(id => active.has(id));
             const dim = filtering && !lit.length;
             const tint = lit.length === 1 ? byId.get(lit[0]).col : '';
-            const sig = ids.map(id => id + byId.get(id).col).join('|') + '#' + (dim ? 1 : 0) + '#' + tint;
+            const sig = ids.map(id => id + byId.get(id).col).join('|') + '#' + (dim ? 1 : 0) + '#' + tint + '#' + lit.length;
             if (dim || ids.length) any = true;
             if (el._lyrSig === sig) return;
             el._lyrSig = sig;
             el.classList.toggle('is-layer-dim', dim);
             el.classList.toggle(kind === 'node' ? 'has-layer-ring' : 'has-layer-tint', !!tint);
+            if (kind === 'edge') el.classList.toggle('is-layer-lit', lit.length > 0);
             if (tint) el.style.setProperty('--layer-color', tint); else el.style.removeProperty('--layer-color');
             if (kind === 'node') dots(el, ids.map(id => byId.get(id).col));
         };

@@ -1137,6 +1137,16 @@ body.flow-has-minimap .flow-layers { bottom: 224px; }
 
 /* On the chart: a dot per layer on each card, everything outside the switched-on layers steps back. */
 .flow-layer-dots { position: absolute; left: 10px; bottom: 6px; z-index: 3; display: flex; gap: 4px; pointer-events: none; }
+/* The default spot is a rectangle's bottom-left corner; other outlines pull it inside their edge
+   (hexagon slant and pill curve up to 20px, cylinder base curve and document wave about 10px). */
+.flow-shape-hexagon > .flow-layer-dots { left: 26px; }
+.flow-shape-pill > .flow-layer-dots { left: 22px; }
+.flow-shape-cylinder > .flow-layer-dots { left: 14px; bottom: 16px; }
+.flow-shape-document > .flow-layer-dots { bottom: 16px; }
+.flow-shape-diamond > .flow-layer-dots,
+.flow-shape-circle > .flow-layer-dots { left: 50%; transform: translateX(-50%); }
+.flow-shape-diamond > .flow-layer-dots { bottom: 22%; }
+.flow-shape-circle > .flow-layer-dots { bottom: 12%; }
 .flow-layer-dots i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--flow-card-bg); }
 .flow-node { transition: border-color 0.12s, box-shadow 0.12s, opacity 0.2s; }
 .flow-edge, .flow-edge-label { transition: opacity 0.2s; }
@@ -1145,6 +1155,8 @@ body.flow-has-minimap .flow-layers { bottom: 224px; }
 .flow-edge-label.is-layer-dim { opacity: 0.16; }
 .flow-node.has-layer-ring { outline: 2px solid var(--layer-color); outline-offset: 2px; }
 .flow-edge.has-layer-tint .flow-edge-line { stroke: var(--layer-color); }
+/* A lit connector is drawn heavier, so the route reads as clearly as its ringed cards. */
+.flow-edge.is-layer-lit .flow-edge-line { stroke-width: max(2.5px, calc(2.25px / var(--flow-zoom, 1))); }
 .flow-edge.has-layer-tint .flow-edge-head { fill: var(--layer-color); stroke: var(--layer-color); }
 .flow-edge-label.has-layer-tint { color: var(--layer-color); }
 .flow-step-opt.is-partial { border-style: dashed; }
