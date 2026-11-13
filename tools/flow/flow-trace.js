@@ -1,12 +1,12 @@
 /**
  * P16 - Trace and flow: two ambient effects that work any time, not only while playing.
- *  - Flowing lines: a connector that leaves a card flagged "doing" or "done" (the Status flag) shows
- *    dashes marching in its direction. Waiting connectors stay still, so a flagged chart reads as progress.
- *    Needs no data of its own; a chart without status flags never animates. Pref `lines`.
+ *  - Flowing lines: dashes march along every connector in its direction, faintly; a connector that leaves a
+ *    card flagged "doing" or "done" (the Status flag) flows at full strength, so progress still reads.
+ *    Off until switched on (menu or corner button). Pref `lines` === true.
  *  - Hover trace: point at a card and everything upstream and downstream of it stays lit while the rest of
  *    the chart steps back. Paused while dragging, connecting, typing or using another tool. Pref `trace`.
- * Both are on unless their pref is false, can be switched in the menu, and give way to play mode, which
- * draws its own motion. They only toggle classes and add one dash path per flowing connector; the
+ * Hover trace is on unless its pref is false, flowing lines only when theirs is true; both switch from the
+ * menu (lines also from the footer button) and give way to play mode, which draws its own motion. They only toggle classes and add one dash path per flowing connector; the
  * document is never written to.
  */
 (function () {
@@ -20,12 +20,14 @@
     const trace = Flow.trace = {};
     const MAX_FLOWING = 60;   // beyond this many moving connectors a chart is too busy to animate
 
-    const linesOn = () => core.prefs.lines !== false;
+    const linesOn = () => core.prefs.lines === true;
     const traceOn = () => core.prefs.trace !== false;
     const playing = () => document.body.classList.contains('flow-playing');
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-    let hoverId = null, force = false;
+    let hoverId = null, force = false, current = null;
+    /** The cards on the hovered card's path (a Set of ids), or null. The minimap lights these. */
+    trace.current = () => current;
 
     /** A connector's direction as drawn: from -> to, unless only its start has an arrowhead. */
     function flowOf(e) {
@@ -50,13 +52,23 @@
         force = false;
         const on = linesOn() && !playing() && !reduced();
         const els = edgeEls();
-        let moving = 0;
+        const strong = new Set(), moving = new Set();
+        if (on) {
+            // Flagged connectors first, so a busy chart spends its cap on the ones that carry meaning.
+            const cand = [];
+            for (const e of core.edges()) {
+                const f = flowOf(e), src = core.getNode(f.from);
+                if (!src || src.type === 'group' || !core.getNode(f.to)) continue;
+                cand.push({ e, flagged: !!S.statusOf(src) });
+            }
+            cand.sort((a, b) => (b.flagged ? 1 : 0) - (a.flagged ? 1 : 0));
+            for (const c of cand.slice(0, MAX_FLOWING)) { moving.add(c.e.id); if (c.flagged) strong.add(c.e.id); }
+        }
         for (const e of core.edges()) {
             const g = els.get(e.id);
             if (!g) continue;
-            const f = flowOf(e), src = core.getNode(f.from);
-            const live = on && !!src && src.type !== 'group' && !!S.statusOf(src) && moving < MAX_FLOWING;
-            if (live) moving++;
+            const f = flowOf(e);
+            const live = moving.has(e.id);
             if (live) {
                 const line = g._line || (g._line = g.querySelector('.flow-edge-line'));
                 const dd = line && line.getAttribute('d');
@@ -68,9 +80,11 @@
                 }
                 if (dd && m._d !== dd) { m._d = dd; m.setAttribute('d', dd); }
             }
-            if (g._flow !== live || g._rev !== (live && f.rev)) {
-                g._flow = live; g._rev = live && f.rev;
+            const strongNow = strong.has(e.id);
+            if (g._flow !== live || g._rev !== (live && f.rev) || g._strong !== strongNow) {
+                g._flow = live; g._rev = live && f.rev; g._strong = strongNow;
                 g.classList.toggle('is-flowing', live);
+                g.classList.toggle('is-flowing-strong', strongNow);
                 g.classList.toggle('is-flowing-rev', live && f.rev);
             }
         }
@@ -98,6 +112,8 @@
     function apply(id) {
         hoverId = id;
         const rel = id ? related(id) : null;
+        current = rel;
+        core.emit('trace', rel);
         for (const n of core.nodes()) {
             const el = Flow.nodes.elementFor(n.id);
             if (!el) continue;
@@ -122,6 +138,13 @@
         return core.viewOnly || core.tool === 'select';
     }
 
+    let btn = null;
+    function syncButton() {
+        if (!btn) return;
+        btn.classList.toggle('is-active', linesOn());
+        btn.setAttribute('aria-pressed', linesOn() ? 'true' : 'false');
+    }
+
     trace.init = function () {
         const vp = core.viewportEl;
         core.addRenderer('trace-lines', lines, 85);
@@ -141,6 +164,8 @@
         core.on('tool', clear);
         core.on('viewonly', () => { clear(); force = true; core.invalidate('edges'); });
         core.on('play', () => { clear(); force = true; core.invalidate('edges'); });
-        core.on('prefs', () => { if (!traceOn()) clear(); force = true; core.invalidate('edges'); });
+        core.on('prefs', () => { if (!traceOn()) clear(); syncButton(); force = true; core.invalidate('edges'); });
+        btn = $('flowLinesBtn');
+        if (btn) { btn.addEventListener('click', () => core.setPref('lines', !linesOn())); syncButton(); }
     };
 })();
