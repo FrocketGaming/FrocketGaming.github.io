@@ -21,7 +21,6 @@
         { slug: "todo", name: "To-Do List", icon: "fa-list-check", desc: "Tasks with categories, priorities and deadlines", keys: "task todo list" },
         { slug: "notes", name: "Notes", icon: "fa-note-sticky", desc: "Markdown notes with tags and sync", keys: "markdown note writing" },
         { slug: "flow", name: "Flow", icon: "fa-diagram-project", desc: "Flowcharts on an infinite canvas", keys: "diagram flowchart canvas" },
-        { slug: "csv-viewer", name: "CSV Viewer", icon: "fa-table", desc: "View and query CSV data with SQL", keys: "csv table sql data" },
         { slug: "regex-tester", name: "Regex Tester", icon: "fa-asterisk", desc: "Test regular expressions with match details", keys: "regex pattern" },
         { slug: "image-editor", name: "Image Editor", icon: "fa-image", desc: "Annotate, crop, resize and redact images", keys: "image annotation screenshot" },
         { slug: "cron-builder", name: "Cron Builder", icon: "fa-calendar-days", desc: "Build cron expressions with next-run preview", keys: "cron schedule" },
@@ -309,7 +308,7 @@
         if (document.querySelector(".skip-link")) return;
         var target = document.querySelector([
             "#notesApp", "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
-            ".columns-row", ".csv-container", ".cron-container",
+            ".columns-row", ".cron-container",
             ".image-editor-container", ".json-container", ".regex-container",
             ".diff-container", ".snippets-container", ".tz-container", ".pe-container",
             ".flow-viewport", "main"

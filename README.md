@@ -17,9 +17,6 @@ A local-first code snippet manager. Store, tag, and search snippets by language 
 ### To-Do List
 A persistent task manager backed by IndexedDB. Supports subtasks, categories, priorities, and projects. Everything saves automatically in your browser.
 
-### CSV Viewer
-Drop in a CSV file and explore it as an interactive, sortable, filterable table. Includes a SQL query interface for more complex filtering and aggregation without leaving the browser.
-
 ### Regex Tester
 Live regular expression testing with real-time match highlighting, capture group details, and flag controls. Useful for building and debugging patterns without switching to a terminal.
 
@@ -148,7 +145,6 @@ Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/fir
 │   └── issues/             One Markdown file per issue (YYYY-MM-DD.md)
 └── tools/
     ├── cron-builder/
-    ├── csv-viewer/
     ├── image-editor/
     ├── notes/
     ├── phase-board/
