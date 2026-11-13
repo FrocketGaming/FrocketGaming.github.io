@@ -405,6 +405,7 @@
         if (!core.viewOnly) { Flow.view.set(true, { quiet: true }); weSetView = true; } else weSetView = false;
         on = true;
         document.body.classList.add('flow-playing');
+        core.emit('play', true);
         bar.hidden = false;
         layer = document.createElementNS(NS, 'g');
         layer.setAttribute('class', 'flow-play-layer');
@@ -423,6 +424,7 @@
         const hadLayer = !!forced;
         on = false; forced = null;
         document.body.classList.remove('flow-playing');
+        core.emit('play', false);
         bar.hidden = true;
         if (weSetView) { weSetView = false; Flow.view.set(false, { quiet: true }); }
         if (hadLayer) Flow.layers.clearActive();   // a played layer was switched on for the run

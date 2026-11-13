@@ -669,6 +669,7 @@
             ['Shift + 2', 'Zoom to selection'], ['Shift + 0', 'Reset zoom'], ['Ctrl + = / -', 'Zoom in / out'],
             ["Ctrl + '", 'Toggle snap to grid'], ["Ctrl + Shift + '", 'Toggle grid dots'],
             ['Ctrl + F', 'Find on canvas (Enter / Shift + Enter for next / previous)'], ['M', 'Toggle the minimap'],
+            ['Menu: Hover trace / Flowing lines', 'Hover trace lights the whole path through a card; flowing lines move along connectors that leave a card flagged in progress or done'],
             ['Alt + V', 'View only: hide the editing tools, drag or arrows to pan (or open with ?view=1)'],
         ]],
         ['Play', [

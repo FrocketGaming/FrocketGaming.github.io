@@ -1986,3 +1986,30 @@ body.flow-view-only .flow-layers-form { display: none; }
 @media (max-width: 640px) {
     .flow-play-stat, .flow-play-exit span { display: none; }
 }
+
+/* ── Hover trace and flowing lines (flow-trace.js) ─────────────────────── */
+
+.flow-node.is-trace-dim,
+.flow-edge.is-trace-dim,
+.flow-edge-label.is-trace-dim { opacity: 0.14; }
+.flow-node.is-trace-hit { border-color: var(--accent-primary); }
+.flow-node.is-trace-hit .flow-node-shape { stroke: var(--accent-primary); stroke-width: 2.5px; }
+.flow-edge.is-trace-path .flow-edge-line { stroke: var(--accent-primary); stroke-width: max(2.5px, calc(2.25px / var(--flow-zoom, 1))); }
+.flow-edge.is-trace-path .flow-edge-head { fill: var(--accent-primary); stroke: var(--accent-primary); }
+
+.flow-edge-march {
+    display: none;
+    fill: none;
+    stroke: var(--accent-primary);
+    stroke-width: max(2.5px, calc(2.25px / var(--flow-zoom, 1)));
+    stroke-linejoin: round;
+    stroke-dasharray: calc(5px / var(--flow-zoom, 1)) calc(9px / var(--flow-zoom, 1));
+    pointer-events: none;
+    animation: flow-march 0.9s linear infinite;
+}
+.flow-edge.is-flowing .flow-edge-march { display: inline; }
+.flow-edge.is-flowing-rev .flow-edge-march { animation-direction: reverse; }
+.flow-edge.is-flowing .flow-edge-line { opacity: 0.4; }
+.flow-edge.is-flowing.is-selected .flow-edge-line { opacity: 1; }
+@keyframes flow-march { to { stroke-dashoffset: calc(-14px / var(--flow-zoom, 1)); } }
+@media (prefers-reduced-motion: reduce) { .flow-edge-march { animation: none; } }

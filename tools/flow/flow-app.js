@@ -195,6 +195,8 @@
         const syncChecks = () => {
             menu.querySelector('[data-action="snap"]').classList.toggle('is-checked', !!core.prefs.snap);
             menu.querySelector('[data-action="grid"]').classList.toggle('is-checked', !!core.prefs.grid);
+            menu.querySelector('[data-action="trace"]').classList.toggle('is-checked', core.prefs.trace !== false);
+            menu.querySelector('[data-action="lines"]').classList.toggle('is-checked', core.prefs.lines !== false);
         };
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -224,6 +226,8 @@
                 case 'copy-png': Flow.io.copyPNG(); break;
                 case 'copy-mermaid': Flow.mermaid.copy(); break;
                 case 'export-mermaid': Flow.mermaid.download(); break;
+                case 'trace': core.setPref('trace', core.prefs.trace === false); break;
+                case 'lines': core.setPref('lines', core.prefs.lines === false); break;
                 case 'snap': core.setPref('snap', !core.prefs.snap); break;
                 case 'grid': core.setPref('grid', !core.prefs.grid); break;
                 case 'shortcuts': app.showShortcuts(); break;
@@ -245,6 +249,7 @@
         Flow.find.init();
         Flow.minimap.init();
         Flow.layers.init();
+        Flow.trace.init();
         Flow.play.init();
         Flow.panel.init();
         Flow.io.init();
