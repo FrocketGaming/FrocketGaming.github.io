@@ -125,6 +125,10 @@
         core.on('toast', showToast);
         core.on('change', syncEmptyAndStats);
         core.on('load', syncEmptyAndStats);
+        // A new card lives in an open transaction while it is typed into, so `change` has not fired yet:
+        // also follow the render pass and the editor, or the hint shows through the card.
+        core.on('editing', syncEmptyAndStats);
+        core.addRenderer('empty-state', (d) => { if (d.all || d.structure || d.nodes.size) syncEmptyAndStats(); }, 90);
         core.on('prefs', () => viewport.classList.toggle('no-grid', !core.prefs.grid));
         viewport.classList.toggle('no-grid', !core.prefs.grid);
 
@@ -527,7 +531,7 @@
 
     function syncEmptyAndStats() {
         const n = core.nodes().length, e = core.edges().length;
-        $('flowEmpty').hidden = n > 0;
+        $('flowEmpty').hidden = n > 0 || !!core.editing;
         $('flowStats').textContent = n ? `${n} card${n === 1 ? '' : 's'} · ${e} connector${e === 1 ? '' : 's'}` : '';
     }
 
