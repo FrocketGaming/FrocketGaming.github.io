@@ -720,3 +720,15 @@
 .pb .card > div { min-width: 0; }
 .pb .card h2 { overflow-wrap: anywhere; }
 .pb .card-next { max-width: 100%; }
+
+/* Project page, kept to the phase in hand: no side panel when nothing is open, outcomes folded
+   until the end of the project. */
+.pb .detail.no-feed { grid-template-columns: minmax(0, 1fr); }
+.pb .outcomes-fold { display: grid; gap: 8px; }
+.pb .outcomes-toggle { justify-self: end; display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 4px 0; color: var(--fg-2); font: inherit; font-size: 12px; cursor: pointer; }
+.pb .outcomes-toggle:hover, .pb .outcomes-toggle:focus-visible { color: var(--fg); }
+.pb .outcomes-toggle.is-row { justify-self: stretch; justify-content: flex-start; gap: 14px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; text-align: left; }
+.pb .outcomes-toggle.is-row:hover, .pb .outcomes-toggle.is-row:focus-visible { border-color: var(--accent-secondary); }
+.pb .outcomes-toggle.is-row .eyebrow { margin: 0; }
+.pb .outcomes-toggle.is-row .fa-chevron-down { margin-left: auto; }
+.pb .outcomes-toggle-hint { font-size: 13px; }

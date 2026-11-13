@@ -17,9 +17,6 @@ A local-first code snippet manager. Store, tag, and search snippets by language 
 ### To-Do List
 A persistent task manager backed by IndexedDB. Supports subtasks, categories, priorities, and projects. Everything saves automatically in your browser.
 
-### CSV Viewer
-Drop in a CSV file and explore it as an interactive, sortable, filterable table. Includes a SQL query interface for more complex filtering and aggregation without leaving the browser.
-
 ### Regex Tester
 Live regular expression testing with real-time match highlighting, capture group details, and flag controls. Useful for building and debugging patterns without switching to a terminal.
 
@@ -28,9 +25,6 @@ A canvas-based annotation and editing tool. Supports drawing arrows, rectangles,
 
 ### Cron Builder
 Visual cron expression editor with a plain-English description of the schedule and a next-run preview. Paste in an existing expression to decode it, or build one field-by-field.
-
-### Timezone
-Add multiple timezones and compare times across them at a glance. Includes a meeting planner for finding overlap between locations.
 
 ### Text Diff
 Compare two blocks of text and see exactly what changed — additions, deletions, and modified lines with word-level highlighting. Unchanged lines are collapsed by default so the output stays focused on the differences. Supports unified and side-by-side views, with optional labels for each side.
@@ -148,14 +142,12 @@ Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/fir
 │   └── issues/             One Markdown file per issue (YYYY-MM-DD.md)
 └── tools/
     ├── cron-builder/
-    ├── csv-viewer/
     ├── image-editor/
     ├── notes/
     ├── phase-board/
     ├── regex-tester/
     ├── snippets/
     ├── text-diff/
-    ├── timezone/
     ├── todo/
     └── txt-formatter/
 ```

@@ -47,6 +47,8 @@ class PhaseBoardApp {
         // Project-detail view state. `undefined` means "open the current phase".
         this.phaseChoice = undefined;
         this.expandAllPhases = false;
+        // Outcomes are folded away until the project is nearly done or already has some; `undefined` means "decide from the project".
+        this.outcomesOpen = undefined;
         this.actionsOpen = {};
         this.actionsOpenDefault = true;
         try { this.actionsOpenDefault = localStorage.getItem('pb-actions-open') !== '0'; } catch (e) { /* default open */ }
@@ -576,7 +578,11 @@ class PhaseBoardApp {
         if (!p) return '<button class="back" type="button" data-act="back">Back to projects</button><div class="empty"><h2>Project not found</h2><p>It may have been removed.</p></div>';
         const tpl = tplOf(p), s = summarize(tpl, p), people = peopleOf(p);
         const currentId = s.current ? s.current.id : '';
+        const anyOpen = tpl.phases.some(d => this.phaseIsOpen(d.id, currentId));
         const cards = tpl.phases.map((d, i) => {
+            // The strip above names every phase, so only the open one takes up the page. With none open
+            // (the open one was folded shut) they all come back as rows, so there is always a way in.
+            if (anyOpen && !this.phaseIsOpen(d.id, currentId)) return '';
             const extra = '<form class="dec-add" data-dec="' + d.id + '"><label class="sub" for="dec-' + d.id + '" style="width:100%;margin:0">Record a decision</label>' +
                 '<input class="field" id="dec-' + d.id + '" autocomplete="off" placeholder="What was decided, and why?"><button class="btn" type="submit">Add</button></form>';
             const next = tpl.phases[i + 1];
@@ -606,6 +612,8 @@ class PhaseBoardApp {
             : '<button class="btn" type="button" data-act="archive">Archive project</button>';
         const riskCount = (p.risks || []).filter(r => r.kind === 'constraint' ? !r.resolved : riskStatus(r) !== 'mitigated').length;
 
+        const feed = this.openActionsPanelHTML(p);
+
         return '<button class="back" type="button" data-act="back">Back to projects</button>' +
             '<div class="project-head">' +
                 '<div class="project-title"><p class="eyebrow">' + projectMeta(p) + '</p><h1>' + esc(p.name) + '</h1>' + tagChip(p, tagHues(this.projects)) + '</div>' +
@@ -620,8 +628,25 @@ class PhaseBoardApp {
             (this.showRisks ? risksHTML(p, true) : '') +
             this.statusLine() +
             '<div class="phase-workspace">' + this.phaseNavHTML(tpl, p, s, currentId) +
-            '<div class="detail"><div class="phases">' + cards + '</div><aside class="feed sticky">' + this.openActionsPanelHTML(p) + '</aside></div></div>' +
-            outcomesHTML(p, true) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
+            '<div class="detail' + (feed ? '' : ' no-feed') + '"><div class="phases">' + cards + '</div>' + (feed ? '<aside class="feed sticky">' + feed + '</aside>' : '') + '</div></div>' +
+            this.outcomesFoldHTML(p, s) + '<div class="danger-zone">' + archiveBtn + del + '</div>';
+    }
+
+    /* Outcomes belong to the end of a project. Until the last phase (or until something is recorded)
+       they are one quiet row, so the page is about the phase in hand. */
+    outcomesFoldHTML(p, s) {
+        const o = p.outcomes || {};
+        const tpl = tplOf(p);
+        const last = tpl.phases[tpl.phases.length - 1];
+        const has = !!(o.value || o.lessons || (o.metrics && o.metrics.length) || (o.amounts && o.amounts.length));
+        const due = !s.current || (last && s.current.id === last.id);
+        const open = this.outcomesOpen !== undefined ? this.outcomesOpen : (has || due);
+        if (open) {
+            return '<div class="outcomes-fold is-open"><button type="button" class="outcomes-toggle" data-act="toggle-outcomes" aria-expanded="true"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i> Hide outcomes</button>' + outcomesHTML(p, true) + '</div>';
+        }
+        return '<div class="outcomes-fold"><button type="button" class="outcomes-toggle is-row" data-act="toggle-outcomes" aria-expanded="false">' +
+            '<span class="eyebrow">Outcomes</span><span class="outcomes-toggle-hint">Metrics and value added. Usually filled in near the end.</span>' +
+            '<i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button></div>';
     }
 
     phaseIsOpen(id, currentId) {
@@ -666,7 +691,7 @@ class PhaseBoardApp {
         return '<nav class="phase-nav" aria-label="Phases">' +
             '<div class="phase-nav-scroll">' + tabs + '</div>' +
             '<div class="phase-nav-side"><span class="phase-nav-progress">' + s.doneP + '/' + s.total + ' phases · ' + s.g + '/' + s.gt + ' criteria</span>' +
-            '<button type="button" class="btn small" data-act="toggle-expand">' + (this.expandAllPhases ? 'Collapse' : 'Expand all') + '</button>' +
+            '<button type="button" class="btn small" data-act="toggle-expand" title="' + (this.expandAllPhases ? 'Show only the phase you are working on' : 'Open every phase on one page') + '">' + (this.expandAllPhases ? 'One phase' : 'All phases') + '</button>' +
             '<button type="button" class="btn small" data-act="edit-flow">Edit phases</button></div></nav>';
     }
 
@@ -708,7 +733,11 @@ class PhaseBoardApp {
                 }).join('') + '</ul></div>';
         }).join('');
 
-        return '<div class="feed-head"><p class="eyebrow">Open action items</p><span class="cnt">' + counts.all + '</span></div>' +
+        if (!rows.length) return '';
+        const head = '<div class="feed-head"><p class="eyebrow">Open action items</p><span class="cnt">' + counts.all + '</span></div>';
+        // A handful of items needs no filtering or grouping controls; they only earn their space on a long list.
+        if (rows.length <= 4 && filter === 'all') return head + rowsHTML;
+        return head +
             '<div class="action-tools"><div class="action-filters">' +
             filters.map(f => '<button type="button" class="action-filter' + (filter === f[0] ? ' is-on' : '') + '" data-action-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + (counts[f[0]] ? ' ' + counts[f[0]] : '') + '</button>').join('') +
             '</div><div class="action-group-toggle" role="group" aria-label="Group actions">' +
@@ -864,6 +893,13 @@ class PhaseBoardApp {
                 backupBtn.title = 'Download every project and your own flows as one JSON file. ' + (last ? 'Last backup from this browser: ' + last + '.' : 'No backup made from this browser yet.');
             }
             document.getElementById('pbExportBtn').hidden = !this.loaded || !Object.keys(this.projects).length;
+            // Starting a project, the year in review, flows and restore are portfolio jobs: inside a
+            // project they are one click away (Back to projects) and otherwise just more buttons.
+            const inProject = this.view !== 'portfolio' && this.view.indexOf('__') !== 0;
+            ['pbNewBtn', 'pbReviewBtn', 'pbFlowsBtn', 'pbRestoreBtn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.hidden = inProject;
+            });
         });
         this.updateStickyLayout();
     }
@@ -1466,6 +1502,8 @@ class PhaseBoardApp {
         this.confirmDelete = false;
         this.phaseChoice = undefined;
         this.expandAllPhases = false;
+        // Outcomes are folded away until the project is nearly done or already has some; `undefined` means "decide from the project".
+        this.outcomesOpen = undefined;
         this.actionsOpen = {};
         this.actionsOpenDefault = true;
         try { this.actionsOpenDefault = localStorage.getItem('pb-actions-open') !== '0'; } catch (e) { /* default open */ }
@@ -1729,6 +1767,11 @@ class PhaseBoardApp {
                 else if (k === 'toggle-overview') { this.showOverview = !this.showOverview; this.render(); }
                 else if (k === 'toggle-risks') { this.showRisks = !this.showRisks; this.render(); }
                 else if (k === 'toggle-expand') { this.expandAllPhases = !this.expandAllPhases; this.render(); }
+                else if (k === 'toggle-outcomes') {
+                    const fold = act.closest('.outcomes-fold');
+                    this.outcomesOpen = !(fold && fold.classList.contains('is-open'));
+                    this.render();
+                }
                 else if (k === 'archive') { this.setArchived(true); }
                 else if (k === 'unarchive') { this.setArchived(false); }
                 else if (k === 'restore-new') { this.applyRestore(false); }

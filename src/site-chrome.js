@@ -21,11 +21,9 @@
         { slug: "todo", name: "To-Do List", icon: "fa-list-check", desc: "Tasks with categories, priorities and deadlines", keys: "task todo list" },
         { slug: "notes", name: "Notes", icon: "fa-note-sticky", desc: "Markdown notes with tags and sync", keys: "markdown note writing" },
         { slug: "flow", name: "Flow", icon: "fa-diagram-project", desc: "Flowcharts on an infinite canvas", keys: "diagram flowchart canvas" },
-        { slug: "csv-viewer", name: "CSV Viewer", icon: "fa-table", desc: "View and query CSV data with SQL", keys: "csv table sql data" },
         { slug: "regex-tester", name: "Regex Tester", icon: "fa-asterisk", desc: "Test regular expressions with match details", keys: "regex pattern" },
         { slug: "image-editor", name: "Image Editor", icon: "fa-image", desc: "Annotate, crop, resize and redact images", keys: "image annotation screenshot" },
         { slug: "cron-builder", name: "Cron Builder", icon: "fa-calendar-days", desc: "Build cron expressions with next-run preview", keys: "cron schedule" },
-        { slug: "timezone", name: "Timezone", icon: "fa-globe", desc: "Compare times across timezones", keys: "timezone time meeting" },
         { slug: "text-diff", name: "Text Diff", icon: "fa-code-compare", desc: "Compare two texts line by line", keys: "diff compare text" },
         { slug: "json-viewer", name: "JSON Viewer", icon: "fa-file-code", desc: "Validate and explore JSON as a tree", keys: "json tree format" },
         { slug: "palette-extractor", name: "Palette Extractor", icon: "fa-palette", desc: "Extract a colour palette from an image", keys: "colour color palette image" },
@@ -72,6 +70,28 @@
                 }
             } catch (e) { /* ignore malformed hrefs */ }
         });
+    }
+
+    /* The To-Do app leaves its open tasks' due dates in localStorage; counting them here (not
+     * there) keeps the number right on days the list is never opened. */
+    function showTodoBadge() {
+        var link = document.querySelector('.nav-pill-item[href*="todo/"]');
+        if (!link) return;
+        var dates;
+        try { dates = JSON.parse(localStorage.getItem("todo-due-dates") || "[]"); } catch (e) { return; }
+        if (!Array.isArray(dates)) return;
+        var now = new Date();
+        var today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+        var due = dates.filter(function (d) { return typeof d === "string" && d <= today; }).length;
+        var badge = link.querySelector(".nav-pill-badge");
+        if (!due) { if (badge) badge.remove(); return; }
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "nav-pill-badge";
+            link.appendChild(badge);
+        }
+        badge.textContent = due > 99 ? "99+" : String(due);
+        badge.title = due + (due === 1 ? " task" : " tasks") + " due today or earlier";
     }
 
     function storageGet(key, fallback) {
@@ -309,9 +329,9 @@
         if (document.querySelector(".skip-link")) return;
         var target = document.querySelector([
             "#notesApp", "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
-            ".columns-row", ".csv-container", ".cron-container",
+            ".columns-row", ".cron-container",
             ".image-editor-container", ".json-container", ".regex-container",
-            ".diff-container", ".snippets-container", ".tz-container", ".pe-container",
+            ".diff-container", ".snippets-container", ".pe-container",
             ".flow-viewport", "main"
         ].join(","));
         if (!target) target = document.querySelector("h1");
@@ -569,6 +589,8 @@
 
     injectStylesheet();
     enhanceNavigation();
+    showTodoBadge();
+    window.addEventListener("todo-due-dates", showTodoBadge);
     ensurePageHeading();
     addSkipLink();
     buildPalette();
