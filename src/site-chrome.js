@@ -24,7 +24,6 @@
         { slug: "regex-tester", name: "Regex Tester", icon: "fa-asterisk", desc: "Test regular expressions with match details", keys: "regex pattern" },
         { slug: "image-editor", name: "Image Editor", icon: "fa-image", desc: "Annotate, crop, resize and redact images", keys: "image annotation screenshot" },
         { slug: "cron-builder", name: "Cron Builder", icon: "fa-calendar-days", desc: "Build cron expressions with next-run preview", keys: "cron schedule" },
-        { slug: "timezone", name: "Timezone", icon: "fa-globe", desc: "Compare times across timezones", keys: "timezone time meeting" },
         { slug: "text-diff", name: "Text Diff", icon: "fa-code-compare", desc: "Compare two texts line by line", keys: "diff compare text" },
         { slug: "json-viewer", name: "JSON Viewer", icon: "fa-file-code", desc: "Validate and explore JSON as a tree", keys: "json tree format" },
         { slug: "palette-extractor", name: "Palette Extractor", icon: "fa-palette", desc: "Extract a colour palette from an image", keys: "colour color palette image" },
@@ -310,7 +309,7 @@
             "#notesApp", "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
             ".columns-row", ".cron-container",
             ".image-editor-container", ".json-container", ".regex-container",
-            ".diff-container", ".snippets-container", ".tz-container", ".pe-container",
+            ".diff-container", ".snippets-container", ".pe-container",
             ".flow-viewport", "main"
         ].join(","));
         if (!target) target = document.querySelector("h1");

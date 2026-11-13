@@ -26,9 +26,6 @@ A canvas-based annotation and editing tool. Supports drawing arrows, rectangles,
 ### Cron Builder
 Visual cron expression editor with a plain-English description of the schedule and a next-run preview. Paste in an existing expression to decode it, or build one field-by-field.
 
-### Timezone
-Add multiple timezones and compare times across them at a glance. Includes a meeting planner for finding overlap between locations.
-
 ### Text Diff
 Compare two blocks of text and see exactly what changed — additions, deletions, and modified lines with word-level highlighting. Unchanged lines are collapsed by default so the output stays focused on the differences. Supports unified and side-by-side views, with optional labels for each side.
 
@@ -151,7 +148,6 @@ Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/fir
     ├── regex-tester/
     ├── snippets/
     ├── text-diff/
-    ├── timezone/
     ├── todo/
     └── txt-formatter/
 ```
