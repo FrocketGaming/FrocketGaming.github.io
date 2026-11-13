@@ -1,7 +1,7 @@
 /**
  * P16 - Trace and flow: two ambient effects that work any time, not only while playing.
- *  - Flowing lines: dashes march along every connector in its direction, faintly; a connector that leaves a
- *    card flagged "doing" or "done" (the Status flag) flows at full strength, so progress still reads.
+ *  - Flowing lines: dashes march along every connector in its direction, plain to see; a connector that leaves a
+ *    card flagged "doing" or "done" (the Status flag) flows heavier, so progress still reads.
  *    Off until switched on (menu or corner button). Pref `lines` === true.
  *  - Hover trace: point at a card and everything upstream and downstream of it stays lit while the rest of
  *    the chart steps back. Paused while dragging, connecting, typing or using another tool. Pref `trace`.

@@ -2007,10 +2007,12 @@ body.flow-view-only .flow-layers-form { display: none; }
     pointer-events: none;
     animation: flow-march 0.9s linear infinite;
 }
-.flow-edge.is-flowing .flow-edge-march { display: inline; opacity: 0.4; stroke-width: max(2px, calc(1.75px / var(--flow-zoom, 1))); }
-.flow-edge.is-flowing-strong .flow-edge-march { opacity: 1; stroke-width: max(2.75px, calc(2.5px / var(--flow-zoom, 1))); }
+/* Every flowing connector has to read as moving on its own: the dashes sit on a dimmed line, or they
+   vanish into it. A flagged card's connectors are heavier, not the only ones you can see. */
+.flow-edge.is-flowing .flow-edge-march { display: inline; opacity: 0.85; stroke-width: max(2px, calc(1.75px / var(--flow-zoom, 1))); }
+.flow-edge.is-flowing-strong .flow-edge-march { opacity: 1; stroke-width: max(3px, calc(2.75px / var(--flow-zoom, 1))); }
 .flow-edge.is-flowing-rev .flow-edge-march { animation-direction: reverse; }
-.flow-edge.is-flowing-strong .flow-edge-line { opacity: 0.4; }
-.flow-edge.is-flowing-strong.is-selected .flow-edge-line { opacity: 1; }
+.flow-edge.is-flowing .flow-edge-line { opacity: 0.35; }
+.flow-edge.is-flowing.is-selected .flow-edge-line { opacity: 1; }
 @keyframes flow-march { to { stroke-dashoffset: calc(-14px / var(--flow-zoom, 1)); } }
 @media (prefers-reduced-motion: reduce) { .flow-edge-march { animation: none; } }
