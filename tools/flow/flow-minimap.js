@@ -49,10 +49,12 @@
         const group = pal.v('--border-color');
         const accent = pal.v('--accent-primary');
 
+        // Hover trace (flow-trace.js): the cards on the hovered card's path light up, the rest step back.
+        const lit = Flow.trace && Flow.trace.current ? Flow.trace.current() : null;
         for (const n of nodes) {   // groups first, so cards sit on top of them
             if (n.type !== 'group') continue;
             const col = S.hasColor(n.color) ? pal.color(n.color, '--text-secondary') : '';
-            ctx.globalAlpha = 0.35;
+            ctx.globalAlpha = lit ? 0.12 : 0.35;
             ctx.fillStyle = col || group;
             ctx.fillRect(N(n.x) * s + ox, N(n.y) * s + oy, Math.max(2, N(n.width) * s), Math.max(2, N(n.height) * s));
         }
@@ -60,9 +62,12 @@
         for (const n of nodes) {
             if (n.type === 'group') continue;
             const col = S.hasColor(n.color) ? pal.color(n.color, '--text-secondary') : '';
-            ctx.fillStyle = col || card;
+            const on = !lit || lit.has(n.id);
+            ctx.globalAlpha = on ? 1 : 0.25;
+            ctx.fillStyle = lit && on ? accent : (col || card);
             ctx.fillRect(N(n.x) * s + ox, N(n.y) * s + oy, Math.max(2, N(n.width) * s), Math.max(2, N(n.height) * s));
         }
+        ctx.globalAlpha = 1;
         ctx.strokeStyle = accent;
         ctx.lineWidth = 1.5;
         ctx.fillStyle = accent;
@@ -117,6 +122,7 @@
         core.on('change', schedule);
         core.on('load', schedule);
         core.on('selection', schedule);
+        core.on('trace', schedule);
         core.on('prefs', sync);
         window.addEventListener('resize', schedule);
         // A theme switch changes every colour the map reads.

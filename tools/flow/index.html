@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="../../src/stylesheet.css">
     <link rel="stylesheet" href="../../src/firebase-sync.css">
-    <link rel="stylesheet" href="flow-styles.css?v=8cc720c3">
+    <link rel="stylesheet" href="flow-styles.css?v=1994cd77">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap"
@@ -65,6 +65,7 @@
                 <div class="flow-layer flow-layer-labels" id="flowLabels"></div>
                 <svg class="flow-layer flow-layer-overlay" id="flowOverlay" aria-hidden="true"></svg>
                 <div class="flow-layer flow-layer-ui" id="flowSelUI"></div>
+                <div class="flow-layer flow-layer-play" id="flowPlayPills"></div>
             </div>
             <div class="flow-marquee" id="flowMarquee" hidden></div>
             <div class="flow-empty" id="flowEmpty" hidden>
@@ -100,6 +101,19 @@
             <button type="button" class="flow-btn" id="flowViewExit" title="Back to editing — Alt+V"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
         </div>
 
+        <!-- Play controls (flow-play.js): shown while a chart is being walked -->
+        <div class="flow-play" id="flowPlay" role="toolbar" aria-label="Play controls" data-ui hidden>
+            <button type="button" class="flow-play-btn" id="flowPlayReset" title="Reset — R" aria-label="Reset run"><i class="fa-solid fa-arrow-rotate-left"></i></button>
+            <button type="button" class="flow-play-btn" id="flowPlayBack" title="Step back — Left arrow" aria-label="Step back"><i class="fa-solid fa-backward-step"></i></button>
+            <button type="button" class="flow-play-btn is-main" id="flowPlayPlay" title="Play or pause — Space" aria-label="Play"><i class="fa-solid fa-play"></i></button>
+            <button type="button" class="flow-play-btn" id="flowPlayStep" title="Next step — Right arrow" aria-label="Next step"><i class="fa-solid fa-forward-step"></i></button>
+            <span class="flow-play-sep"></span>
+            <button type="button" class="flow-play-btn is-fail" id="flowPlayFail" title="Fail this step — F" aria-label="Fail this step"><i class="fa-solid fa-circle-xmark"></i></button>
+            <button type="button" class="flow-play-speed" id="flowPlaySpeed" title="Speed" aria-label="Speed">1x</button>
+            <span class="flow-play-stat" id="flowPlayStat" aria-live="polite"></span>
+            <button type="button" class="flow-play-exit" id="flowPlayExit" title="Stop playing — Esc"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Exit</span></button>
+        </div>
+
         <!-- Find on canvas (Ctrl+F) -->
         <div class="flow-find" id="flowFind" role="search" data-ui hidden>
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -130,7 +144,10 @@
                     <div class="flow-menu-sep"></div>
                     <button role="menuitem" data-action="swimlanes"><i class="fa-solid fa-table-list"></i><span>Insert swimlanes</span></button>
                     <div class="flow-menu-sep"></div>
+                    <button role="menuitem" data-action="play"><i class="fa-solid fa-play"></i><span>Play the flow</span><kbd>Alt+P</kbd></button>
                     <button role="menuitem" data-action="view-only"><i class="fa-regular fa-eye"></i><span>View only</span><kbd>Alt+V</kbd></button>
+                    <button role="menuitem" data-action="trace"><i class="fa-solid fa-route"></i><span>Hover trace</span></button>
+                    <button role="menuitem" data-action="lines"><i class="fa-solid fa-wind"></i><span>Flowing lines</span></button>
                     <button role="menuitem" data-action="snap"><i class="fa-solid fa-magnet"></i><span>Snap to grid</span><kbd>Ctrl+'</kbd></button>
                     <button role="menuitem" data-action="grid"><i class="fa-solid fa-border-none"></i><span>Show grid</span><kbd>Ctrl+Shift+'</kbd></button>
                     <div class="flow-menu-sep"></div>
@@ -162,7 +179,24 @@
         <div class="flow-minimap" id="flowMinimap" data-ui hidden>
             <canvas id="flowMinimapCanvas" width="200" height="140" role="img" aria-label="Minimap: click or drag to move the view"></canvas>
         </div>
+        <!-- Layers (flow-layers.js): focus on one route, team or failure mode at a time -->
+        <div class="flow-layers" id="flowLayers" role="dialog" aria-label="Layers" data-ui hidden>
+            <div class="flow-layers-head">
+                <b>Layers</b>
+                <span class="flow-layers-sp"></span>
+                <button type="button" class="flow-layers-clear" id="flowLayersClear" data-act="clear" hidden>Show all</button>
+                <button type="button" class="flow-icon-btn" data-act="close" title="Close — Esc" aria-label="Close layers"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="flow-layers-note">Click a layer to focus on it. Switch on several to compare routes.</p>
+            <ul class="flow-layers-list" id="flowLayersList"></ul>
+            <form class="flow-layers-form" id="flowLayersForm">
+                <input type="text" id="flowLayersNew" maxlength="40" placeholder="New layer…" autocomplete="off" aria-label="New layer name">
+                <button type="submit" class="flow-btn">Add</button>
+            </form>
+        </div>
         <div class="flow-footer-right" data-ui>
+            <button class="flow-icon-btn flow-pill-solo" id="flowLinesBtn" title="Flowing lines" aria-label="Flowing lines" aria-pressed="false"><i class="fa-solid fa-wind"></i></button>
+            <button class="flow-icon-btn flow-pill-solo" id="flowLayersBtn" title="Layers" aria-label="Layers" aria-haspopup="dialog" aria-expanded="false"><i class="fa-solid fa-layer-group"></i></button>
             <button class="flow-icon-btn flow-pill-solo" id="flowMinimapBtn" title="Minimap — M" aria-label="Minimap" aria-pressed="false"><i class="fa-regular fa-map"></i></button>
             <button class="flow-icon-btn flow-pill-solo" id="flowHelpBtn" title="Shapes and shortcuts — ?" aria-label="Shapes and shortcuts"><i class="fa-regular fa-circle-question"></i></button>
         </div>
@@ -219,23 +253,26 @@
     <script src="../../src/firebase-config.js"></script>
     <script src="../../src/firebase-sync.js"></script>
     <script src="../../src/vendor/purify.min.js"></script>
-    <script src="flow-static.js?v=8cc720c3"></script>
-    <script src="flow-core.js?v=8cc720c3"></script>
-    <script src="flow-canvas.js?v=8cc720c3"></script>
-    <script src="flow-nodes.js?v=8cc720c3"></script>
-    <script src="flow-edges.js?v=8cc720c3"></script>
-    <script src="flow-interact.js?v=8cc720c3"></script>
-    <script src="flow-arrange.js?v=8cc720c3"></script>
-    <script src="flow-find.js?v=8cc720c3"></script>
-    <script src="flow-minimap.js?v=8cc720c3"></script>
-    <script src="flow-panel.js?v=8cc720c3"></script>
-    <script src="flow-mermaid.js?v=8cc720c3"></script>
-    <script src="flow-io.js?v=8cc720c3"></script>
-    <script src="flow-images.js?v=8cc720c3"></script>
-    <script src="flow-view.js?v=8cc720c3"></script>
-    <script src="flow-lanes.js?v=8cc720c3"></script>
-    <script src="flow-snippets.js?v=8cc720c3"></script>
-    <script src="flow-app.js?v=8cc720c3"></script>
+    <script src="flow-static.js?v=1994cd77"></script>
+    <script src="flow-core.js?v=1994cd77"></script>
+    <script src="flow-canvas.js?v=1994cd77"></script>
+    <script src="flow-nodes.js?v=1994cd77"></script>
+    <script src="flow-edges.js?v=1994cd77"></script>
+    <script src="flow-interact.js?v=1994cd77"></script>
+    <script src="flow-arrange.js?v=1994cd77"></script>
+    <script src="flow-find.js?v=1994cd77"></script>
+    <script src="flow-minimap.js?v=1994cd77"></script>
+    <script src="flow-trace.js?v=1994cd77"></script>
+    <script src="flow-play.js?v=1994cd77"></script>
+    <script src="flow-layers.js?v=1994cd77"></script>
+    <script src="flow-panel.js?v=1994cd77"></script>
+    <script src="flow-mermaid.js?v=1994cd77"></script>
+    <script src="flow-io.js?v=1994cd77"></script>
+    <script src="flow-images.js?v=1994cd77"></script>
+    <script src="flow-view.js?v=1994cd77"></script>
+    <script src="flow-lanes.js?v=1994cd77"></script>
+    <script src="flow-snippets.js?v=1994cd77"></script>
+    <script src="flow-app.js?v=1994cd77"></script>
         <script src="../../src/site-chrome.js"></script>
 </body>
 
