@@ -1982,3 +1982,327 @@ kbd {
         width: 100%;
     }
 }
+
+/* ===== Catch-up: a slipped pile, sorted one decision at a time =====
+   The banner is the only thing that asks for attention when tasks have
+   slipped; the sorter then shows one task with one question, so coming back
+   to a neglected board is a minute of key presses, not a wall to read. */
+.catchup-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-secondary));
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+    border-radius: 8px;
+}
+
+.catchup-banner[hidden] {
+    display: none;
+}
+
+.catchup-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.catchup-banner-text strong {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.catchup-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 3px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.catchup-banner-btn:hover {
+    background: var(--accent-secondary);
+}
+
+.catchup-banner-btn kbd,
+.catchup-choice-primary kbd {
+    background: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+    border-color: color-mix(in srgb, var(--bg-primary) 35%, transparent);
+    color: inherit;
+}
+
+.catchup-panel {
+    width: 520px;
+}
+
+.catchup-progress {
+    height: 3px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.catchup-progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+}
+
+.catchup-count {
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.catchup-card {
+    margin: 12px 0 20px;
+    padding: 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.catchup-project {
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.catchup-task {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.catchup-desc {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.catchup-why {
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.catchup-question {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.catchup-choices {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.catchup-choices-minor {
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.catchup-choice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.catchup-choice:hover,
+.catchup-choice:focus-visible {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.catchup-choices-minor .catchup-choice {
+    background: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.catchup-choices-minor .catchup-choice:hover {
+    color: var(--text-primary);
+}
+
+.catchup-choice-primary {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+.catchup-choice-primary:hover,
+.catchup-choice-primary:focus-visible {
+    background: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+}
+
+.catchup-choices-minor .catchup-choice-danger:hover {
+    color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+.catchup-done {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 4px 4px;
+}
+
+.catchup-done-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.catchup-done-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.catchup-done-list strong {
+    display: inline-block;
+    min-width: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+}
+
+.catchup-done .catchup-choice {
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+/* ===== Someday shelf ===== */
+.someday-note {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.someday-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.someday-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.someday-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.someday-row-title {
+    font-size: 13px;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.someday-row-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.someday-row-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.someday-row-btn {
+    height: 28px;
+    padding: 0 8px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-family: 'Raleway', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.someday-row-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+.someday-row-btn-danger:hover {
+    color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+@media (max-width: 540px) {
+    .catchup-choices,
+    .catchup-choices-minor {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catchup-progress-fill {
+        transition: none;
+    }
+}

@@ -4,6 +4,13 @@
  */
 
 class TodoApp {
+    static STALE_DAYS = 14;   // an undated task untouched this long counts as slipped
+    static CATCHUP_MIN = 3;   // fewer slipped tasks than this and the board can carry them itself
+    static CATCHUP_KEYS = {
+        '1': 'today', '2': 'tomorrow', '3': 'nextweek', '4': 'someday',
+        'd': 'done', 'x': 'delete', 's': 'keep', 'arrowright': 'keep', 'enter': 'close'
+    };
+
     constructor() {
         this.todos = [];
         this.expandedTaskId = null;
@@ -37,6 +44,8 @@ class TodoApp {
         this._projectSuggestionIndex = -1;
         this._projectSuggestionRange = null;
         this._taskEditId = null;
+        this._somedayOverlayOpen = false;
+        this._catchup = null; // { ids: [...], index, tally: {...} } while the sorter is open
     }
 
     async init() {
@@ -216,6 +225,21 @@ class TodoApp {
         document.getElementById('completedOverlayBackdrop').addEventListener('click', () => this.closeCompletedOverlay());
         document.getElementById('clearCompletedBtn').addEventListener('click', () => this.clearCompleted());
 
+        // Someday shelf and the catch-up sorter
+        document.getElementById('somedayBtn').addEventListener('click', () => this.openSomedayOverlay());
+        document.getElementById('somedayOverlayClose').addEventListener('click', () => this.closeSomedayOverlay());
+        document.getElementById('somedayOverlayBackdrop').addEventListener('click', () => this.closeSomedayOverlay());
+        document.getElementById('somedayOverlayBody').addEventListener('click', (e) => this.handleSomedayClick(e));
+        document.getElementById('catchupBanner').addEventListener('click', (e) => {
+            if (e.target.closest('[data-catchup-open]')) this.openCatchup();
+        });
+        document.getElementById('catchupClose').addEventListener('click', () => this.closeCatchup());
+        document.getElementById('catchupBackdrop').addEventListener('click', () => this.closeCatchup());
+        document.getElementById('catchupBody').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-catchup]');
+            if (btn) this.catchupAct(btn.dataset.catchup);
+        });
+
         // Task edit modal: shorthand quick-edit bar, same mechanism as the composer
         const taskEditInput = document.getElementById('taskEditInput');
         taskEditInput.addEventListener('input', () => {
@@ -363,6 +387,14 @@ class TodoApp {
                 return;
             }
 
+            // The catch-up sorter owns the keyboard while it is open: one key per decision.
+            if (this._catchup) {
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+                const action = TodoApp.CATCHUP_KEYS[e.key.toLowerCase()];
+                if (action) { e.preventDefault(); this.catchupAct(action); }
+                return;
+            }
+
             // Shortcuts that only work when not in an input
             if (!isInput) {
                 if (e.key === 'n' || e.key === '/') {
@@ -378,6 +410,11 @@ class TodoApp {
                 if (e.key === '?') {
                     e.preventDefault();
                     this.toggleShortcuts();
+                    return;
+                }
+                if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey && this.getSlippedTasks().length) {
+                    e.preventDefault();
+                    this.openCatchup();
                     return;
                 }
             }
@@ -1224,6 +1261,8 @@ class TodoApp {
 
         if (draggedTodo.deadline === newDeadline) return;
         draggedTodo.deadline = newDeadline;
+        draggedTodo.someday = false;
+        draggedTodo.reviewedAt = Date.now();
         await StorageManager.put('todos', draggedTodo);
         this._syncTodo(draggedTodo);
         this.render();
@@ -1596,9 +1635,14 @@ class TodoApp {
         const id = parseInt(item.dataset.id);
         const todo = this.todos.find(t => t.id === id);
         if (!todo) return;
-        this.showCardContextMenu(e.clientX, e.clientY, [
-            { label: `Delete "${todo.text}"`, danger: true, action: () => this.deleteTodo(id) }
-        ]);
+        const items = [];
+        if (!todo.completed && !todo.isProject) {
+            items.push(this.isSomeday(todo)
+                ? { label: 'Bring back to the board', action: () => this.restoreFromSomeday(id) }
+                : { label: 'Move to Someday', action: () => this.moveToSomeday(id) });
+        }
+        items.push({ label: `Delete "${todo.text}"`, danger: true, action: () => this.deleteTodo(id) });
+        this.showCardContextMenu(e.clientX, e.clientY, items);
     }
 
     // Enter/Space activation for elements that aren't native buttons
@@ -1626,6 +1670,9 @@ class TodoApp {
             this.hideShortcuts();
             return;
         }
+
+        if (this._catchup) { this.closeCatchup(); return; }
+        if (this._somedayOverlayOpen) { this.closeSomedayOverlay(); return; }
 
         // Clear search
         if (this.searchTerm) {
@@ -1812,6 +1859,9 @@ class TodoApp {
             topHtml = `<div class="todo-row-top">${cornerText}</div>`;
         } else if (todo.deadline) {
             topHtml = `<div class="todo-row-top">${this.renderDateText(todo)}</div>`;
+        } else if (this.isSomeday(todo)) {
+            // Only reachable through search: a parked task is otherwise off the board.
+            topHtml = `<div class="todo-row-top"><span class="todo-date-text todo-date-none">Someday</span></div>`;
         }
 
         const recurringHtml = todo.recurrence
@@ -2025,7 +2075,13 @@ class TodoApp {
         // A hidden project's own card and its subtasks are dropped from the
         // board entirely (not just collapsed) — search bypasses this, since
         // searching is an explicit request to see everything.
-        const activeTasks = this.todos.filter(t => !t.completed && !this.isHiddenByProjectFilter(t));
+        // Someday tasks are parked off the board on purpose; they live behind the moon button.
+        const activeTasks = this.todos.filter(t => !t.completed && !this.isSomeday(t) && !this.isHiddenByProjectFilter(t));
+        this.renderCatchupBanner(isSearchActive);
+        this.publishDueDates();
+
+        const somedayCountEl = document.getElementById('somedayCount');
+        if (somedayCountEl) somedayCountEl.textContent = this.todos.filter(t => this.isSomeday(t)).length;
 
         const archiveCountEl = document.getElementById('archiveCount');
         if (archiveCountEl) archiveCountEl.textContent = this.todos.filter(t => t.completed && !t.parentId).length;
@@ -2131,11 +2187,249 @@ class TodoApp {
             : `<div class="empty-state"><div class="empty-state-icon"><i class="fa-solid fa-box"></i></div><div class="empty-state-msg">Nothing completed yet</div></div>`;
     }
 
+    // ===== Someday shelf =====
+    // A task can be parked: off the board, out of the counts, kept for later. Giving it a date
+    // (edit, drag, shorthand) brings it straight back, which is why the date is part of the test.
+    isSomeday(todo) {
+        return !!todo.someday && !todo.deadline && !todo.completed && !todo.isProject;
+    }
+
+    async patchTodo(id, patch) {
+        const todo = this.todos.find(t => t.id === id);
+        if (!todo) return null;
+        Object.assign(todo, patch, { reviewedAt: Date.now() });
+        await StorageManager.put('todos', todo);
+        this._syncTodo(todo);
+        return todo;
+    }
+
+    async moveToSomeday(id) {
+        if (this.expandedTaskId === id) this.expandedTaskId = null;
+        const todo = await this.patchTodo(id, { someday: true, deadline: null });
+        this.render();
+        if (todo) this.showUndoToast(`"${todo.text}" moved to Someday`, false);
+    }
+
+    async restoreFromSomeday(id, deadline = null) {
+        await this.patchTodo(id, { someday: false, deadline });
+        this.render();
+    }
+
+    openSomedayOverlay() {
+        this._somedayOverlayOpen = true;
+        this.renderSomedayOverlay();
+        document.getElementById('somedayOverlay').classList.add('open');
+    }
+
+    closeSomedayOverlay() {
+        this._somedayOverlayOpen = false;
+        document.getElementById('somedayOverlay').classList.remove('open');
+    }
+
+    renderSomedayOverlay() {
+        const body = document.getElementById('somedayOverlayBody');
+        if (!body) return;
+        const parked = this.todos.filter(t => this.isSomeday(t)).sort((a, b) => (b.reviewedAt || 0) - (a.reviewedAt || 0));
+        if (!parked.length) {
+            body.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="fa-solid fa-moon"></i></div><div class="empty-state-msg">Nothing parked. Right-click a task and choose Move to Someday to get it off the board without deleting it.</div></div>`;
+            return;
+        }
+        body.innerHTML = `<p class="someday-note">Parked on purpose. Nothing here is late.</p><ul class="someday-list">${parked.map(t => {
+            const project = t.parentId ? this.todos.find(p => p.id === t.parentId) : null;
+            return `<li class="someday-row" data-id="${t.id}">
+                <div class="someday-row-text">
+                    <span class="someday-row-title">${this.escapeHtml(t.text)}</span>
+                    ${project ? `<span class="someday-row-meta">${this.escapeHtml(project.text)}</span>` : ''}
+                </div>
+                <div class="someday-row-actions">
+                    <button type="button" class="someday-row-btn" data-someday="today">Today</button>
+                    <button type="button" class="someday-row-btn" data-someday="board" title="Back to the board with no date">Board</button>
+                    <button type="button" class="someday-row-btn someday-row-btn-danger" data-someday="delete" aria-label="Delete task" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </li>`;
+        }).join('')}</ul>`;
+    }
+
+    handleSomedayClick(e) {
+        const btn = e.target.closest('[data-someday]');
+        const row = btn && btn.closest('.someday-row');
+        if (!row) return;
+        const id = parseInt(row.dataset.id);
+        if (btn.dataset.someday === 'today') this.restoreFromSomeday(id, this.toLocalDateString(new Date()));
+        else if (btn.dataset.someday === 'board') this.restoreFromSomeday(id);
+        else if (btn.dataset.someday === 'delete') this.deleteTodo(id);
+    }
+
+    // ===== Catch-up =====
+    // The board fails when it is left alone: dated tasks slide into Overdue, undated ones sink,
+    // and the pile is what makes it unpleasant to come back to. Catch-up turns the pile into a
+    // short run of single decisions, each one key, and every answer takes the task off the pile.
+
+    /** When a task was last added or deliberately looked at. Ids are creation timestamps. */
+    touchedAt(todo) {
+        if (todo.reviewedAt) return todo.reviewedAt;
+        return typeof todo.id === 'number' && todo.id > 1e12 ? todo.id : null;
+    }
+
+    /** 'overdue', 'stale' (undated and untouched for STALE_DAYS) or '' for a task that is fine. */
+    slipReason(todo) {
+        if (todo.completed || todo.isProject || this.isSomeday(todo)) return '';
+        if (todo.deadline) return this.getDeadlineGroup(todo.deadline) === 'overdue' ? 'overdue' : '';
+        const touched = this.touchedAt(todo);
+        return touched && Date.now() - touched > TodoApp.STALE_DAYS * 86400000 ? 'stale' : '';
+    }
+
+    getSlippedTasks() {
+        const overdue = [], stale = [];
+        for (const t of this.todos) {
+            const why = this.slipReason(t);
+            if (why === 'overdue') overdue.push(t);
+            else if (why === 'stale') stale.push(t);
+        }
+        overdue.sort((a, b) => a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0);
+        stale.sort((a, b) => this.touchedAt(a) - this.touchedAt(b));
+        return overdue.concat(stale);
+    }
+
+    renderCatchupBanner(isSearchActive) {
+        const banner = document.getElementById('catchupBanner');
+        if (!banner) return;
+        const slipped = isSearchActive ? [] : this.getSlippedTasks();
+        if (slipped.length < TodoApp.CATCHUP_MIN) { banner.hidden = true; banner.innerHTML = ''; return; }
+        const overdue = slipped.filter(t => t.deadline).length;
+        const stale = slipped.length - overdue;
+        const parts = [];
+        if (overdue) parts.push(`${overdue} overdue`);
+        if (stale) parts.push(`${stale} undated and untouched for over two weeks`);
+        banner.hidden = false;
+        banner.innerHTML = `
+            <div class="catchup-banner-text">
+                <strong>${slipped.length} tasks have slipped.</strong>
+                <span>${parts.join(', ')}. Sort them one at a time, one key each.</span>
+            </div>
+            <button type="button" class="catchup-banner-btn" data-catchup-open>Catch up <kbd>C</kbd></button>`;
+    }
+
+    openCatchup() {
+        const ids = this.getSlippedTasks().map(t => t.id);
+        if (!ids.length) return;
+        this.expandedTaskId = null;
+        this._catchup = { ids, index: 0, total: ids.length, tally: { planned: 0, parked: 0, done: 0, deleted: 0, kept: 0 } };
+        document.getElementById('catchupModal').classList.add('open');
+        this.renderCatchup();
+    }
+
+    closeCatchup() {
+        this._catchup = null;
+        document.getElementById('catchupModal').classList.remove('open');
+        this.render();
+    }
+
+    renderCatchup() {
+        const c = this._catchup;
+        const body = document.getElementById('catchupBody');
+        if (!c || !body) return;
+        // Skip anything that was finished, deleted or synced away while the sorter was open.
+        while (c.index < c.ids.length) {
+            const t = this.todos.find(x => x.id === c.ids[c.index]);
+            if (t && !t.completed) break;
+            c.index++;
+        }
+        if (c.index >= c.ids.length) {
+            const t = c.tally;
+            const lines = [
+                [t.planned, 'given a date'], [t.parked, 'parked in Someday'], [t.done, 'marked done'],
+                [t.deleted, 'deleted'], [t.kept, 'left as they were']
+            ].filter(l => l[0] > 0).map(l => `<li><strong>${l[0]}</strong> ${l[1]}</li>`).join('');
+            body.innerHTML = `
+                <div class="catchup-done">
+                    <div class="catchup-done-title">That is all of them.</div>
+                    <ul class="catchup-done-list">${lines}</ul>
+                    <button type="button" class="catchup-choice catchup-choice-primary" data-catchup="close"><span>Back to the board</span><kbd>Enter</kbd></button>
+                </div>`;
+            return;
+        }
+        const todo = this.todos.find(x => x.id === c.ids[c.index]);
+        const project = todo.parentId ? this.todos.find(p => p.id === todo.parentId) : null;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        let why;
+        if (todo.deadline) {
+            const [y, m, d] = todo.deadline.split('-').map(Number);
+            const due = new Date(y, m - 1, d);
+            const late = Math.round((today - due) / 86400000);
+            why = `Was due ${due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${late} ${late === 1 ? 'day' : 'days'} late`;
+        } else {
+            const days = Math.floor((Date.now() - this.touchedAt(todo)) / 86400000);
+            why = `No date · untouched for ${days} days`;
+        }
+        const choice = (action, key, label, extra = '') =>
+            `<button type="button" class="catchup-choice ${extra}" data-catchup="${action}"><span>${label}</span><kbd>${key}</kbd></button>`;
+        body.innerHTML = `
+            <div class="catchup-progress" aria-hidden="true">
+                <div class="catchup-progress-fill" style="transform:scaleX(${c.index / c.total})"></div>
+            </div>
+            <div class="catchup-count">${c.index + 1} of ${c.total}</div>
+            <div class="catchup-card">
+                ${project ? `<div class="catchup-project">${this.escapeHtml(project.text)}</div>` : ''}
+                <div class="catchup-task">${this.escapeHtml(todo.text)}</div>
+                ${todo.description ? `<div class="catchup-desc">${this.escapeHtml(todo.description)}</div>` : ''}
+                <div class="catchup-why">${this.escapeHtml(why)}</div>
+            </div>
+            <div class="catchup-question">When will you do this?</div>
+            <div class="catchup-choices">
+                ${choice('today', '1', 'Today', 'catchup-choice-primary')}
+                ${choice('tomorrow', '2', 'Tomorrow')}
+                ${choice('nextweek', '3', 'Next week')}
+                ${choice('someday', '4', 'Someday')}
+            </div>
+            <div class="catchup-choices catchup-choices-minor">
+                ${choice('done', 'D', 'Already done')}
+                ${choice('delete', 'X', 'Delete', 'catchup-choice-danger')}
+                ${choice('keep', 'S', 'Skip')}
+            </div>`;
+    }
+
+    async catchupAct(action) {
+        const c = this._catchup;
+        if (!c || c.busy) return;
+        if (c.index >= c.ids.length) { if (action === 'close') this.closeCatchup(); return; }
+        if (action === 'close') return;
+        const id = c.ids[c.index];
+        const day = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset); return this.toLocalDateString(d); };
+        c.busy = true;
+        try {
+            if (action === 'today') { await this.patchTodo(id, { deadline: day(0), someday: false }); c.tally.planned++; }
+            else if (action === 'tomorrow') { await this.patchTodo(id, { deadline: day(1), someday: false }); c.tally.planned++; }
+            else if (action === 'nextweek') { await this.patchTodo(id, { deadline: day(7), someday: false }); c.tally.planned++; }
+            else if (action === 'someday') { await this.patchTodo(id, { deadline: null, someday: true }); c.tally.parked++; }
+            else if (action === 'keep') { await this.patchTodo(id, {}); c.tally.kept++; }
+            else if (action === 'done') { await this.toggleTodo(id); c.tally.done++; }
+            else if (action === 'delete') { await this.deleteTodo(id); c.tally.deleted++; }
+            else return;
+            c.index++;
+        } finally {
+            c.busy = false;
+        }
+        this.renderCatchup();
+    }
+
+    /** Leaves the open tasks' due dates where the site header can read them, for the nav badge. */
+    publishDueDates() {
+        try {
+            const dates = this.todos
+                .filter(t => !t.completed && !t.isProject && t.deadline)
+                .map(t => t.deadline);
+            localStorage.setItem('todo-due-dates', JSON.stringify(dates));
+            window.dispatchEvent(new Event('todo-due-dates'));
+        } catch (e) { /* ignore */ }
+    }
+
     // ===== Main Render =====
     render() {
         this.renderBoard();
 
         if (this._completedOverlayOpen) this.renderCompletedOverlay();
+        if (this._somedayOverlayOpen) this.renderSomedayOverlay();
 
         // Detail drawer (side panel, replaces the old inline expansion)
         this.renderDetailDrawer();

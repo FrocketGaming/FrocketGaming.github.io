@@ -30,3 +30,13 @@ Already implemented and working in `tools/todo/` — keep these, they're indepen
 - No stats, no completion-rate, no streaks — explicitly rejected by the user.
 - Keep the site's 8-theme token system (`--accent-primary`, `--syntax-*`, etc.) — the mockups use Canary's literal hex values for clarity, but real implementation must use the CSS custom properties so it adapts across all 8 themes.
 - Drag-and-drop reordering and project/subtask nesting are existing functionality — the kanban rebuild must not break them.
+
+## Added 2026-11-13: catch-up and Someday
+
+The board went unused because it piled up between visits: dated tasks slid into Overdue, undated ones sank, and the pile itself was the reason not to open it. Three additions, none of which change the board:
+
+- **Catch-up sorter** (`C`, or the banner that appears once 3 or more tasks have slipped). A task has slipped if it is overdue, or undated and untouched for 14 days. The sorter shows one task at a time with one question and one key per answer: Today, Tomorrow, Next week, Someday, Already done, Delete, Skip. Every answer stamps `reviewedAt`, so a skipped undated task stays quiet for another 14 days.
+- **Someday shelf** (moon button, or right-click a card). `someday: true` with no deadline takes a task off the board and out of every count without deleting it. Giving it a date brings it back.
+- **Nav badge**: the To-Do pill on every page shows how many tasks are due today or earlier (`todo-due-dates` in localStorage, counted by `src/site-chrome.js`).
+
+Still no stats, streaks or completion rates: the sorter's closing summary only says what was just decided.

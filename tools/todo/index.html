@@ -105,6 +105,10 @@
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
+                <button class="archive-btn" id="somedayBtn" title="Someday: tasks parked off the board" aria-label="Someday tasks">
+                    <i class="fa-solid fa-moon"></i>
+                    <span class="archive-count" id="somedayCount">0</span>
+                </button>
                 <button class="archive-btn" id="archiveBtn" title="Completed tasks" aria-label="Completed tasks">
                     <i class="fa-solid fa-box-archive"></i>
                     <span class="archive-count" id="archiveCount">0</span>
@@ -209,6 +213,11 @@
              Project mode's columns are each project plus "No Project" — same
              board mechanic, different grouping axis. Exactly one live at a
              time, built and populated by renderBoard(). -->
+        <!-- Catch-up prompt: shown instead of leaving a pile to be faced all at
+             once. Appears when enough tasks have slipped (overdue, or undated
+             and untouched for two weeks); opens the one-at-a-time sorter. -->
+        <div class="catchup-banner" id="catchupBanner" hidden></div>
+
         <div class="board-columns" id="boardColumns"></div>
 
     <!-- Task Detail Drawer -->
@@ -240,6 +249,35 @@
                 </div>
             </div>
             <div class="detail-drawer-body" id="completedOverlayBody"></div>
+        </div>
+    </div>
+
+    <!-- Someday: tasks deliberately parked off the board, so the board only
+         holds what is actually on the plate. -->
+    <div class="detail-drawer" id="somedayOverlay">
+        <div class="detail-drawer-backdrop" id="somedayOverlayBackdrop"></div>
+        <div class="detail-drawer-panel-wrap">
+            <div class="detail-drawer-header">
+                <span class="detail-drawer-title">Someday</span>
+                <button class="detail-drawer-close" id="somedayOverlayClose" aria-label="Close someday tasks">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="detail-drawer-body" id="somedayOverlayBody"></div>
+        </div>
+    </div>
+
+    <!-- Catch-up: slipped tasks one at a time, one decision each. -->
+    <div class="task-edit-modal" id="catchupModal" role="dialog" aria-modal="true" aria-labelledby="catchupTitle">
+        <div class="task-edit-modal-backdrop" id="catchupBackdrop"></div>
+        <div class="task-edit-modal-panel catchup-panel">
+            <div class="task-edit-modal-header">
+                <span class="detail-drawer-title" id="catchupTitle">Catch up</span>
+                <button class="detail-drawer-close" id="catchupClose" aria-label="Close catch up">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="task-edit-modal-body" id="catchupBody"></div>
         </div>
     </div>
 
@@ -313,6 +351,7 @@
             <div class="shortcut-row"><kbd>Esc</kbd> <span>Close panels / cancel edits</span></div>
             <div class="shortcut-row"><kbd>Enter</kbd> <span>Save edits / add tasks</span></div>
             <div class="shortcut-row"><kbd>F</kbd> <span>Focus search</span></div>
+            <div class="shortcut-row"><kbd>C</kbd> <span>Catch up on slipped tasks</span></div>
             <div class="shortcut-row"><kbd>?</kbd> <span>Toggle this overlay</span></div>
             <div class="shortcut-row"><kbd>Double-click</kbd> <span>Inline rename task</span></div>
             <button class="shortcuts-close" id="shortcutsClose">Close</button>

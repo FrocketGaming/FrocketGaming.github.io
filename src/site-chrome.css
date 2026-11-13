@@ -205,3 +205,26 @@
 [data-skip-target]:focus {
     outline: none;
 }
+
+/* Count of to-do tasks due today or earlier, on the To-Do pill of every page, so the list
+   is not something you have to remember to open. */
+.nav-pill-badge {
+    margin-left: 6px;
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.nav-pill-item:hover .nav-pill-badge,
+.nav-pill-item:focus-visible .nav-pill-badge,
+.nav-pill-item.active .nav-pill-badge {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}

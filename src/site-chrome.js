@@ -72,6 +72,28 @@
         });
     }
 
+    /* The To-Do app leaves its open tasks' due dates in localStorage; counting them here (not
+     * there) keeps the number right on days the list is never opened. */
+    function showTodoBadge() {
+        var link = document.querySelector('.nav-pill-item[href*="todo/"]');
+        if (!link) return;
+        var dates;
+        try { dates = JSON.parse(localStorage.getItem("todo-due-dates") || "[]"); } catch (e) { return; }
+        if (!Array.isArray(dates)) return;
+        var now = new Date();
+        var today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+        var due = dates.filter(function (d) { return typeof d === "string" && d <= today; }).length;
+        var badge = link.querySelector(".nav-pill-badge");
+        if (!due) { if (badge) badge.remove(); return; }
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "nav-pill-badge";
+            link.appendChild(badge);
+        }
+        badge.textContent = due > 99 ? "99+" : String(due);
+        badge.title = due + (due === 1 ? " task" : " tasks") + " due today or earlier";
+    }
+
     function storageGet(key, fallback) {
         try {
             var value = window.localStorage.getItem(key);
@@ -567,6 +589,8 @@
 
     injectStylesheet();
     enhanceNavigation();
+    showTodoBadge();
+    window.addEventListener("todo-due-dates", showTodoBadge);
     ensurePageHeading();
     addSkipLink();
     buildPalette();
