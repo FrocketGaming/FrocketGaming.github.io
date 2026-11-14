@@ -1,9 +1,8 @@
 /**
  * Backup: collect every local store into one JSON file, and restore it.
  *
- * Data lives in three IndexedDB databases:
+ * Data lives in two IndexedDB databases:
  *   QoLToolsDB       snippets, snippetTypes, snippetVersions, todos
- *   QoLNotesDB       one "state" record keyed "notes"
  *   QoLPhaseBoardDB  one "state" record keyed "board"
  * plus a small set of UI settings in localStorage.
  */
@@ -140,7 +139,6 @@
             snippetTypes: [],
             snippetVersions: [],
             todos: [],
-            notes: null,
             phaseBoard: null
         };
 
@@ -155,8 +153,6 @@
             console.warn("Backup: could not read snippets and tasks", e);
         }
 
-        var notes = await readStateDb("QoLNotesDB", "notes");
-        if (notes) data.notes = notes;
         var board = await readStateDb("QoLPhaseBoardDB", "board");
         if (board) data.phaseBoard = board;
 
@@ -207,10 +203,6 @@
         }, "");
     }
 
-    function countNotes(notes) {
-        return notes && notes.notes ? Object.keys(notes.notes).length : 0;
-    }
-
     function countProjects(board) {
         return board && board.projects ? Object.keys(board.projects).length : 0;
     }
@@ -219,7 +211,6 @@
         var backup = await collect();
         var data = backup.data;
         var size = new Blob([JSON.stringify(backup, null, 2)]).size;
-        var notesCount = countNotes(data.notes);
         var projectCount = countProjects(data.phaseBoard);
         var flowCount = data.phaseBoard && data.phaseBoard.flows ? Object.keys(data.phaseBoard.flows).length : 0;
 
@@ -241,11 +232,6 @@
                 title: "To-Do",
                 count: data.todos.length,
                 meta: data.todos.length ? "Newest " + formatDate(new Date(Number(newest(data.todos, "id")) || 0).toISOString()) : "Nothing stored yet"
-            },
-            {
-                title: "Notes",
-                count: notesCount,
-                meta: notesCount ? "Last edited " + formatDate(newest(Object.values(data.notes.notes || {}), "updatedAt")) : "Nothing stored yet"
             },
             {
                 title: "Phase Board",
@@ -275,7 +261,6 @@
             "<ul>" +
             "<li>Backup taken: " + (lastBackup ? formatDate(lastBackup) + " (" + new Date(lastBackup).toLocaleString() + ")" : "not yet") + "</li>" +
             "<li>Restoring replaces the matching stores in this browser; it does not upload anything.</li>" +
-            "<li>Notes images and version history stay with Firebase and are not part of this file.</li>" +
             "</ul>";
     }
 
@@ -324,7 +309,6 @@
             var parts = [];
             if (Array.isArray(data.snippets)) parts.push(data.snippets.length + " snippets");
             if (Array.isArray(data.todos)) parts.push(data.todos.length + " tasks");
-            if (data.notes) parts.push(countNotes(data.notes) + " notes");
             if (data.phaseBoard) parts.push(countProjects(data.phaseBoard) + " projects");
             el("restoreSummary").textContent = "This file was exported " + new Date(parsed.exportedAt).toLocaleString() + " and contains " + (parts.join(", ") || "no tool data") + ".";
             el("restorePanel").hidden = false;
@@ -347,12 +331,6 @@
                     if (Array.isArray(data[name])) await putAll(toolsDb, name, data[name]);
                 }
                 toolsDb.close();
-            }
-
-            if (data.notes) {
-                var notesDb = await openDb("QoLNotesDB", 1, stateUpgrade);
-                await putRecord(notesDb, "state", Object.assign({ key: "notes" }, data.notes));
-                notesDb.close();
             }
 
             if (data.phaseBoard) {

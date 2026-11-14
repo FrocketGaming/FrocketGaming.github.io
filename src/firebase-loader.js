@@ -1,12 +1,12 @@
 /**
  * Lazy Firebase loader.
  *
- * Notes and Phase Board are local-first: a visitor who never signs in should not
+ * Phase Board is local-first: a visitor who never signs in should not
  * download the Firebase SDKs or call gstatic at all. This loads them on demand,
  * once, and reuses the same promise for every caller.
  *
- *   await loadFirebase({ storage: true })  // Notes
  *   await loadFirebase()                   // Phase Board
+ *   await loadFirebase({ storage: true })  // also loads Cloud Storage
  */
 (function () {
     "use strict";

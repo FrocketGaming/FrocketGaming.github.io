@@ -29,15 +29,6 @@ Visual cron expression editor with a plain-English description of the schedule a
 ### Text Diff
 Compare two blocks of text and see exactly what changed — additions, deletions, and modified lines with word-level highlighting. Unchanged lines are collapsed by default so the output stays focused on the differences. Supports unified and side-by-side views, with optional labels for each side.
 
-### Notes
-A Markdown note-taking tool with Firebase sync. Linked from the main nav and the landing page (`/tools/notes/`). Supports tags, pinning, archiving, split editor/preview, zen mode, a command palette, wiki-links, bulk actions, version history, image paste, Mermaid diagrams, and keyboard shortcuts. Works locally in this browser without an account; sign in with Google to sync across devices. Version history and image uploads need sign-in.
-
-The local-first merge has a Node test:
-
-```nu
-node tools/notes/tests/local.test.js
-```
-
 ### Phase Board
 Track projects from discovery to deploy. Opening a project puts the current phase first: a sticky phase switcher marks it, other phases collapse to one-line summaries, project details and risks sit behind buttons, criteria and action items share the card's two work columns, and decisions, notes and diagrams sit in a collapsed Context strip. Open actions sort overdue-first and offer quick due dates; phase notes are editable in Context. The sidebar filters and groups the project's open actions. The portfolio shows target dates, blocked and past-target flags, and the next action on each card, filters by tag, and can group the due panel by project or due date. Each project moves through Discovery, Research, Build, Test and Deploy, with exit criteria you define per phase (the Standard and Lite flows start with none; "Standard flow with starter criteria" is a worked example you can use or duplicate, or save your own template; every phase also offers suggested criteria you can add with a click; when creating a project you can untick the phases it does not need; projects in progress can be given a High, Medium or Low priority, and the portfolio lists the most urgent first; each card in progress shows its place in the work order, which you change by dragging a card, or with Alt and the up or down arrow on a focused card), action items with an assignee and due date, decisions, risks (open, monitoring, mitigated or occurred) and constraints, and a closing outcomes section for the value added: before and after metrics, and amounts saved (hours, cost) that the year in review totals. Value added and Lessons learned (written once a project is complete) accept bullet points: start a line with * or -. Finished projects show their value on the project card, grouped in a collapsible Completed section below the projects in progress. A phase can hold up to three diagrams drawn in the Flow tool and saved to Snippets; they show collapsed, and the HTML export carries them as pictures. A portfolio view shows every project at a glance, and lists the open action items that are overdue, due today or due in the next three days, grouped by project with the most urgent first, which you can check off from there (the list collapses to a one-line summary, and clicking a count shows only that group). "Export HTML" saves a read-only snapshot you can send to stakeholders. Finished phases, action items and projects are stamped with a completion date (a project's start and completed dates can be changed by hand, so projects from the past can be added and found in the right year), finished or abandoned projects can be archived, and a Year in review page lists what you completed in a chosen year with the value added, metrics and decisions behind it (and exports as its own read-only file). Flows are editable: the Flows page keeps a library of the phases and exit criteria a project follows (reorder, rename, add or remove phases and criteria), and each project can adjust its own phases after it starts. A project can carry a Tag (for example NHOP) that groups related projects: the tag shows as a colored chip on its card, and the same tag always has the same color. Back up downloads every project and your own flows as one JSON file, and Restore adds them back (new items only, or replacing what is already there). Works locally in this browser without an account (projects are saved in IndexedDB); sign in with Google to sync the board across devices, and local work merges into the cloud board on sign-in.
 
@@ -79,9 +70,7 @@ npx serve .
 
 ## Backup
 
-`/backup/` collects every local store — snippets, tasks, notes, Phase Board projects and flows — plus UI settings (theme, recents, panel state) into one JSON file. Restore reads that file and replaces the matching stores in the browser after a confirmation and a size/format check. Nothing is uploaded.
-
-Notes images and version history live in Firebase and are not part of the backup; the page says so.
+`/backup/` collects every local store — snippets, tasks, Phase Board projects and flows — plus UI settings (theme, recents, panel state) into one JSON file. Restore reads that file and replaces the matching stores in the browser after a confirmation and a size/format check. Nothing is uploaded.
 
 ---
 
@@ -89,10 +78,10 @@ Notes images and version history live in Firebase and are not part of the backup
 
 - **Static site** hosted on GitHub Pages — no server, no build step
 - **Local persistence** via IndexedDB (`QoLToolsDB`) using a shared `StorageManager` wrapper
-- **Cloud sync** (Snippets, Notes, Phase Board) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners; all three work locally first, and Notes and Phase Board merge local work with the cloud on sign-in. Notes and Phase Board load the Firebase SDKs only when sync is enabled, so a local-only visit makes no Firebase requests.
+- **Cloud sync** (Snippets, Phase Board) via Firebase Firestore with Google OAuth — offline-capable with real-time listeners; both work locally first, and Phase Board merges local work with the cloud on sign-in. Phase Board loads the Firebase SDKs only when sync is enabled, so a local-only visit makes no Firebase requests.
 - **Theming** — 8 themes (Default, Dracula, Catppuccin, Atom, Nord, Solarized, SynthWave, Canary) applied via `data-theme` on `<html>` with no flash on load
-- **Shared site chrome** — `src/site-chrome.js`/`.css` add the command palette (`Ctrl/⌘+K`, `Ctrl/⌘+Shift+P` on Notes), which searches tools, actions and local notes/tasks/snippets/projects and deep-links to the record; native tooltips and `aria-current` on the nav rail; and a skip link plus a visually hidden page heading.
-- **One-file backup** — `/backup/` exports every local store (snippets, tasks, notes, projects, flows) plus UI settings to one JSON file and restores it.
+- **Shared site chrome** — `src/site-chrome.js`/`.css` add the command palette (`Ctrl/⌘+K`), which searches tools, actions and local tasks/snippets/projects and deep-links to the record; native tooltips and `aria-current` on the nav rail; and a skip link plus a visually hidden page heading.
+- **One-file backup** — `/backup/` exports every local store (snippets, tasks, projects, flows) plus UI settings to one JSON file and restores it.
 - No frameworks, no bundler — vanilla JS, CSS variables, and a handful of CDN libraries (Highlight.js, Marked, KaTeX, Firebase SDK)
 
 ---
@@ -109,7 +98,7 @@ npx serve .
 
 The newsletter fetches its issues with `fetch`, which browsers block on `file://` pages, so serve the site over http to view it locally.
 
-Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/firebase-config.js` for cloud sync. Snippets, Notes and Phase Board all work locally without any configuration; Notes' version history and image uploads, and Phase Board's cross-device sync, need Firebase.
+Firebase-dependent tools (Snippets, Phase Board) require a valid `src/firebase-config.js` for cloud sync. Both work locally without any configuration; cross-device sync needs Firebase.
 
 ---
 
@@ -143,7 +132,6 @@ Firebase-dependent tools (Snippets, Notes, Phase Board) require a valid `src/fir
 └── tools/
     ├── cron-builder/
     ├── image-editor/
-    ├── notes/
     ├── phase-board/
     ├── regex-tester/
     ├── snippets/

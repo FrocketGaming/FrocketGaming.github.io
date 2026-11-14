@@ -1,8 +1,7 @@
 /* Shared site chrome.
  *
- * 1. Command palette: Ctrl/Cmd+K (Ctrl/Cmd+Shift+P on Notes, which owns Ctrl+K).
- *    It switches tools, runs a few actions, and searches local notes, tasks,
- *    snippets and projects, deep-linking straight to the record.
+ * 1. Command palette: Ctrl/Cmd+K. It switches tools, runs a few actions, and
+ *    searches local tasks, snippets and projects, deep-linking straight to the record.
  * 2. Nav polish: native tooltips and aria-current on the rail.
  * 3. A skip link and a visually hidden page heading.
  *
@@ -19,7 +18,6 @@
         { slug: "txt-formatter", name: "Txt Formatter", icon: "fa-font", desc: "Transform text: lists, case, JSON, find & replace", keys: "text case json format list sort" },
         { slug: "snippets", name: "Snippets", icon: "fa-code", desc: "Store and search code snippets", keys: "code snippet library" },
         { slug: "todo", name: "To-Do List", icon: "fa-list-check", desc: "Tasks with categories, priorities and deadlines", keys: "task todo list" },
-        { slug: "notes", name: "Notes", icon: "fa-note-sticky", desc: "Markdown notes with tags and sync", keys: "markdown note writing" },
         { slug: "flow", name: "Flow", icon: "fa-diagram-project", desc: "Flowcharts on an infinite canvas", keys: "diagram flowchart canvas" },
         { slug: "regex-tester", name: "Regex Tester", icon: "fa-asterisk", desc: "Test regular expressions with match details", keys: "regex pattern" },
         { slug: "image-editor", name: "Image Editor", icon: "fa-image", desc: "Annotate, crop, resize and redact images", keys: "image annotation screenshot" },
@@ -36,11 +34,10 @@
     });
 
     var ACTIONS = [
-        { key: "new-note", name: "New note", icon: "fa-note-sticky", desc: "Create a note in Notes", keys: "create add note", href: siteRoot + "tools/notes/?new=1" },
         { key: "new-task", name: "New task", icon: "fa-list-check", desc: "Add a task in the To-Do List", keys: "create add task todo", href: siteRoot + "tools/todo/?new=1" },
         { key: "new-snippet", name: "New snippet", icon: "fa-code", desc: "Create a snippet in Snippets", keys: "create add snippet code", href: siteRoot + "tools/snippets/?new=1" },
         { key: "new-project", name: "New project", icon: "fa-bars-progress", desc: "Start a project in Phase Board", keys: "create add project phase", href: siteRoot + "tools/phase-board/?new=1" },
-        { key: "backup", name: "Back up local data", icon: "fa-database", desc: "Download notes, tasks, snippets, projects and settings", keys: "export backup restore save", href: siteRoot + "backup/" }
+        { key: "backup", name: "Back up local data", icon: "fa-database", desc: "Download tasks, snippets, projects and settings", keys: "export backup restore save", href: siteRoot + "backup/" }
     ].map(function (action) {
         action.group = "Actions";
         return action;
@@ -244,32 +241,6 @@
             }
         } catch (e) { /* no local snippets or tasks yet */ }
 
-        if (exists("QoLNotesDB")) {
-            try {
-                var notesDb = await withTimeout(openDatabase("QoLNotesDB"), 1500);
-                if (notesDb) {
-                    var noteState = await withTimeout(getRecord(notesDb, "state", "notes"), 1500);
-                    var notes = (noteState && noteState.notes) || {};
-                    Object.keys(notes).map(function (id) { return notes[id]; })
-                        .filter(function (note) { return note && !note.trashed; })
-                        .sort(function (a, b) { return String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")); })
-                        .forEach(function (note) {
-                            var title = note.title || firstLine(note.content) || "Untitled note";
-                            items.push({
-                                key: "note:" + note.id,
-                                group: "Notes",
-                                name: title,
-                                desc: note.archived ? "Archived note" : "Note",
-                                icon: "fa-note-sticky",
-                                href: siteRoot + "tools/notes/?note=" + encodeURIComponent(note.id),
-                                search: title + " " + String(note.content || "").slice(0, 3000)
-                            });
-                        });
-                    notesDb.close();
-                }
-            } catch (e) { /* Notes has not been opened here yet */ }
-        }
-
         if (exists("QoLPhaseBoardDB")) {
             try {
                 var boardDb = await withTimeout(openDatabase("QoLPhaseBoardDB"), 1500);
@@ -328,7 +299,7 @@
     function addSkipLink() {
         if (document.querySelector(".skip-link")) return;
         var target = document.querySelector([
-            "#notesApp", "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
+            "#pbApp", ".nl-main", ".ledger-toolbar", ".tool-ledger", ".todo-layout",
             ".columns-row", ".cron-container",
             ".image-editor-container", ".json-container", ".regex-container",
             ".diff-container", ".snippets-container", ".pe-container",
@@ -397,7 +368,7 @@
             '<div class="site-palette" role="dialog" aria-modal="true" aria-label="Command palette">' +
                 '<div class="site-palette-input-row">' +
                     '<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>' +
-                    '<input class="site-palette-input" id="sitePaletteInput" type="text" role="combobox" aria-expanded="true" aria-controls="sitePaletteList" aria-autocomplete="list" placeholder="Jump to a tool, note, task, snippet or project…" autocomplete="off" spellcheck="false" aria-label="Jump to a tool or record">' +
+                    '<input class="site-palette-input" id="sitePaletteInput" type="text" role="combobox" aria-expanded="true" aria-controls="sitePaletteList" aria-autocomplete="list" placeholder="Jump to a tool, task, snippet or project…" autocomplete="off" spellcheck="false" aria-label="Jump to a tool or record">' +
                     '<span class="site-palette-esc">esc</span>' +
                 '</div>' +
                 '<div class="site-palette-list" id="sitePaletteList" role="listbox" aria-label="Results"></div>' +
@@ -413,8 +384,7 @@
         var input = overlay.querySelector("#sitePaletteInput");
         var list = overlay.querySelector("#sitePaletteList");
         var shortcutLabel = overlay.querySelector(".site-palette-shortcut");
-        var notesOwnsCtrlK = !!document.getElementById("commandPaletteOverlay");
-        var shortcut = notesOwnsCtrlK ? "Ctrl Shift P" : "Ctrl K";
+        var shortcut = "Ctrl K";
         if (/Mac|iPhone|iPad/.test(navigator.platform)) shortcut = shortcut.replace("Ctrl", "⌘");
         shortcutLabel.textContent = shortcut;
 
@@ -463,7 +433,7 @@
                 }).slice(0, 6);
                 if (primary.length) sections.push({ label: "Tools & actions", entries: primary.map(function (item) { return item.entry; }) });
 
-                ["Notes", "Tasks", "Snippets", "Projects"].forEach(function (group) {
+                ["Tasks", "Snippets", "Projects"].forEach(function (group) {
                     var matches = scored.filter(function (item) { return item.group === group; }).slice(0, 4);
                     if (matches.length) sections.push({ label: group, entries: matches.map(function (item) { return item.entry; }) });
                 });
@@ -559,7 +529,7 @@
             var isOpen = !overlay.hidden;
             var mod = event.metaKey || event.ctrlKey;
 
-            if (!isOpen && mod && ((!notesOwnsCtrlK && key === "k") || (notesOwnsCtrlK && key === "p" && event.shiftKey))) {
+            if (!isOpen && mod && key === "k") {
                 event.preventDefault();
                 open();
                 return;
